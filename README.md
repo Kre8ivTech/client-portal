@@ -25,6 +25,7 @@ KT-Portal is a multi-tenant SaaS client portal for Kre8ivTech, LLC. It serves wh
 | Payments | Stripe |
 | Email | Resend |
 
+> Note: The detailed technical specification in `docs/tech.md` currently describes the legacy FastAPI + React stack for KT-Portal v1. It is being updated to align with this Next.js + Supabase + Vercel architecture for v2.
 ---
 
 ## Project Structure

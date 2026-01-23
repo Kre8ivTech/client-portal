@@ -5,6 +5,7 @@
     "description": "Custom status line showing: user:path branch* ctx:% model time todos:N"
   },
   "_comments": {
+    "project": "KT-Portal - Kre8ivTech Client Portal",
     "colors": {
       "B": "Blue - directory path",
       "G": "Green - git branch",
@@ -13,7 +14,19 @@
       "C": "Cyan - username, todos",
       "T": "Gray - model name"
     },
-    "output_example": "affoon:~/projects/myapp main* ctx:73% sonnet-4.5 14:30 todos:3",
-    "usage": "Copy the statusLine object to your ~/.claude/settings.json"
+    "output_example": "developer:~/kt-portal feature/KT-123-ticket-queue* ctx:73% opus-4.5 14:30 todos:3",
+    "usage": "Copy the statusLine object to your ~/.claude/settings.json",
+    "kt_portal_notes": {
+      "branch_prefixes": [
+        "feature/KT-XXX-description",
+        "fix/KT-XXX-description",
+        "refactor/description"
+      ],
+      "common_directories": [
+        "~/kt-portal/backend - FastAPI backend",
+        "~/kt-portal/frontend - React frontend",
+        "~/kt-portal/docs - Project documentation"
+      ]
+    }
   }
 }

@@ -7,7 +7,7 @@ Project-level instructions for AI assistants working on this codebase.
 **KT-Portal** is a multi-tenant SaaS client portal for Kre8ivTech, LLC. It serves white-label partners and direct clients with ticketing, invoicing, contracts, knowledge base, live chat, and messaging capabilities.
 
 **Tech Stack:**
-- **Frontend:** Next.js 14+ (App Router, TypeScript)
+- **Framework:** Next.js 14+ (App Router, TypeScript)
 - **Hosting:** Vercel (Edge Network, Serverless Functions, Cron)
 - **Database:** Supabase (PostgreSQL with RLS)
 - **Auth:** Supabase Auth (Magic links, OAuth, 2FA)
@@ -58,7 +58,7 @@ Always verify RLS policies exist before assuming data is filtered.
 
 **TypeScript/React:**
 - Functional components only
-- Immutability always — never mutate objects or arrays
+- Immutability always - never mutate objects or arrays
 - Use React Query for all server state
 - Use Zustand sparingly for client-only state
 - Prefer Server Components where possible
@@ -245,7 +245,7 @@ import { Database } from '@/types/database'
 
 export async function createServerSupabaseClient() {
   const cookieStore = await cookies()
-  
+
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -281,16 +281,16 @@ import { TicketList } from '@/components/tickets/ticket-list'
 
 export default async function TicketsPage() {
   const supabase = await createServerSupabaseClient()
-  
+
   const { data: tickets, error } = await supabase
     .from('tickets')
     .select('*, created_by:profiles!created_by(name, avatar_url)')
     .order('created_at', { ascending: false })
-  
+
   if (error) {
     throw new Error(error.message)
   }
-  
+
   return <TicketList tickets={tickets} />
 }
 ```
@@ -307,7 +307,7 @@ import { TicketCard } from './ticket-card'
 
 export function TicketList({ initialTickets }) {
   const supabase = createClient()
-  
+
   const { data: tickets } = useQuery({
     queryKey: ['tickets'],
     queryFn: async () => {
@@ -315,13 +315,13 @@ export function TicketList({ initialTickets }) {
         .from('tickets')
         .select('*')
         .order('created_at', { ascending: false })
-      
+
       if (error) throw error
       return data
     },
     initialData: initialTickets,
   })
-  
+
   return (
     <div className="space-y-4">
       {tickets?.map((ticket) => (
@@ -345,7 +345,7 @@ import { createClient } from '@/lib/supabase/client'
 export function useRealtimeTickets() {
   const queryClient = useQueryClient()
   const supabase = createClient()
-  
+
   useEffect(() => {
     const channel = supabase
       .channel('tickets-changes')
@@ -358,7 +358,7 @@ export function useRealtimeTickets() {
         }
       )
       .subscribe()
-    
+
     return () => {
       supabase.removeChannel(channel)
     }
@@ -377,13 +377,13 @@ import { createTicketSchema } from '@/lib/validators/ticket'
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient()
-    
+
     // Check auth
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
-    
+
     // Validate input
     const body = await request.json()
     const result = createTicketSchema.safeParse(body)
@@ -393,14 +393,14 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    
+
     // Get user's org
     const { data: profile } = await supabase
       .from('profiles')
       .select('organization_id')
       .eq('id', user.id)
       .single()
-    
+
     // Insert
     const { data: ticket, error } = await supabase
       .from('tickets')
@@ -411,11 +411,11 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single()
-    
+
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
-    
+
     return NextResponse.json({ data: ticket }, { status: 201 })
   } catch (err) {
     return NextResponse.json(
@@ -480,7 +480,7 @@ export function TicketCard({ ticket, onClick }: TicketCardProps) {
           {ticket.priority}
         </Badge>
       </div>
-      
+
       {ticket.queue_position && (
         <p className="text-xs text-muted-foreground mt-2">
           Queue position: #{ticket.queue_position}
@@ -489,6 +489,96 @@ export function TicketCard({ ticket, onClick }: TicketCardProps) {
     </Card>
   )
 }
+```
+
+### Next.js Middleware for Auth
+
+```typescript
+// middleware.ts
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value)
+          })
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) => {
+            supabaseResponse.cookies.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Redirect to login if not authenticated and accessing protected route
+  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+  }
+
+  return supabaseResponse
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+}
+```
+
+### RLS Policy Pattern
+
+```sql
+-- supabase/migrations/20260120000001_tickets_rls.sql
+
+-- Enable RLS
+ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
+
+-- Users can view tickets in their organization
+CREATE POLICY "Users can view org tickets"
+  ON tickets FOR SELECT
+  USING (
+    organization_id IN (
+      SELECT organization_id FROM profiles
+      WHERE id = auth.uid()
+    )
+  );
+
+-- Users can create tickets in their organization
+CREATE POLICY "Users can create org tickets"
+  ON tickets FOR INSERT
+  WITH CHECK (
+    organization_id IN (
+      SELECT organization_id FROM profiles
+      WHERE id = auth.uid()
+    )
+  );
+
+-- Partners can view their clients' tickets
+CREATE POLICY "Partners can view client tickets"
+  ON tickets FOR SELECT
+  USING (
+    organization_id IN (
+      SELECT id FROM organizations
+      WHERE parent_org_id IN (
+        SELECT organization_id FROM profiles
+        WHERE id = auth.uid()
+      )
+    )
+  );
 ```
 
 ## Environment Variables
@@ -517,14 +607,14 @@ NEXT_PUBLIC_APP_URL=https://app.ktportal.app
 
 Use these slash commands when working with Claude on this project:
 
-- `/plan` — Create implementation plan for a feature
-- `/component` — Create a React component following project patterns
-- `/api-route` — Create a Next.js API route
-- `/migration` — Create a Supabase migration
-- `/rls-policy` — Create RLS policies for a table
-- `/hook` — Create a custom React hook
-- `/validate` — Create a Zod validation schema
-- `/test` — Create tests for a component or function
+- `/plan` - Create implementation plan for a feature
+- `/component` - Create a React component following project patterns
+- `/api-route` - Create a Next.js API route
+- `/migration` - Create a Supabase migration
+- `/rls-policy` - Create RLS policies for a table
+- `/hook` - Create a custom React hook
+- `/validate` - Create a Zod validation schema
+- `/test` - Create tests for a component or function
 
 ## Git Workflow
 
@@ -548,32 +638,30 @@ refactor(auth): extract to custom hook
 - Type check must pass
 - At least one review required
 
-## Supabase CLI Commands
+## CLI Commands
 
 ```bash
-# Start local Supabase
-supabase start
+# Development
+npm run dev                        # Start Next.js dev server
+npm run build                      # Build for production
+npm run start                      # Start production server
+npm run lint                       # Run ESLint
+npm run type-check                 # Run TypeScript check
 
-# Stop local Supabase
-supabase stop
+# Testing
+npm test                           # Run Vitest
+npm run test:e2e                   # Run Playwright E2E tests
+npm run test:coverage              # Run tests with coverage
 
-# Generate TypeScript types
-supabase gen types typescript --local > src/types/database.ts
-
-# Create new migration
-supabase migration new my_migration_name
-
-# Push migrations to remote
-supabase db push
-
-# Pull remote schema changes
-supabase db pull
-
-# Deploy Edge Functions
-supabase functions deploy function-name
-
-# View local logs
-supabase logs
+# Supabase CLI
+supabase start                     # Start local Supabase
+supabase stop                      # Stop local Supabase
+supabase gen types typescript --local > src/types/database.ts  # Generate types
+supabase migration new my_migration_name  # Create new migration
+supabase db push                   # Push migrations to remote
+supabase db pull                   # Pull remote schema changes
+supabase functions deploy fn-name  # Deploy Edge Function
+supabase logs                      # View local logs
 ```
 
 ## Common Pitfalls
@@ -657,7 +745,11 @@ export const runtime = 'edge'
 export const runtime = 'nodejs'
 ```
 
+### Environment Variables in Vercel
+- Add all env vars in Vercel Dashboard > Settings > Environment Variables
+- Use different values for Preview, Development, and Production
+
 ---
 
-*CLAUDE.md for KT-Portal — Vercel + Supabase Stack*  
-*Last updated: January 20, 2026*
+*CLAUDE.md for KT-Portal - Vercel + Supabase Stack*
+*Last updated: January 2026*

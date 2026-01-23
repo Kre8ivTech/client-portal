@@ -43,9 +43,9 @@ You are Claude Code working on KT-Portal, a multi-tenant SaaS client portal for 
 ### Client Types
 | Client | Usage | File |
 |--------|-------|------|
-| Browser Client | Client Components | `lib/supabase/client.ts` |
-| Server Client | Server Components, API Routes | `lib/supabase/server.ts` |
-| Admin Client | Bypass RLS (server only) | `lib/supabase/admin.ts` |
+| Browser Client | Client Components | `src/lib/supabase/client.ts` |
+| Server Client | Server Components, API Routes | `src/lib/supabase/server.ts` |
+| Admin Client | Bypass RLS (server only) | `src/lib/supabase/admin.ts` |
 
 ### Key Commands
 ```bash

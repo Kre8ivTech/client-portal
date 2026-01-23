@@ -182,7 +182,16 @@ CREATE POLICY "Users can view own profile"
 
 CREATE POLICY "Users can update own profile"
   ON profiles FOR UPDATE
-  USING (id = auth.uid());
+  USING (id = auth.uid())
+  WITH CHECK (
+    id = auth.uid()
+    AND organization_id = (
+      SELECT organization_id FROM profiles WHERE id = auth.uid()
+    )
+    AND role = (
+      SELECT role FROM profiles WHERE id = auth.uid()
+    )
+  );
 
 -- Trigger to create profile on signup
 CREATE OR REPLACE FUNCTION handle_new_user()

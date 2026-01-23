@@ -1,76 +1,217 @@
-# Session: Auth Feature Implementation
+# Session: JWT Authentication with Multi-Tenant Support
 **Date:** 2026-01-20
 **Started:** 14:30
 **Last Updated:** 17:45
+**Branch:** feature/KT-101-jwt-auth
 
 ---
 
 ## Current State
 
-Working on JWT authentication flow for the API. Main goal is replacing session-based auth with stateless tokens.
+Implementing JWT authentication flow for KT-Portal API with multi-tenant context. Supporting email/password login, magic links, and refresh token rotation.
 
 ### Completed
-- [x] Set up JWT signing with RS256
-- [x] Created `/auth/login` endpoint
-- [x] Added refresh token rotation
-- [x] Fixed token expiry bug (was using seconds, needed milliseconds)
+- [x] Set up JWT signing with RS256 (asymmetric for distributed services)
+- [x] Created `/api/v1/auth/login` endpoint
+- [x] Created `/api/v1/auth/magic-link` endpoint
+- [x] Added refresh token rotation with Redis storage
+- [x] Fixed token expiry bug (was using seconds, needed timedelta)
+- [x] Added tenant context to JWT claims
 
 ### In Progress
-- [ ] Add rate limiting to auth endpoints
+- [ ] Add rate limiting to auth endpoints (10 req/min for login)
 - [ ] Implement token blacklist for logout
+- [ ] Add 2FA support (TOTP)
 
 ### Blockers Encountered
-1. **jsonwebtoken version mismatch** - v9.x changed the `verify()` signature, had to update error handling
+1. **python-jose vs PyJWT** - Switched to python-jose for RS256 support, better async compatibility
 2. **Redis TTL for refresh tokens** - Was setting TTL in seconds but passing milliseconds
+3. **Tenant context in JWT** - Need to include org_id in claims for RLS middleware
 
 ### Key Decisions Made
 - Using RS256 over HS256 for better security with distributed services
 - Storing refresh tokens in Redis with 7-day TTL
 - Access tokens expire in 15 minutes
+- Including `org_id` and `role` in JWT claims for tenant isolation
 
-### Code Locations Modified
-- `src/middleware/auth.js` - JWT verification middleware
-- `src/routes/auth.js` - Login/logout/refresh endpoints
-- `src/services/token.service.js` - Token generation and validation
+### JWT Claims Structure
+```python
+# backend/app/core/security.py
+from datetime import datetime, timedelta
+from jose import jwt
+
+def create_access_token(
+    user_id: str,
+    organization_id: str,
+    role: str,
+    expires_delta: timedelta = None
+) -> str:
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+
+    to_encode = {
+        "sub": user_id,
+        "org": organization_id,
+        "role": role,
+        "exp": expire,
+        "type": "access"
+    }
+    return jwt.encode(to_encode, PRIVATE_KEY, algorithm="RS256")
+```
+
+### Auth Middleware with Tenant Context
+```python
+# backend/app/api/deps.py
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer
+from jose import jwt, JWTError
+from sqlalchemy.ext.asyncio import AsyncSession
+
+security = HTTPBearer()
+
+async def get_current_user(
+    token: str = Depends(security),
+    db: AsyncSession = Depends(get_db)
+) -> User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    try:
+        payload = jwt.decode(token.credentials, PUBLIC_KEY, algorithms=["RS256"])
+        user_id: str = payload.get("sub")
+        org_id: str = payload.get("org")
+
+        if user_id is None or org_id is None:
+            raise credentials_exception
+
+        # Set tenant context for RLS
+        await db.execute(f"SET app.current_org_id = '{org_id}'")
+
+    except JWTError:
+        raise credentials_exception
+
+    user = await user_service.get_by_id(db, user_id)
+    if user is None:
+        raise credentials_exception
+
+    return user
+```
+
+### Refresh Token Rotation
+```python
+# backend/app/services/auth.py
+import secrets
+from app.core.redis import redis_client
+
+async def create_refresh_token(user_id: str, org_id: str) -> str:
+    token = secrets.token_urlsafe(32)
+    key = f"refresh:{token}"
+
+    # Store with 7-day TTL
+    await redis_client.setex(
+        key,
+        timedelta(days=7),
+        f"{user_id}:{org_id}"
+    )
+
+    return token
+
+async def rotate_refresh_token(old_token: str) -> tuple[str, str]:
+    key = f"refresh:{old_token}"
+    data = await redis_client.get(key)
+
+    if not data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
+
+    # Delete old token (rotation)
+    await redis_client.delete(key)
+
+    user_id, org_id = data.decode().split(":")
+    new_refresh = await create_refresh_token(user_id, org_id)
+    new_access = create_access_token(user_id, org_id)
+
+    return new_access, new_refresh
+```
+
+### Magic Link Implementation
+```python
+# backend/app/api/v1/auth.py
+from app.tasks.email import send_magic_link_email
+
+@router.post("/magic-link")
+async def request_magic_link(
+    email: str,
+    db: AsyncSession = Depends(get_db)
+):
+    user = await user_service.get_by_email(db, email)
+    if not user:
+        # Don't reveal if user exists
+        return {"message": "If an account exists, a magic link has been sent"}
+
+    token = secrets.token_urlsafe(32)
+    await redis_client.setex(
+        f"magic:{token}",
+        timedelta(minutes=15),
+        f"{user.id}:{user.organization_id}"
+    )
+
+    # Send email via Celery task
+    send_magic_link_email.delay(email, token)
+
+    return {"message": "If an account exists, a magic link has been sent"}
+```
 
 ### Notes for Next Session
-- Need to add CSRF protection for cookie-based token storage
-- Consider adding fingerprinting for refresh token binding
+- Add CSRF protection for cookie-based token storage in browser
+- Consider fingerprinting for refresh token binding (device ID)
 - Review rate limit values with team
+- Add login audit logging for security compliance
+- Implement password reset flow
 
 ### Context to Load
 ```
-src/middleware/
-src/routes/auth.js
-src/services/token.service.js
+backend/app/core/security.py
+backend/app/api/v1/auth.py
+backend/app/api/deps.py
+backend/app/services/auth.py
 ```
 
 ---
 
 ## Session Log
 
-**14:30** - Started session, goal is JWT implementation
+**14:30** - Started session, goal is JWT implementation with multi-tenant support
 
-**14:45** - Set up basic JWT signing. Using RS256 with key pair stored in env vars.
+**14:45** - Set up basic JWT signing with RS256. Storing key pair in environment variables.
 
-**15:20** - Login endpoint working. Discovered jsonwebtoken v9 breaking change - `verify()` now throws different error types. Updated catch block:
-```javascript
-// Old (v8)
-if (err.name === 'TokenExpiredError') { ... }
+**15:20** - Login endpoint working. Discovered need to include `org_id` in claims for RLS middleware to set tenant context.
 
-// New (v9)
-if (err instanceof jwt.TokenExpiredError) { ... }
+**15:45** - Magic link flow implemented. Using Celery for async email sending via SendGrid.
+
+**16:00** - Refresh token rotation working but tokens expiring immediately. Bug: was using `datetime.utcnow() + 900` instead of `datetime.utcnow() + timedelta(minutes=15)`. Fixed:
+```python
+# Wrong
+expire = datetime.utcnow() + 900  # Adding int to datetime!
+
+# Correct
+expire = datetime.utcnow() + timedelta(minutes=15)
 ```
 
-**16:00** - Refresh token rotation working but tokens expiring immediately. Bug: was passing `Date.now()` (milliseconds) to `expiresIn` which expects seconds. Fixed:
-```javascript
-// Wrong
-expiresIn: Date.now() + 900000
+**16:30** - Added tenant context setting in auth dependency. Now RLS policies work correctly with JWT auth.
 
-// Correct
-expiresIn: '15m'
-```
+**17:30** - Auth flow complete. Login -> access token -> refresh -> new tokens. Ready for rate limiting next session.
 
-**17:30** - Auth flow complete. Login -> access token -> refresh -> new tokens. Ready for rate limiting tomorrow.
+**17:45** - Saving session state. All tests passing: `pytest backend/tests/test_auth.py -v`
 
-**17:45** - Saving session state.
+### Related KT-Portal Considerations
+- Partner users need both their org_id AND client org_ids in claims
+- Super Admin role bypasses tenant RLS (use with caution)
+- Magic links must work across custom domains (tenant subdomains)

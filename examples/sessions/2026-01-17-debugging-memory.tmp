@@ -1,54 +1,91 @@
-# Session: Memory Leak Investigation
+# Session: WebSocket Memory Leak in Live Chat
 **Date:** 2026-01-17
 **Started:** 09:00
 **Last Updated:** 12:00
+**Branch:** fix/KT-089-chat-memory-leak
 
 ---
 
 ## Current State
 
-Investigating memory leak in production. Heap growing unbounded over 24h period.
+Investigating memory leak in production. Heap growing unbounded over 24h period in the chat service.
 
 ### Completed
-- [x] Set up heap snapshots in staging
-- [x] Identified leak source: event listeners not being cleaned up
-- [x] Fixed leak in WebSocket handler
+- [x] Set up heap profiling in staging environment
+- [x] Identified leak source: WebSocket event listeners not being cleaned up
+- [x] Fixed leak in FastAPI WebSocket handler
 - [x] Verified fix with 4h soak test
 
 ### Root Cause
-WebSocket `onMessage` handlers were being added on reconnect but not removed on disconnect. After ~1000 reconnects, memory grew from 200MB to 2GB.
+WebSocket connection manager was adding listeners on reconnect but not removing them on disconnect. After ~1000 chat session reconnects, memory grew from 200MB to 2GB.
 
 ### The Fix
-```javascript
-// Before (leaking)
-socket.on('connect', () => {
-  socket.on('message', handleMessage)
-})
+```python
+# backend/app/core/websocket.py
 
-// After (fixed)
-socket.on('connect', () => {
-  socket.off('message', handleMessage) // Remove old listener first
-  socket.on('message', handleMessage)
-})
+# Before (leaking)
+class ConnectionManager:
+    async def connect(self, websocket: WebSocket, user_id: str):
+        await websocket.accept()
+        self.active_connections[user_id] = websocket
+        # Missing cleanup for old connection!
 
-// Even better - use once or cleanup on disconnect
-socket.on('disconnect', () => {
-  socket.removeAllListeners('message')
-})
+# After (fixed)
+class ConnectionManager:
+    async def connect(self, websocket: WebSocket, user_id: str):
+        # Clean up old connection first
+        if user_id in self.active_connections:
+            old_ws = self.active_connections[user_id]
+            try:
+                await old_ws.close()
+            except Exception:
+                pass
+            await self.disconnect(user_id)
+
+        await websocket.accept()
+        self.active_connections[user_id] = websocket
+
+    async def disconnect(self, user_id: str):
+        if user_id in self.active_connections:
+            del self.active_connections[user_id]
+        # Also clean up from Redis pub/sub
+        await self.redis.unsubscribe(f"user:{user_id}")
 ```
 
 ### Debugging Technique Worth Saving
-1. Take heap snapshot at T=0
-2. Force garbage collection: `global.gc()`
-3. Run suspected operation N times
-4. Take heap snapshot at T=1
-5. Compare snapshots - look for objects with count = N
+1. Use `tracemalloc` to track memory allocations
+2. Take snapshot at T=0
+3. Force garbage collection: `gc.collect()`
+4. Run suspected operation N times (simulate chat reconnects)
+5. Take snapshot at T=1
+6. Compare snapshots - look for objects with count = N
+
+```python
+import tracemalloc
+import gc
+
+tracemalloc.start()
+# ... run operations ...
+gc.collect()
+snapshot = tracemalloc.take_snapshot()
+top_stats = snapshot.statistics('lineno')
+for stat in top_stats[:10]:
+    print(stat)
+```
 
 ### Notes for Next Session
-- Add memory monitoring alert at 1GB threshold
-- Document this debugging pattern for team
+- Add memory monitoring alert at 1GB threshold via Prometheus
+- Document this debugging pattern in docs/scratchpad.md
+- Consider connection pooling for Redis pub/sub subscriptions
 
 ### Context to Load
 ```
-src/services/websocket.js
+backend/app/core/websocket.py
+backend/app/api/v1/chat.py
+backend/app/services/chat.py
 ```
+
+### Related KT-Portal Modules
+- Live Chat (Phase 2 feature)
+- Real-time notifications
+- Ticket queue position updates

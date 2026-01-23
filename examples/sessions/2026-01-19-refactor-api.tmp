@@ -1,43 +1,152 @@
-# Session: API Refactor - Error Handling
+# Session: API Refactor - Standardized Error Handling
 **Date:** 2026-01-19
 **Started:** 10:00
 **Last Updated:** 13:30
+**Branch:** refactor/standardize-api-errors
 
 ---
 
 ## Current State
 
-Standardizing error handling across all API endpoints. Moving from ad-hoc try/catch to centralized error middleware.
+Standardizing error handling across all KT-Portal API endpoints. Moving from ad-hoc exception handling to centralized error middleware with consistent response format.
 
 ### Completed
-- [x] Created AppError class with status codes
-- [x] Built global error handler middleware
-- [x] Migrated `/users` routes to new pattern
-- [x] Migrated `/products` routes
+- [x] Created custom exception classes in `backend/app/core/exceptions.py`
+- [x] Built global exception handler middleware
+- [x] Migrated `/api/v1/tickets` routes to new pattern
+- [x] Migrated `/api/v1/invoices` routes
+- [x] Updated OpenAPI schema with error response models
 
 ### Key Findings
 - 47 endpoints with inconsistent error responses
-- Some returning `{ error: message }`, others `{ message: message }`
-- No consistent HTTP status codes
+- Some returning `{ "error": message }`, others `{ "detail": message }`
+- No consistent HTTP status codes for validation errors
+- RLS policy errors not being caught properly
 
-### Error Response Standard
-```javascript
-{
-  success: false,
-  error: {
-    code: 'VALIDATION_ERROR',
-    message: 'Email is required',
-    field: 'email'  // optional, for validation errors
-  }
-}
+### Error Response Standard (KT-Portal)
+```python
+# backend/app/schemas/response.py
+from pydantic import BaseModel
+from typing import Optional, Any
+
+class ErrorDetail(BaseModel):
+    code: str
+    message: str
+    field: Optional[str] = None
+
+class ErrorResponse(BaseModel):
+    success: bool = False
+    error: ErrorDetail
+
+class SuccessResponse(BaseModel):
+    success: bool = True
+    data: Any
+    meta: Optional[dict] = None
+```
+
+### Exception Classes
+```python
+# backend/app/core/exceptions.py
+from fastapi import HTTPException, status
+
+class AppException(HTTPException):
+    def __init__(
+        self,
+        status_code: int,
+        code: str,
+        message: str,
+        field: str = None
+    ):
+        self.code = code
+        self.field = field
+        super().__init__(status_code=status_code, detail=message)
+
+class ValidationError(AppException):
+    def __init__(self, message: str, field: str = None):
+        super().__init__(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            code="VALIDATION_ERROR",
+            message=message,
+            field=field
+        )
+
+class NotFoundError(AppException):
+    def __init__(self, resource: str, id: str = None):
+        message = f"{resource} not found" if not id else f"{resource} with id {id} not found"
+        super().__init__(
+            status_code=status.HTTP_404_NOT_FOUND,
+            code="NOT_FOUND",
+            message=message
+        )
+
+class TenantAccessError(AppException):
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            code="TENANT_ACCESS_DENIED",
+            message="Access to this resource is not permitted for your organization"
+        )
+```
+
+### Exception Handler Middleware
+```python
+# backend/app/core/middleware.py
+from fastapi import Request
+from fastapi.responses import JSONResponse
+from app.core.exceptions import AppException
+
+async def exception_handler(request: Request, exc: AppException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "error": {
+                "code": exc.code,
+                "message": exc.detail,
+                "field": exc.field
+            }
+        }
+    )
+```
+
+### Usage in Endpoints
+```python
+# backend/app/api/v1/tickets.py
+from app.core.exceptions import NotFoundError, TenantAccessError
+
+@router.get("/{ticket_id}")
+async def get_ticket(
+    ticket_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    ticket = await ticket_service.get_by_id(db, ticket_id)
+
+    if not ticket:
+        raise NotFoundError("Ticket", ticket_id)
+
+    # RLS should handle this, but explicit check for clarity
+    if ticket.organization_id != current_user.organization_id:
+        raise TenantAccessError()
+
+    return {"success": True, "data": ticket}
 ```
 
 ### Notes for Next Session
-- Migrate remaining routes: `/orders`, `/payments`, `/admin`
-- Add error logging to monitoring service
+- Migrate remaining routes: `/organizations`, `/contracts`, `/chat`
+- Add error logging to Sentry with tenant context
+- Create error code documentation for API consumers
+- Consider adding request ID to error responses for debugging
 
 ### Context to Load
 ```
-src/middleware/errorHandler.js
-src/utils/AppError.js
+backend/app/core/exceptions.py
+backend/app/core/middleware.py
+backend/app/schemas/response.py
+backend/app/api/v1/tickets.py
 ```
+
+### Related KT-Portal Considerations
+- Multi-tenant errors need special handling (don't leak tenant info)
+- RLS policy violations should return 404, not 403 (security through obscurity)
+- Rate limit errors should include retry-after header

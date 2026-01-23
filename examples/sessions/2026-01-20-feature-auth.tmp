@@ -1,217 +1,300 @@
-# Session: JWT Authentication with Multi-Tenant Support
+# Session: Supabase Auth with Multi-Tenant Support
 **Date:** 2026-01-20
 **Started:** 14:30
 **Last Updated:** 17:45
-**Branch:** feature/KT-101-jwt-auth
+**Branch:** feature/KT-101-supabase-auth
 
 ---
 
 ## Current State
 
-Implementing JWT authentication flow for KT-Portal API with multi-tenant context. Supporting email/password login, magic links, and refresh token rotation.
+Implementing authentication flow for KT-Portal using Supabase Auth. Supporting email/password, magic links, and OAuth with multi-tenant context.
 
 ### Completed
-- [x] Set up JWT signing with RS256 (asymmetric for distributed services)
-- [x] Created `/api/v1/auth/login` endpoint
-- [x] Created `/api/v1/auth/magic-link` endpoint
-- [x] Added refresh token rotation with Redis storage
-- [x] Fixed token expiry bug (was using seconds, needed timedelta)
-- [x] Added tenant context to JWT claims
+- [x] Set up Supabase Auth with @supabase/ssr
+- [x] Created auth callback route for OAuth/magic links
+- [x] Implemented Next.js middleware for auth protection
+- [x] Added profile creation trigger on user signup
+- [x] Fixed cookie handling in Server Components
 
 ### In Progress
-- [ ] Add rate limiting to auth endpoints (10 req/min for login)
-- [ ] Implement token blacklist for logout
-- [ ] Add 2FA support (TOTP)
+- [ ] Add Google OAuth provider
+- [ ] Implement 2FA with TOTP
+- [ ] Add organization invite flow
 
 ### Blockers Encountered
-1. **python-jose vs PyJWT** - Switched to python-jose for RS256 support, better async compatibility
-2. **Redis TTL for refresh tokens** - Was setting TTL in seconds but passing milliseconds
-3. **Tenant context in JWT** - Need to include org_id in claims for RLS middleware
+1. **@supabase/ssr cookie handling** - Had to use the new `cookies()` API pattern for Next.js 14
+2. **Server Component auth** - `getUser()` works but `getSession()` doesn't in Server Components
+3. **Profile creation** - Needed database trigger since we can't use `onAuthStateChange` on server
 
 ### Key Decisions Made
-- Using RS256 over HS256 for better security with distributed services
-- Storing refresh tokens in Redis with 7-day TTL
-- Access tokens expire in 15 minutes
-- Including `org_id` and `role` in JWT claims for tenant isolation
+- Using `@supabase/ssr` (not `@supabase/auth-helpers-nextjs` which is deprecated)
+- Magic links as primary auth method for better UX
+- Profile record created via database trigger, not client-side
+- Organization assigned on invite or first login
 
-### JWT Claims Structure
-```python
-# backend/app/core/security.py
-from datetime import datetime, timedelta
-from jose import jwt
+### Supabase Client Setup
+```typescript
+// lib/supabase/client.ts (Browser)
+import { createBrowserClient } from '@supabase/ssr'
+import { Database } from '@/types/database'
 
-def create_access_token(
-    user_id: str,
-    organization_id: str,
-    role: str,
-    expires_delta: timedelta = None
-) -> str:
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+export function createClient() {
+  return createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
 
-    to_encode = {
-        "sub": user_id,
-        "org": organization_id,
-        "role": role,
-        "exp": expire,
-        "type": "access"
+// lib/supabase/server.ts (Server Components & API Routes)
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+import { Database } from '@/types/database'
+
+export async function createServerSupabaseClient() {
+  const cookieStore = await cookies()
+
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // Called from Server Component - ignore
+          }
+        },
+      },
     }
-    return jwt.encode(to_encode, PRIVATE_KEY, algorithm="RS256")
+  )
+}
 ```
 
-### Auth Middleware with Tenant Context
-```python
-# backend/app/api/deps.py
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer
-from jose import jwt, JWTError
-from sqlalchemy.ext.asyncio import AsyncSession
+### Next.js Middleware for Auth
+```typescript
+// middleware.ts
+import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
-security = HTTPBearer()
+export async function middleware(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({ request })
 
-async def get_current_user(
-    token: str = Depends(security),
-    db: AsyncSession = Depends(get_db)
-) -> User:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) =>
+            request.cookies.set(name, value)
+          )
+          supabaseResponse = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
 
-    try:
-        payload = jwt.decode(token.credentials, PUBLIC_KEY, algorithms=["RS256"])
-        user_id: str = payload.get("sub")
-        org_id: str = payload.get("org")
+  // IMPORTANT: Use getUser() not getSession()
+  // getSession() reads from storage which may have stale data
+  const { data: { user } } = await supabase.auth.getUser()
 
-        if user_id is None or org_id is None:
-            raise credentials_exception
+  // Redirect to login if not authenticated
+  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    url.searchParams.set('redirect', request.nextUrl.pathname)
+    return NextResponse.redirect(url)
+  }
 
-        # Set tenant context for RLS
-        await db.execute(f"SET app.current_org_id = '{org_id}'")
+  // Redirect to dashboard if already logged in
+  if (user && (request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup')) {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
 
-    except JWTError:
-        raise credentials_exception
+  return supabaseResponse
+}
 
-    user = await user_service.get_by_id(db, user_id)
-    if user is None:
-        raise credentials_exception
-
-    return user
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+}
 ```
 
-### Refresh Token Rotation
-```python
-# backend/app/services/auth.py
-import secrets
-from app.core.redis import redis_client
+### Auth Callback Route
+```typescript
+// app/auth/callback/route.ts
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { NextResponse } from 'next/server'
 
-async def create_refresh_token(user_id: str, org_id: str) -> str:
-    token = secrets.token_urlsafe(32)
-    key = f"refresh:{token}"
+export async function GET(request: Request) {
+  const { searchParams, origin } = new URL(request.url)
+  const code = searchParams.get('code')
+  const next = searchParams.get('next') ?? '/dashboard'
 
-    # Store with 7-day TTL
-    await redis_client.setex(
-        key,
-        timedelta(days=7),
-        f"{user_id}:{org_id}"
-    )
+  if (code) {
+    const supabase = await createServerSupabaseClient()
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
 
-    return token
+    if (!error) {
+      return NextResponse.redirect(`${origin}${next}`)
+    }
+  }
 
-async def rotate_refresh_token(old_token: str) -> tuple[str, str]:
-    key = f"refresh:{old_token}"
-    data = await redis_client.get(key)
-
-    if not data:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token"
-        )
-
-    # Delete old token (rotation)
-    await redis_client.delete(key)
-
-    user_id, org_id = data.decode().split(":")
-    new_refresh = await create_refresh_token(user_id, org_id)
-    new_access = create_access_token(user_id, org_id)
-
-    return new_access, new_refresh
+  // Return to login with error
+  return NextResponse.redirect(`${origin}/login?error=auth_callback_error`)
+}
 ```
 
-### Magic Link Implementation
-```python
-# backend/app/api/v1/auth.py
-from app.tasks.email import send_magic_link_email
+### Profile Creation Trigger
+```sql
+-- supabase/migrations/20260120000001_profile_trigger.sql
 
-@router.post("/magic-link")
-async def request_magic_link(
-    email: str,
-    db: AsyncSession = Depends(get_db)
-):
-    user = await user_service.get_by_email(db, email)
-    if not user:
-        # Don't reveal if user exists
-        return {"message": "If an account exists, a magic link has been sent"}
+-- Create profiles table
+CREATE TABLE profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  organization_id UUID REFERENCES organizations(id),
+  email TEXT NOT NULL,
+  name TEXT,
+  avatar_url TEXT,
+  role TEXT NOT NULL DEFAULT 'client',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-    token = secrets.token_urlsafe(32)
-    await redis_client.setex(
-        f"magic:{token}",
-        timedelta(minutes=15),
-        f"{user.id}:{user.organization_id}"
-    )
+-- Enable RLS
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
-    # Send email via Celery task
-    send_magic_link_email.delay(email, token)
+CREATE POLICY "Users can view own profile"
+  ON profiles FOR SELECT
+  USING (id = auth.uid());
 
-    return {"message": "If an account exists, a magic link has been sent"}
+CREATE POLICY "Users can update own profile"
+  ON profiles FOR UPDATE
+  USING (id = auth.uid());
+
+-- Trigger to create profile on signup
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, name, avatar_url)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'name', NEW.email),
+    NEW.raw_user_meta_data->>'avatar_url'
+  );
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+```
+
+### Login Page Component
+```typescript
+// app/(auth)/login/page.tsx
+'use client'
+
+import { useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
+  const supabase = createClient()
+
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    })
+
+    if (error) {
+      setMessage(error.message)
+    } else {
+      setMessage('Check your email for the magic link!')
+    }
+    setLoading(false)
+  }
+
+  return (
+    <form onSubmit={handleMagicLink} className="space-y-4">
+      <Input
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      <Button type="submit" disabled={loading} className="w-full">
+        {loading ? 'Sending...' : 'Send Magic Link'}
+      </Button>
+      {message && <p className="text-sm text-muted-foreground">{message}</p>}
+    </form>
+  )
+}
 ```
 
 ### Notes for Next Session
-- Add CSRF protection for cookie-based token storage in browser
-- Consider fingerprinting for refresh token binding (device ID)
-- Review rate limit values with team
-- Add login audit logging for security compliance
-- Implement password reset flow
+- Add Google OAuth configuration in Supabase dashboard
+- Implement organization invite flow with email tokens
+- Add 2FA enrollment page
+- Consider adding passkey/WebAuthn support
+- Handle custom domain auth redirects for partners
 
 ### Context to Load
 ```
-backend/app/core/security.py
-backend/app/api/v1/auth.py
-backend/app/api/deps.py
-backend/app/services/auth.py
+src/lib/supabase/client.ts
+src/lib/supabase/server.ts
+src/app/auth/callback/route.ts
+src/app/(auth)/login/page.tsx
+middleware.ts
+supabase/migrations/20260120000001_profile_trigger.sql
 ```
 
 ---
 
 ## Session Log
 
-**14:30** - Started session, goal is JWT implementation with multi-tenant support
+**14:30** - Started session, goal is Supabase Auth implementation
 
-**14:45** - Set up basic JWT signing with RS256. Storing key pair in environment variables.
+**14:45** - Set up @supabase/ssr clients. Key insight: use different clients for browser vs server.
 
-**15:20** - Login endpoint working. Discovered need to include `org_id` in claims for RLS middleware to set tenant context.
+**15:20** - Middleware working but hit issue with `getSession()`. Switched to `getUser()` which makes server request to verify token.
 
-**15:45** - Magic link flow implemented. Using Celery for async email sending via SendGrid.
+**15:45** - Auth callback route working. Magic links successfully redirect to dashboard.
 
-**16:00** - Refresh token rotation working but tokens expiring immediately. Bug: was using `datetime.utcnow() + 900` instead of `datetime.utcnow() + timedelta(minutes=15)`. Fixed:
-```python
-# Wrong
-expire = datetime.utcnow() + 900  # Adding int to datetime!
+**16:00** - Profile creation issue: can't use `onAuthStateChange` in Server Components. Solution: database trigger.
 
-# Correct
-expire = datetime.utcnow() + timedelta(minutes=15)
-```
+**16:30** - Database trigger created and tested. New users automatically get profile record.
 
-**16:30** - Added tenant context setting in auth dependency. Now RLS policies work correctly with JWT auth.
+**17:00** - Tested full flow: signup -> magic link -> callback -> profile created -> dashboard access.
 
-**17:30** - Auth flow complete. Login -> access token -> refresh -> new tokens. Ready for rate limiting next session.
-
-**17:45** - Saving session state. All tests passing: `pytest backend/tests/test_auth.py -v`
+**17:45** - Saving session state. All tests passing: `npm test -- auth`
 
 ### Related KT-Portal Considerations
-- Partner users need both their org_id AND client org_ids in claims
-- Super Admin role bypasses tenant RLS (use with caution)
-- Magic links must work across custom domains (tenant subdomains)
+- Partner custom domains need separate auth redirects configured in Supabase
+- Organization assignment happens via invite token or admin action
+- Magic links are tenant-aware (redirect to correct subdomain)

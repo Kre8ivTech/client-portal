@@ -12,11 +12,11 @@ User-level configs apply globally across all projects but this example is tailor
 You are Claude Code working on KT-Portal, a multi-tenant SaaS client portal for Kre8ivTech, LLC.
 
 **Key Principles:**
-1. **Multi-Tenancy First**: Always consider tenant isolation in every feature
+1. **Multi-Tenancy First**: Always consider tenant isolation via Supabase RLS
 2. **Mobile-First Design**: Base styles for mobile, enhance for larger screens
-3. **Type Safety**: Full type coverage in Python (type hints) and TypeScript (strict mode)
-4. **Test-Driven**: Write tests alongside implementation, 80% coverage target
-5. **Security-First**: RLS on all tables, validate all inputs, never expose secrets
+3. **Server Components First**: Use Server Components by default, Client Components when needed
+4. **Type Safety**: Full TypeScript strict mode, auto-generated Supabase types
+5. **Security-First**: RLS on all tables, validate all inputs, never expose service role key
 
 ---
 
@@ -24,31 +24,50 @@ You are Claude Code working on KT-Portal, a multi-tenant SaaS client portal for 
 
 | Layer | Technology |
 |-------|------------|
-| Backend | FastAPI (Python 3.11+) |
-| Frontend | React 18+ with TypeScript |
-| Database | PostgreSQL 15+ with RLS |
-| Cache/Queue | Redis 7+ + Celery |
-| Real-Time | FastAPI WebSockets |
+| Framework | Next.js 14+ (App Router) |
+| Hosting | Vercel (Edge Network, Serverless, Cron) |
+| Database | Supabase (PostgreSQL with RLS) |
+| Auth | Supabase Auth (Magic links, OAuth, 2FA) |
+| Storage | Supabase Storage |
+| Real-Time | Supabase Realtime |
 | Styling | Tailwind CSS + Shadcn/ui |
 | State | React Query + Zustand |
-| Storage | AWS S3 |
+| Validation | Zod |
 | Payments | Stripe |
-| Email | SendGrid / Postmark |
+| Email | Resend |
 
 ---
 
-## Modular Rules
+## Supabase Quick Reference
 
-Detailed guidelines for KT-Portal development:
+### Client Types
+| Client | Usage | File |
+|--------|-------|------|
+| Browser Client | Client Components | `lib/supabase/client.ts` |
+| Server Client | Server Components, API Routes | `lib/supabase/server.ts` |
+| Admin Client | Bypass RLS (server only) | `lib/supabase/admin.ts` |
 
-| Rule Area | Key Points |
-|-----------|------------|
-| Multi-Tenancy | RLS policies on all tables, tenant context via middleware |
-| Authentication | JWT with refresh tokens, magic link support |
-| API Design | RESTful, versioned (`/v1/`), consistent response format |
-| Database | UUIDs, TIMESTAMPTZ, JSONB for flexibility |
-| Testing | Pytest (backend), Vitest (frontend), Playwright (E2E) |
-| Security | Pydantic/Zod validation, rate limiting, audit logging |
+### Key Commands
+```bash
+supabase start                     # Start local Supabase
+supabase stop                      # Stop local Supabase
+supabase gen types typescript --local > src/types/database.ts
+supabase migration new <name>      # Create migration
+supabase db push                   # Push to remote
+```
+
+### RLS Policy Template
+```sql
+-- Enable RLS
+ALTER TABLE table_name ENABLE ROW LEVEL SECURITY;
+
+-- Select policy
+CREATE POLICY "Users can view own org data"
+  ON table_name FOR SELECT
+  USING (organization_id = (
+    SELECT organization_id FROM profiles WHERE id = auth.uid()
+  ));
+```
 
 ---
 
@@ -68,65 +87,69 @@ When implementing features, always consider these roles:
 
 ## Common Development Tasks
 
-### Creating a New API Endpoint
+### Creating a New Server Component Page
 
 ```bash
-# 1. Create schema in backend/app/schemas/{entity}.py
-# 2. Create/update model in backend/app/models/{entity}.py
-# 3. Create service in backend/app/services/{entity}.py
-# 4. Create endpoint in backend/app/api/v1/{entity}.py
-# 5. Add to router in backend/app/api/v1/router.py
-# 6. Write tests in backend/tests/test_{entity}.py
+# 1. Create page at src/app/(dashboard)/feature/page.tsx
+# 2. Fetch data with createServerSupabaseClient()
+# 3. Pass data to Client Components as props
+# 4. Create RLS policies for the table
 ```
 
-### Creating a New React Component
+### Creating a New Client Component
 
 ```bash
-# 1. Create component in frontend/src/components/{feature}/{component}.tsx
-# 2. Add types in frontend/src/types/index.ts if needed
-# 3. Create hook in frontend/src/hooks/use-{feature}.ts if needed
-# 4. Add API client in frontend/src/api/{feature}.ts if needed
-# 5. Write tests alongside component
+# 1. Create component at src/components/feature/component.tsx
+# 2. Add 'use client' directive at top
+# 3. Use createClient() for Supabase queries
+# 4. Use React Query for data fetching
+# 5. Add Zod validation if handling user input
+```
+
+### Creating a New API Route
+
+```bash
+# 1. Create route at src/app/api/feature/route.ts
+# 2. Use createServerSupabaseClient() for auth
+# 3. Validate input with Zod
+# 4. Return consistent response format
 ```
 
 ### Database Migration Workflow
 
 ```bash
-# 1. Modify models in backend/app/models/
-# 2. Generate migration
-alembic revision --autogenerate -m "description"
-# 3. Review migration in backend/migrations/versions/
-# 4. Apply migration
-alembic upgrade head
-# 5. Add RLS policy if new table
+# 1. Create migration
+supabase migration new add_feature_table
+
+# 2. Edit migration file in supabase/migrations/
+# 3. Add RLS policies in the same migration
+# 4. Test locally with: supabase db reset
+# 5. Generate types: supabase gen types typescript --local > src/types/database.ts
+# 6. Push to remote: supabase db push
 ```
 
 ---
 
 ## Code Style Preferences
 
-### Python (Backend)
+### Server Components (Default)
 
-- Async/await for all database operations
-- Type hints on all function signatures
-- Pydantic for request/response validation
-- Dependency injection for DB sessions
-- Use `HTTPException` for API errors
-- Structured logging with `structlog`
+- Fetch data directly with Supabase
+- Pass data to Client Components as props
+- No 'use client' directive needed
+- Can be async functions
 
-### TypeScript (Frontend)
+### Client Components
 
-- Functional components only
-- React Query for server state
-- Zustand sparingly for client-only state
-- Zod for runtime validation
-- Tailwind for styling (mobile-first)
-- No `any` types
+- Add `'use client'` at the top
+- Use React Query for data fetching
+- Use `createClient()` for Supabase
+- Handle loading/error states
 
 ### General
 
 - No emojis in code or documentation
-- No `print()` or `console.log()` in production
+- No `console.log()` in production
 - 200-400 lines typical, 800 max per file
 - Conventional commits: `feat:`, `fix:`, `refactor:`
 
@@ -145,39 +168,69 @@ refactor/extract-auth-hook
 ```
 feat(tickets): add queue position display
 fix(invoices): correct tax calculation
-refactor(auth): extract jwt verification
-test(tickets): add queue position tests
+refactor(auth): extract supabase client
+test(tickets): add RLS policy tests
 docs(api): update ticket endpoint docs
 ```
 
 ### PR Checklist
-- [ ] Tests pass (`pytest` and `npm test`)
-- [ ] Type checks pass
+- [ ] Tests pass (`npm test`)
+- [ ] Type checks pass (`npm run type-check`)
 - [ ] RLS policies added for new tables
+- [ ] Supabase types regenerated if schema changed
 - [ ] Mobile-first responsive design verified
 - [ ] No secrets in code
-- [ ] API documented in OpenAPI
 
 ---
 
 ## Quick Commands
 
 ```bash
-# Backend
-uvicorn app.main:app --reload --port 8000
-pytest --cov=app
-alembic upgrade head
-celery -A app.tasks worker -l info
+# Development
+npm run dev                        # Start Next.js dev server
+npm run build                      # Build for production
+npm run lint                       # Run ESLint
+npm run type-check                 # Run TypeScript check
 
-# Frontend
-npm run dev
-npm test
-npm run build
+# Testing
+npm test                           # Run Vitest
+npm run test:e2e                   # Run Playwright
 
-# Docker
-docker-compose up -d
-docker-compose logs -f api
+# Supabase
+supabase start                     # Start local Supabase
+supabase stop                      # Stop local Supabase
+supabase gen types typescript --local > src/types/database.ts
+supabase db reset                  # Reset local database
+supabase db push                   # Push migrations to remote
+
+# Vercel
+vercel                             # Deploy preview
+vercel --prod                      # Deploy production
+vercel env pull                    # Pull env vars locally
 ```
+
+---
+
+## Vercel Deployment Notes
+
+### Environment Variables
+- Add in Vercel Dashboard > Project > Settings > Environment Variables
+- Separate values for Production, Preview, Development
+- Required vars: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+
+### Cron Jobs
+Define in `vercel.json`:
+```json
+{
+  "crons": [
+    { "path": "/api/cron/reminders", "schedule": "0 9 * * *" }
+  ]
+}
+```
+
+### Edge vs Serverless
+- **Edge**: Fast, simple operations (auth checks, redirects)
+- **Serverless**: Complex logic, PDF generation, external APIs
 
 ---
 
@@ -199,12 +252,13 @@ You are successful when:
 - All tests pass (80%+ coverage)
 - No security vulnerabilities
 - RLS policies in place for all tables
+- Supabase types are up to date
 - Mobile-first responsive design
 - Code is readable and maintainable
 - User requirements from PRD are met
 
 ---
 
-**Philosophy**: Multi-tenancy first, mobile-first design, type safety everywhere, test before ship, security always.
+**Philosophy**: Multi-tenancy first, mobile-first design, Server Components by default, type safety everywhere, security always.
 
-*User-level CLAUDE.md for KT-Portal Development*
+*User-level CLAUDE.md for KT-Portal Development - Vercel + Supabase Stack*

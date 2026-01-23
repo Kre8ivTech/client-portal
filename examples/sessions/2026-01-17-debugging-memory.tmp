@@ -1,91 +1,132 @@
-# Session: WebSocket Memory Leak in Live Chat
+# Session: Supabase Realtime Subscription Memory Leak
 **Date:** 2026-01-17
 **Started:** 09:00
 **Last Updated:** 12:00
-**Branch:** fix/KT-089-chat-memory-leak
+**Branch:** fix/KT-089-realtime-memory-leak
 
 ---
 
 ## Current State
 
-Investigating memory leak in production. Heap growing unbounded over 24h period in the chat service.
+Investigating memory leak in production. Client-side memory growing unbounded when users navigate between ticket pages.
 
 ### Completed
-- [x] Set up heap profiling in staging environment
-- [x] Identified leak source: WebSocket event listeners not being cleaned up
-- [x] Fixed leak in FastAPI WebSocket handler
-- [x] Verified fix with 4h soak test
+- [x] Set up Chrome DevTools memory profiling
+- [x] Identified leak source: Supabase Realtime channels not being cleaned up
+- [x] Fixed leak in useRealtimeTickets hook
+- [x] Verified fix with navigation stress test
 
 ### Root Cause
-WebSocket connection manager was adding listeners on reconnect but not removing them on disconnect. After ~1000 chat session reconnects, memory grew from 200MB to 2GB.
+Supabase Realtime channels were being created on component mount but not properly removed on unmount. After navigating between pages ~50 times, memory grew from 50MB to 500MB due to orphaned subscriptions.
 
 ### The Fix
-```python
-# backend/app/core/websocket.py
+```typescript
+// hooks/use-realtime-tickets.ts
 
-# Before (leaking)
-class ConnectionManager:
-    async def connect(self, websocket: WebSocket, user_id: str):
-        await websocket.accept()
-        self.active_connections[user_id] = websocket
-        # Missing cleanup for old connection!
+// Before (leaking)
+'use client'
 
-# After (fixed)
-class ConnectionManager:
-    async def connect(self, websocket: WebSocket, user_id: str):
-        # Clean up old connection first
-        if user_id in self.active_connections:
-            old_ws = self.active_connections[user_id]
-            try:
-                await old_ws.close()
-            except Exception:
-                pass
-            await self.disconnect(user_id)
+import { useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
-        await websocket.accept()
-        self.active_connections[user_id] = websocket
+export function useRealtimeTickets() {
+  const supabase = createClient()
 
-    async def disconnect(self, user_id: str):
-        if user_id in self.active_connections:
-            del self.active_connections[user_id]
-        # Also clean up from Redis pub/sub
-        await self.redis.unsubscribe(f"user:{user_id}")
+  useEffect(() => {
+    const channel = supabase
+      .channel('tickets-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tickets' },
+        (payload) => console.log(payload)
+      )
+      .subscribe()
+    // Missing cleanup!
+  }, [])
+}
+
+// After (fixed)
+'use client'
+
+import { useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+
+export function useRealtimeTickets() {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('tickets-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'tickets' },
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['tickets'] })
+        }
+      )
+      .subscribe()
+
+    // Proper cleanup on unmount
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [queryClient, supabase])
+}
+```
+
+### Additional Fix: Stable Supabase Client
+```typescript
+// The supabase client was being recreated on every render
+// This caused new channels to be created even with cleanup
+
+// Before
+export function useRealtimeTickets() {
+  const supabase = createClient() // New instance every render!
+  // ...
+}
+
+// After - use useMemo or move outside component
+import { useMemo } from 'react'
+
+export function useRealtimeTickets() {
+  const supabase = useMemo(() => createClient(), [])
+  // ...
+}
+
+// Or better - create singleton in client.ts
+let client: SupabaseClient | null = null
+
+export function createClient() {
+  if (client) return client
+  client = createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+  return client
+}
 ```
 
 ### Debugging Technique Worth Saving
-1. Use `tracemalloc` to track memory allocations
-2. Take snapshot at T=0
-3. Force garbage collection: `gc.collect()`
-4. Run suspected operation N times (simulate chat reconnects)
-5. Take snapshot at T=1
-6. Compare snapshots - look for objects with count = N
-
-```python
-import tracemalloc
-import gc
-
-tracemalloc.start()
-# ... run operations ...
-gc.collect()
-snapshot = tracemalloc.take_snapshot()
-top_stats = snapshot.statistics('lineno')
-for stat in top_stats[:10]:
-    print(stat)
-```
+1. Open Chrome DevTools > Memory tab
+2. Take heap snapshot at T=0
+3. Navigate between pages 10+ times
+4. Take heap snapshot at T=1
+5. Compare snapshots - look for "Detached" elements
+6. Filter by "RealtimeChannel" or similar
 
 ### Notes for Next Session
-- Add memory monitoring alert at 1GB threshold via Prometheus
-- Document this debugging pattern in docs/scratchpad.md
-- Consider connection pooling for Redis pub/sub subscriptions
+- Audit all other realtime subscriptions in the codebase
+- Consider creating a custom hook factory for realtime subscriptions
+- Add ESLint rule to warn about missing cleanup in useEffect
 
 ### Context to Load
 ```
-backend/app/core/websocket.py
-backend/app/api/v1/chat.py
-backend/app/services/chat.py
+src/hooks/use-realtime-tickets.ts
+src/hooks/use-realtime-messages.ts
+src/lib/supabase/client.ts
 ```
 
 ### Related KT-Portal Modules
-- Live Chat (Phase 2 feature)
-- Real-time notifications
+- Live Chat (Supabase Realtime Presence)
 - Ticket queue position updates
+- Notification center

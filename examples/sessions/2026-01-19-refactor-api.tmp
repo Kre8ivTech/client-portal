@@ -1,152 +1,182 @@
-# Session: API Refactor - Standardized Error Handling
+# Session: RLS Policy Refactor for Multi-Tenant Isolation
 **Date:** 2026-01-19
 **Started:** 10:00
 **Last Updated:** 13:30
-**Branch:** refactor/standardize-api-errors
+**Branch:** refactor/rls-policies-standardize
 
 ---
 
 ## Current State
 
-Standardizing error handling across all KT-Portal API endpoints. Moving from ad-hoc exception handling to centralized error middleware with consistent response format.
+Standardizing RLS (Row Level Security) policies across all Supabase tables. Found inconsistencies causing data leakage between tenants in some edge cases.
 
 ### Completed
-- [x] Created custom exception classes in `backend/app/core/exceptions.py`
-- [x] Built global exception handler middleware
-- [x] Migrated `/api/v1/tickets` routes to new pattern
-- [x] Migrated `/api/v1/invoices` routes
-- [x] Updated OpenAPI schema with error response models
+- [x] Audited all existing RLS policies
+- [x] Created standardized policy patterns
+- [x] Fixed tickets table RLS (was leaking to other orgs)
+- [x] Fixed invoices table RLS
+- [x] Regenerated Supabase types
 
 ### Key Findings
-- 47 endpoints with inconsistent error responses
-- Some returning `{ "error": message }`, others `{ "detail": message }`
-- No consistent HTTP status codes for validation errors
-- RLS policy errors not being caught properly
+- 12 tables without RLS enabled
+- 5 tables with RLS enabled but no policies (blocks all access)
+- 3 tables with policies using wrong column (user_id instead of organization_id)
+- Partner -> Client visibility not properly implemented
 
-### Error Response Standard (KT-Portal)
-```python
-# backend/app/schemas/response.py
-from pydantic import BaseModel
-from typing import Optional, Any
+### The Problem
+```sql
+-- BAD: This policy allows users to see ANY ticket they created
+-- even if they moved to a different organization
+CREATE POLICY "Users can view own tickets"
+  ON tickets FOR SELECT
+  USING (created_by = auth.uid());
 
-class ErrorDetail(BaseModel):
-    code: str
-    message: str
-    field: Optional[str] = None
-
-class ErrorResponse(BaseModel):
-    success: bool = False
-    error: ErrorDetail
-
-class SuccessResponse(BaseModel):
-    success: bool = True
-    data: Any
-    meta: Optional[dict] = None
-```
-
-### Exception Classes
-```python
-# backend/app/core/exceptions.py
-from fastapi import HTTPException, status
-
-class AppException(HTTPException):
-    def __init__(
-        self,
-        status_code: int,
-        code: str,
-        message: str,
-        field: str = None
-    ):
-        self.code = code
-        self.field = field
-        super().__init__(status_code=status_code, detail=message)
-
-class ValidationError(AppException):
-    def __init__(self, message: str, field: str = None):
-        super().__init__(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            code="VALIDATION_ERROR",
-            message=message,
-            field=field
-        )
-
-class NotFoundError(AppException):
-    def __init__(self, resource: str, id: str = None):
-        message = f"{resource} not found" if not id else f"{resource} with id {id} not found"
-        super().__init__(
-            status_code=status.HTTP_404_NOT_FOUND,
-            code="NOT_FOUND",
-            message=message
-        )
-
-class TenantAccessError(AppException):
-    def __init__(self):
-        super().__init__(
-            status_code=status.HTTP_403_FORBIDDEN,
-            code="TENANT_ACCESS_DENIED",
-            message="Access to this resource is not permitted for your organization"
-        )
-```
-
-### Exception Handler Middleware
-```python
-# backend/app/core/middleware.py
-from fastapi import Request
-from fastapi.responses import JSONResponse
-from app.core.exceptions import AppException
-
-async def exception_handler(request: Request, exc: AppException):
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={
-            "success": False,
-            "error": {
-                "code": exc.code,
-                "message": exc.detail,
-                "field": exc.field
-            }
-        }
+-- GOOD: This policy checks organization membership
+CREATE POLICY "Users can view org tickets"
+  ON tickets FOR SELECT
+  USING (
+    organization_id IN (
+      SELECT organization_id FROM profiles
+      WHERE id = auth.uid()
     )
+  );
 ```
 
-### Usage in Endpoints
-```python
-# backend/app/api/v1/tickets.py
-from app.core.exceptions import NotFoundError, TenantAccessError
+### Standardized RLS Pattern
 
-@router.get("/{ticket_id}")
-async def get_ticket(
-    ticket_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    ticket = await ticket_service.get_by_id(db, ticket_id)
+```sql
+-- supabase/migrations/20260119000000_standardize_rls.sql
 
-    if not ticket:
-        raise NotFoundError("Ticket", ticket_id)
+-- ============================================
+-- STANDARD RLS POLICIES FOR MULTI-TENANT TABLES
+-- ============================================
 
-    # RLS should handle this, but explicit check for clarity
-    if ticket.organization_id != current_user.organization_id:
-        raise TenantAccessError()
+-- Helper function to get current user's organization
+CREATE OR REPLACE FUNCTION auth.user_org_id()
+RETURNS UUID AS $$
+  SELECT organization_id FROM public.profiles WHERE id = auth.uid()
+$$ LANGUAGE SQL SECURITY DEFINER;
 
-    return {"success": True, "data": ticket}
+-- Helper function to get organizations user can access (including client orgs for partners)
+CREATE OR REPLACE FUNCTION auth.accessible_org_ids()
+RETURNS SETOF UUID AS $$
+  -- User's own organization
+  SELECT organization_id FROM public.profiles WHERE id = auth.uid()
+  UNION
+  -- Client organizations (for partners)
+  SELECT id FROM public.organizations
+  WHERE parent_org_id = (SELECT organization_id FROM public.profiles WHERE id = auth.uid())
+$$ LANGUAGE SQL SECURITY DEFINER;
+
+-- ============================================
+-- TICKETS TABLE
+-- ============================================
+ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
+
+-- Drop old policies
+DROP POLICY IF EXISTS "Users can view own tickets" ON tickets;
+
+-- New standardized policies
+CREATE POLICY "Users can view accessible tickets"
+  ON tickets FOR SELECT
+  USING (organization_id IN (SELECT auth.accessible_org_ids()));
+
+CREATE POLICY "Users can create tickets in own org"
+  ON tickets FOR INSERT
+  WITH CHECK (organization_id = auth.user_org_id());
+
+CREATE POLICY "Users can update own org tickets"
+  ON tickets FOR UPDATE
+  USING (organization_id = auth.user_org_id());
+
+-- Staff can update any accessible ticket
+CREATE POLICY "Staff can update accessible tickets"
+  ON tickets FOR UPDATE
+  USING (
+    organization_id IN (SELECT auth.accessible_org_ids())
+    AND EXISTS (
+      SELECT 1 FROM profiles
+      WHERE id = auth.uid()
+      AND role IN ('super_admin', 'staff')
+    )
+  );
+
+-- ============================================
+-- INVOICES TABLE
+-- ============================================
+ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view accessible invoices"
+  ON invoices FOR SELECT
+  USING (
+    organization_id IN (SELECT auth.accessible_org_ids())
+    OR client_org_id = auth.user_org_id()
+  );
+
+CREATE POLICY "Staff can create invoices"
+  ON invoices FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE id = auth.uid()
+      AND role IN ('super_admin', 'staff', 'partner')
+    )
+  );
+```
+
+### Testing RLS Policies
+```typescript
+// tests/rls/tickets.test.ts
+import { createClient } from '@supabase/supabase-js'
+
+describe('Tickets RLS', () => {
+  it('user cannot see tickets from other organizations', async () => {
+    // Create client as user from org A
+    const userAClient = createClient(URL, ANON_KEY, {
+      global: { headers: { Authorization: `Bearer ${userAToken}` } }
+    })
+
+    // Try to fetch ticket from org B
+    const { data, error } = await userAClient
+      .from('tickets')
+      .select('*')
+      .eq('id', ticketFromOrgB.id)
+      .single()
+
+    expect(data).toBeNull()
+    // RLS should filter it out, not throw an error
+  })
+
+  it('partner can see client organization tickets', async () => {
+    const partnerClient = createClient(URL, ANON_KEY, {
+      global: { headers: { Authorization: `Bearer ${partnerToken}` } }
+    })
+
+    const { data } = await partnerClient
+      .from('tickets')
+      .select('*')
+      .eq('organization_id', clientOrgId)
+
+    expect(data).not.toBeNull()
+    expect(data.length).toBeGreaterThan(0)
+  })
+})
 ```
 
 ### Notes for Next Session
-- Migrate remaining routes: `/organizations`, `/contracts`, `/chat`
-- Add error logging to Sentry with tenant context
-- Create error code documentation for API consumers
-- Consider adding request ID to error responses for debugging
+- Apply same pattern to remaining tables: contracts, messages, files
+- Add RLS for the new chat_sessions table
+- Create migration to backfill any orphaned records
+- Add CI check to ensure all tables have RLS enabled
 
 ### Context to Load
 ```
-backend/app/core/exceptions.py
-backend/app/core/middleware.py
-backend/app/schemas/response.py
-backend/app/api/v1/tickets.py
+supabase/migrations/20260119000000_standardize_rls.sql
+src/lib/supabase/server.ts
+tests/rls/
 ```
 
 ### Related KT-Portal Considerations
-- Multi-tenant errors need special handling (don't leak tenant info)
-- RLS policy violations should return 404, not 403 (security through obscurity)
-- Rate limit errors should include retry-after header
+- Super Admin should bypass RLS (use service role key)
+- Partner Staff role needs limited access within partner org
+- Audit log should track cross-tenant access attempts

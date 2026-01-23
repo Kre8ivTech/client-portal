@@ -29,11 +29,22 @@ KT-Portal is a multi-tenant SaaS client portal for Kre8ivTech, LLC. It serves wh
 
 ## Project Structure
 
+This repository serves as a template and configuration for the KT-Portal application. The complete application structure includes:
+
 ```
 kt-portal/
 ├── CLAUDE.md              # Project-level AI assistant config
+├── CONTRIBUTING.md        # Contribution guidelines
+├── README.md              # This file
 ├── statusline.json        # Status line configuration
-├── docs/
+├── package.json           # Node.js dependencies
+├── next.config.js         # Next.js configuration
+├── tailwind.config.js     # Tailwind CSS configuration
+├── tsconfig.json          # TypeScript configuration
+├── vercel.json            # Vercel deployment configuration
+├── middleware.ts          # Next.js middleware for auth
+│
+├── docs/                  # Documentation
 │   ├── prd.md             # Product Requirements Document
 │   ├── tech.md            # Technical Specification
 │   ├── changelog.md       # Version history
@@ -41,6 +52,45 @@ kt-portal/
 │   ├── scratchpad.md      # Working notes
 │   ├── user-CLAUDE.md     # User-level config template
 │   └── sessions/          # Example session notes
+│
+├── src/                   # Application source code
+│   ├── app/               # Next.js App Router
+│   │   ├── (auth)/        # Auth route group
+│   │   ├── (dashboard)/   # Protected dashboard routes
+│   │   ├── api/           # API routes & webhooks
+│   │   ├── layout.tsx     # Root layout
+│   │   ├── page.tsx       # Landing page
+│   │   └── globals.css    # Global styles
+│   │
+│   ├── components/        # React components
+│   │   ├── ui/            # Shadcn/ui components
+│   │   ├── layout/        # Layout components
+│   │   ├── tickets/       # Ticket feature components
+│   │   └── ...            # Other feature components
+│   │
+│   ├── hooks/             # Custom React hooks
+│   ├── lib/               # Utilities & helpers
+│   │   ├── supabase/      # Supabase client configs
+│   │   └── validators/    # Zod validation schemas
+│   │
+│   ├── types/             # TypeScript types
+│   │   └── database.ts    # Auto-generated from Supabase
+│   │
+│   └── stores/            # Zustand state stores
+│
+├── supabase/              # Supabase configuration
+│   ├── config.toml        # Supabase config
+│   ├── migrations/        # Database migrations
+│   └── functions/         # Supabase Edge Functions
+│
+├── public/                # Static assets
+│   ├── manifest.json      # PWA manifest
+│   └── icons/             # App icons
+│
+├── tests/                 # Test suites
+│   ├── e2e/               # End-to-end tests (Playwright)
+│   └── unit/              # Unit tests (Vitest)
+│
 ├── agents/                # AI Agent definitions
 ├── commands/              # Custom commands
 ├── contexts/              # Context files
@@ -50,6 +100,8 @@ kt-portal/
 ├── rules/                 # Rule files
 └── skills/                # Skill definitions
 ```
+
+> **Note:** The `src/`, `supabase/`, `public/`, and `tests/` directories will be created during application setup. This repository provides the configuration and documentation framework.
 
 ---
 

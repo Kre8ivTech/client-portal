@@ -1,87 +1,173 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { AlertCircle, CheckCircle2 } from 'lucide-react'
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight,
+  Loader2,
+  Mail,
+} from "lucide-react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const supabase = createClient()
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const supabase = createClient();
 
   const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setMessage(null)
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
-    if (error) {
-      setMessage({ type: 'error', text: error.message })
-    } else {
-      setMessage({ type: 'success', text: 'Check your email for the magic link!' })
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+      } else {
+        setMessage({
+          type: "success",
+          text: "We've sent a magic link to your inbox. Please click it to sign in.",
+        });
+      }
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: "An unexpected error occurred. Please try again.",
+      });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false)
-  }
+  };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-slate-50">
-      <Card className="w-full max-w-md shadow-lg border-slate-200">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold tracking-tight text-center">KT-Portal Login</CardTitle>
-          <CardDescription className="text-center text-slate-500">
-            Enter your email to receive a magic link
+    <div className="flex min-h-screen items-center justify-center p-4 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black overflow-hidden relative">
+      {/* Decorative Blur Elements */}
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-blue-500/10 blur-[100px] rounded-full" />
+
+      <Card className="w-full max-w-md shadow-2xl border-slate-800 bg-slate-900/50 backdrop-blur-xl relative z-10 transition-all duration-500 hover:shadow-primary/5">
+        <CardHeader className="space-y-2 pb-8">
+          <div className="flex justify-center mb-4">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20 rotate-3">
+              <Mail className="text-white h-7 w-7" />
+            </div>
+          </div>
+          <CardTitle className="text-3xl font-bold tracking-tight text-center text-white">
+            Welcome Back
+          </CardTitle>
+          <CardDescription className="text-center text-slate-400 text-base">
+            Secure access to your client portal
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleMagicLink} className="space-y-4">
+          <form onSubmit={handleMagicLink} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="w-full"
-                disabled={loading}
-              />
+              <Label
+                htmlFor="email"
+                className="text-slate-300 font-medium ml-1"
+              >
+                Email Address
+              </Label>
+              <div className="relative group">
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full bg-slate-950/50 border-slate-800 text-white h-12 px-4 focus:ring-primary focus:border-primary transition-all pr-12"
+                  disabled={loading}
+                  autoComplete="email"
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">
+                  <Mail size={18} />
+                </div>
+              </div>
             </div>
-            <Button type="submit" className="w-full font-medium" disabled={loading}>
-              {loading ? 'Sending Link...' : 'Send Magic Link'}
+
+            <Button
+              type="submit"
+              className="w-full h-12 font-semibold text-base bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/10 transition-all hover:translate-y-[-1px] active:translate-y-0"
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Preparing link...</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span>Sign In with Magic Link</span>
+                  <ArrowRight className="h-4 w-4" />
+                </div>
+              )}
             </Button>
           </form>
-          
+
           {message && (
-            <div className={`mt-4 p-3 rounded-md flex items-start gap-3 text-sm ${
-              message.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-            }`}>
-              {message.type === 'success' ? (
-                <CheckCircle2 className="h-5 w-5 shrink-0" />
-              ) : (
-                <AlertCircle className="h-5 w-5 shrink-0" />
+            <div
+              className={cn(
+                "mt-6 p-4 rounded-xl flex items-start gap-4 text-sm animate-in fade-in slide-in-from-top-4 duration-300",
+                message.type === "success"
+                  ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                  : "bg-red-500/10 text-red-400 border border-red-500/20",
               )}
-              <p>{message.text}</p>
+            >
+              {message.type === "success" ? (
+                <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+              )}
+              <p className="leading-relaxed">{message.text}</p>
             </div>
           )}
         </CardContent>
-        <CardFooter className="flex flex-col text-center space-y-4">
-          <p className="text-xs text-slate-400">
-            By signing in, you agree to our Terms of Service and Privacy Policy.
+        <CardFooter className="flex flex-col text-center space-y-6 pt-2 pb-8">
+          <div className="flex items-center justify-between w-full px-1">
+            <Link
+              href="/forgot-password"
+              className="text-sm text-slate-400 hover:text-white transition-colors underline-offset-4 hover:underline"
+            >
+              Trouble signing in?
+            </Link>
+            <span className="text-slate-700">|</span>
+            <Link
+              href="/signup"
+              className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              Request Access
+            </Link>
+          </div>
+          <p className="text-[11px] text-slate-500 uppercase tracking-widest leading-relaxed opacity-60">
+            Powered by Kre8ivTech Multi-Tenant Infrastructure
           </p>
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }

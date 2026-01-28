@@ -22,53 +22,34 @@
 
 ## 1. Technology Stack
 
-### 1.1 Backend
+### 1.1 Core Platform
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Framework** | FastAPI (Python 3.11+) | REST API, async support |
-| **Database** | PostgreSQL 15+ | Primary data store |
-| **Cache** | Redis 7+ | Sessions, caching, pub/sub |
-| **Task Queue** | Celery + Redis | Background jobs |
-| **WebSocket** | FastAPI WebSockets | Real-time communication |
-| **Search** | PostgreSQL FTS → Meilisearch | Full-text search |
+| **Framework** | [Next.js 14+](https://nextjs.org/) | App Router, React Server Components, TypeScript |
+| **Hosting** | [Vercel](https://vercel.com/) | Edge Network, Serverless Functions, Cron Jobs |
+| **Database** | [Supabase](https://supabase.com/) | PostgreSQL 15+ with Row-Level Security (RLS) |
+| **Auth** | [Supabase Auth](https://supabase.com/auth) | Magic links, OAuth, JWT, 2FA |
+| **Storage** | [Supabase Storage](https://supabase.com/storage) | File attachments, assets |
+| **Real-Time** | [Supabase Realtime](https://supabase.com/realtime) | Postgres Changes, Presence, Broadcast |
 
-### 1.2 Frontend
-
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Framework** | React 18+ with TypeScript | UI components |
-| **Styling** | Tailwind CSS 3+ | Utility-first CSS |
-| **Components** | Shadcn/ui | Pre-built components |
-| **State** | React Query + Zustand | Server & client state |
-| **Real-Time** | Socket.io Client | WebSocket connection |
-| **Forms** | React Hook Form + Zod | Form handling & validation |
-| **Rich Text** | TipTap | WYSIWYG editor |
-
-### 1.3 Infrastructure
+### 1.2 Frontend Infrastructure
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Containerization** | Docker | Application packaging |
-| **Orchestration** | Docker Compose → Kubernetes | Container management |
-| **Reverse Proxy** | Nginx / Caddy | Routing, SSL, domains |
-| **SSL** | Let's Encrypt / Caddy | Auto-certificates |
-| **CDN** | Cloudflare | Static assets, DDoS |
-| **File Storage** | AWS S3 | Attachments, documents |
-| **Email** | SendGrid / Postmark | Transactional email |
-| **Payments** | Stripe | Payment processing |
+| **Styling** | [Tailwind CSS 3+](https://tailwindcss.com/) | Utility-first CSS |
+| **Components** | [Shadcn/ui](https://ui.shadcn.com/) | Radix UI + Tailwind primitive components |
+| **Icons** | [Lucide React](https://lucide.dev/) / Font Awesome | Iconography |
+| **State** | [TanStack Query](https://tanstack.com/query) + [Zustand](https://zustand-demo.pmnd.rs/) | Server & client state management |
+| **Forms** | [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/) | Type-safe form validation |
 
-### 1.4 Development Tools
+### 1.3 External Services
 
-| Tool | Purpose |
-|------|---------|
-| **Version Control** | Git + GitHub/GitLab |
-| **API Docs** | OpenAPI 3.0 + Swagger UI |
-| **Testing** | Pytest (backend), Vitest (frontend) |
-| **E2E Testing** | Playwright |
-| **CI/CD** | GitHub Actions / GitLab CI |
-| **Monitoring** | Sentry (errors), Prometheus + Grafana (metrics) |
-| **Logging** | Structured JSON logs → Loki/ELK |
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Payments** | [Stripe](https://stripe.com/) | Subscription management and invoice payments |
+| **Email** | [Resend](https://resend.com/) | Transactional email delivery |
+| **Analytics** | [Vercel Analytics](https://vercel.com/analytics) | Privacy-friendly usage tracking |
 
 ---
 
@@ -76,101 +57,45 @@
 
 ### 2.1 High-Level Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         CLOUDFLARE                               │
-│                    (CDN, DDoS, DNS)                              │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      NGINX / CADDY                               │
-│           (Reverse Proxy, SSL, Domain Routing)                   │
-│                                                                  │
-│   *.portal.kre8ivtech.com  →  App                               │
-│   portal.partnerdomain.com →  App (tenant lookup)               │
-│   api.portal.kre8ivtech.com → API                               │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                ┌───────────────┼───────────────┐
-                ▼               ▼               ▼
-┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐
-│   REACT SPA      │ │   FASTAPI        │ │   WEBSOCKET      │
-│   (Frontend)     │ │   (REST API)     │ │   SERVER         │
-│                  │ │                  │ │                  │
-│ - Dashboards     │ │ - CRUD ops       │ │ - Chat           │
-│ - Forms          │ │ - Auth           │ │ - Notifications  │
-│ - Chat UI        │ │ - Business logic │ │ - Queue updates  │
-└──────────────────┘ └──────────────────┘ └──────────────────┘
-                                │               │
-                                ▼               ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                           REDIS                                  │
-│                                                                  │
-│   - Session storage         - Pub/Sub for WebSockets            │
-│   - API response cache      - Rate limiting                     │
-│   - Celery broker           - Presence tracking                 │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                        POSTGRESQL                                │
-│                                                                  │
-│   - Multi-tenant data (RLS)  - Full-text search                 │
-│   - Audit logs               - JSON fields for flexibility      │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                          CELERY                                  │
-│                     (Background Workers)                         │
-│                                                                  │
-│   - Email sending            - PDF generation                   │
-│   - Invoice reminders        - Storage calculations             │
-│   - Scheduled reports        - Webhook delivery                 │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    EXTERNAL SERVICES                             │
-│                                                                  │
-│   AWS S3          Stripe          SendGrid        Twilio        │
-│   (Files)         (Payments)      (Email)         (SMS/2FA)     │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    User((User)) --> Cloudflare
+    Cloudflare --> Vercel[Vercel Edge/Serverless]
+    
+    subgraph "Vercel / Next.js"
+        Vercel --> RSC[React Server Components]
+        Vercel --> API[API Routes]
+        Vercel --> Middleware[Auth Middleware]
+    end
+    
+    subgraph "Supabase (Backend as a Service)"
+        RSC --> S_DB[(PostgreSQL + RLS)]
+        API --> S_DB
+        Middleware --> S_Auth[Supabase Auth]
+        S_Realtime[Supabase Realtime] --> Client[Browser Client]
+        S_Storage[Supabase Storage] --> Client
+    end
+    
+    S_DB --> Stripe["Stripe (Payments)"]
+    API --> Resend["Resend (Email)"]
 ```
 
 ### 2.2 Multi-Tenant Architecture
 
 **Tenant Identification:**
-1. Subdomain: `partner-slug.portal.kre8ivtech.com`
-2. Custom domain: `portal.partnerdomain.com` → DNS lookup → tenant
+1. **Subdomain:** `partner-slug.portal.ktportal.app` (Handled via Vercel middleware)
+2. **Custom Domain:** `portal.partnerdomain.com` (Vercel custom domains + Supabase RLS)
 
 **Data Isolation:**
-- PostgreSQL Row-Level Security (RLS)
-- All queries filtered by `organization_id`
-- Tenant context set on each request
+- **Row-Level Security (RLS):** Mandatory on all tables. Queries automatically filtered by `auth.uid()` and organization associations.
+- **Tenant Context:** Profiles table links every user to an `organization_id`.
 
-```python
-# Middleware example
-async def tenant_middleware(request: Request, call_next):
-    tenant = await resolve_tenant(request.headers.get("host"))
-    request.state.tenant = tenant
-    response = await call_next(request)
-    return response
-```
-
-### 2.3 Request Flow
-
-```
-1. Request arrives at Cloudflare
-2. Cloudflare routes to origin (Nginx/Caddy)
-3. Nginx identifies subdomain/custom domain
-4. Request routed to FastAPI
-5. Auth middleware validates JWT
-6. Tenant middleware resolves organization
-7. RLS policy applied to database queries
-8. Response returned with proper CORS headers
-```
+### 2.3 Auth & Data Flow
+1. User requests a page.
+2. Next.js Middleware checks Supabase session.
+3. If valid, Server Component fetches data direct from Supabase via `createServerSupabaseClient`.
+4. Supabase applies RLS policies based on the JWT session.
+5. Client-side state is synchronized via TanStack Query and Realtime subscriptions.
 
 ---
 

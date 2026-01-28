@@ -58,21 +58,15 @@
 
 ### Sprint 1-2: Foundation (Weeks 1-4)
 
-#### Backend Core
+#### Backend Core (Supabase)
 
-- ⬜ FastAPI project structure
-- ⬜ Database migrations setup (Alembic)
-- ⬜ Core models (Organization, User)
-- ⬜ Authentication system
-  - ⬜ Email/password login
-  - ⬜ JWT token generation
-  - ⬜ Refresh token logic
-  - ⬜ Magic link authentication
-- ⬜ Multi-tenant middleware
-- ⬜ Row-level security policies
-- ⬜ Basic CRUD endpoints (orgs, users)
-- ⬜ API key generation and validation
-- ⬜ Rate limiting middleware
+- ✅ Supabase project initialization
+- ✅ Database schema design (Migrations)
+- ✅ Initial organizations/profiles tables
+- ✅ Authentication triggers
+- 🔲 RLS Policies verification
+- 🔲 Storage bucket configuration
+- 🔲 Edge Functions for business logic (if needed)
 
 #### Frontend Core (Next.js)
 
@@ -81,16 +75,12 @@
 - 🔲 Component library setup (Shadcn/ui)
 - ✅ Router configuration (Next.js App Router)
 - ✅ Supabase Client setup
-- ⬜ Auth middleware and hooks
-- ⬜ API Route logic (if needed)
-- ⬜ Login page
-- ⬜ Registration / invite flow
-- ⬜ Password reset flow
-- ✅ Basic layout components (Root)
-  - ⬜ Mobile navigation (bottom nav)
-  - ⬜ Desktop sidebar
-  - ⬜ Header component
-  - ⬜ Page container
+- ✅ Auth middleware and basic layout
+- 🔲 Login/Landing UI Polish
+- 🔲 Registration / invite flow
+- ✅ Basic dashboard layout
+- 🔲 Breadcrumb navigation
+- 🔲 Dashboard View Skeletons
 
 ### Sprint 3-4: Tickets (Weeks 5-8)
 

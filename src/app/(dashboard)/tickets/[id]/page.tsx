@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator"; // Need to check if I have this
-import { TicketComments } from "@/components/tickets/ticket-comments"; // Will create this next
+import { Separator } from "@/components/ui/separator";
+import { TicketComments } from "@/components/tickets/ticket-comments";
+import { TicketActions } from "@/components/tickets/ticket-actions";
 
 interface TicketDetailPageProps {
   params: {
@@ -54,6 +55,15 @@ export default async function TicketDetailPage({ params }: TicketDetailPageProps
       </div>
 
       <div className="space-y-6">
+        <Card>
+          <CardHeader>
+             <CardTitle className="text-base">Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+             <TicketActions ticketId={ticket.id} currentStatus={ticket.status} />
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Details</CardTitle>

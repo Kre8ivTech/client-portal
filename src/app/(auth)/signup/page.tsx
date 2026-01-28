@@ -1,0 +1,190 @@
+"use client";
+
+import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight,
+  Loader2,
+  UserPlus,
+} from "lucide-react";
+import Link from "next/link";
+import { cn } from "@/lib/utils";
+
+export default function SignupPage() {
+  const [email, setEmail] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+  const supabase = createClient();
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      // In a real invite flow, we might validate an invite code here.
+      // For now, we'll allow signups but they might need approval or verification.
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            name: fullName,
+            // You can add more metadata here like organization name if capturing it
+          }
+        },
+      });
+
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+      } else {
+        setMessage({
+          type: "success",
+          text: "We've sent a magic link to your inbox. Please click it to create your account.",
+        });
+      }
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: "An unexpected error occurred. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center p-4 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black overflow-hidden relative">
+      {/* Decorative Blur Elements */}
+      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-blue-500/10 blur-[100px] rounded-full" />
+
+      <Card className="w-full max-w-md shadow-2xl border-slate-800 bg-slate-900/50 backdrop-blur-xl relative z-10 transition-all duration-500 hover:shadow-primary/5">
+        <CardHeader className="space-y-2 pb-8">
+          <div className="flex justify-center mb-4">
+            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20 rotate-3">
+              <UserPlus className="text-white h-7 w-7" />
+            </div>
+          </div>
+          <CardTitle className="text-3xl font-bold tracking-tight text-center text-white">
+            Create Account
+          </CardTitle>
+          <CardDescription className="text-center text-slate-400 text-base">
+            Join the client portal to get started
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSignup} className="space-y-6">
+            <div className="space-y-2">
+              <Label
+                htmlFor="name"
+                className="text-slate-300 font-medium ml-1"
+              >
+                Full Name
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                className="w-full bg-slate-950/50 border-slate-800 text-white h-12 px-4 focus:ring-primary focus:border-primary transition-all"
+                disabled={loading}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label
+                htmlFor="email"
+                className="text-slate-300 font-medium ml-1"
+              >
+                Email Address
+              </Label>
+              <div className="relative group">
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="name@company.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full bg-slate-950/50 border-slate-800 text-white h-12 px-4 focus:ring-primary focus:border-primary transition-all"
+                  disabled={loading}
+                  autoComplete="email"
+                />
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full h-12 font-semibold text-base bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/10 transition-all hover:translate-y-[-1px] active:translate-y-0"
+              disabled={loading}
+            >
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Preparing link...</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span>Sign Up with Magic Link</span>
+                  <ArrowRight className="h-4 w-4" />
+                </div>
+              )}
+            </Button>
+          </form>
+
+          {message && (
+            <div
+              className={cn(
+                "mt-6 p-4 rounded-xl flex items-start gap-4 text-sm animate-in fade-in slide-in-from-top-4 duration-300",
+                message.type === "success"
+                  ? "bg-green-500/10 text-green-400 border border-green-500/20"
+                  : "bg-red-500/10 text-red-400 border border-red-500/20",
+              )}
+            >
+              {message.type === "success" ? (
+                <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+              )}
+              <p className="leading-relaxed">{message.text}</p>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="flex flex-col text-center space-y-6 pt-2 pb-8">
+          <div className="flex items-center justify-center w-full px-1">
+            <span className="text-slate-500 mr-2">Already have an account?</span>
+            <Link
+              href="/login"
+              className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              Sign In
+            </Link>
+          </div>
+          <p className="text-[11px] text-slate-500 uppercase tracking-widest leading-relaxed opacity-60">
+            Powered by Kre8ivTech Multi-Tenant Infrastructure
+          </p>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}

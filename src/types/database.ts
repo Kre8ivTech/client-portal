@@ -115,6 +115,120 @@ export interface Database {
           updated_at?: string;
         };
       };
+      tickets: {
+        Row: {
+          id: string;
+          organization_id: string;
+          subject: string;
+          description: string;
+          status: "new" | "open" | "in_progress" | "pending_client" | "resolved" | "closed";
+          priority: "low" | "medium" | "high" | "critical";
+          category: "technical_support" | "billing" | "general_inquiry" | "bug_report" | "feature_request";
+          ticket_number: number;
+          assigned_to: string | null;
+          created_by: string;
+          queue_position: number | null;
+          queue_calculated_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          subject: string;
+          description: string;
+          status?: "new" | "open" | "in_progress" | "pending_client" | "resolved" | "closed";
+          priority?: "low" | "medium" | "high" | "critical";
+          category?: "technical_support" | "billing" | "general_inquiry" | "bug_report" | "feature_request";
+          ticket_number?: number;
+          assigned_to?: string | null;
+          created_by: string;
+          queue_position?: number | null;
+          queue_calculated_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          subject?: string;
+          description?: string;
+          status?: "new" | "open" | "in_progress" | "pending_client" | "resolved" | "closed";
+          priority?: "low" | "medium" | "high" | "critical";
+          category?: "technical_support" | "billing" | "general_inquiry" | "bug_report" | "feature_request";
+          ticket_number?: number;
+          assigned_to?: string | null;
+          created_by?: string;
+          queue_position?: number | null;
+          queue_calculated_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      ticket_comments: {
+        Row: {
+          id: string;
+          ticket_id: string;
+          content: string;
+          is_internal: boolean;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          ticket_id: string;
+          content: string;
+          is_internal?: boolean;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          ticket_id?: string;
+          content?: string;
+          is_internal?: boolean;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      ticket_attachments: {
+        Row: {
+          id: string;
+          ticket_id: string | null;
+          comment_id: string | null;
+          file_name: string;
+          file_type: string | null;
+          file_size: number | null;
+          storage_path: string;
+          uploaded_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          ticket_id?: string | null;
+          comment_id?: string | null;
+          file_name: string;
+          file_type?: string | null;
+          file_size?: number | null;
+          storage_path: string;
+          uploaded_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          ticket_id?: string | null;
+          comment_id?: string | null;
+          file_name?: string;
+          file_type?: string | null;
+          file_size?: number | null;
+          storage_path?: string;
+          uploaded_by?: string;
+          created_at?: string;
+        };
+      };
       plans: {
         Row: {
           id: string;
@@ -269,6 +383,9 @@ export interface Database {
       coverage_type: "support" | "dev" | "both";
       dispute_status: "pending" | "under_review" | "resolved" | "rejected";
       dispute_type: "time_logged" | "invoice_amount" | "coverage" | "other";
+      ticket_status: "new" | "open" | "in_progress" | "pending_client" | "resolved" | "closed";
+      ticket_priority: "low" | "medium" | "high" | "critical";
+      ticket_category: "technical_support" | "billing" | "general_inquiry" | "bug_report" | "feature_request";
     };
   };
 }

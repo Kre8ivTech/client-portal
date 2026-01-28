@@ -7,8 +7,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Plus } from "lucide-react";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { TicketList } from "@/components/tickets/ticket-list";
+import Link from "next/link";
 
-export default function TicketsPage() {
+export default async function TicketsPage() {
+  const supabase = await createServerSupabaseClient();
+  const { data: tickets } = await supabase
+    .from('tickets')
+    .select('*')
+    .order('created_at', { ascending: false });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -20,31 +29,26 @@ export default function TicketsPage() {
             Manage support requests and track queue positions.
           </p>
         </div>
-        <Button className="gap-2">
-          <Plus size={18} />
-          Create Ticket
-        </Button>
+        <Link href="/dashboard/tickets/new">
+          <Button className="gap-2">
+            <Plus size={18} />
+            Create Ticket
+          </Button>
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <StatsCard title="Open Tickets" value="12" />
-        <StatsCard title="Avg. Response" value="2.4h" />
-        <StatsCard title="Waitlist" value="5" />
+        <StatsCard title="Open Tickets" value="0" />
+        <StatsCard title="Avg. Response" value="--" />
+        <StatsCard title="Queue Position" value="--" />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Tickets</CardTitle>
-          <CardDescription>
-            A list of your recent support queries.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[200px] flex items-center justify-center text-slate-400 border-2 border-dashed rounded-lg">
-            Ticket list component will be implemented here
-          </div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+           <h3 className="text-lg font-medium">Recent Tickets</h3>
+        </div>
+        <TicketList initialTickets={tickets || []} />
+      </div>
     </div>
   );
 }
@@ -53,7 +57,7 @@ function StatsCard({ title, value }: { title: string; value: string }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>

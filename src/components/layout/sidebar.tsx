@@ -14,11 +14,15 @@ const navItems = [
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
 ];
 
-export function DashboardSidebar() {
+interface DashboardSidebarProps {
+  className?: string;
+}
+
+export function DashboardSidebar({ className }: DashboardSidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden md:flex w-64 flex-col bg-slate-900 text-white flex-shrink-0">
+    <aside className={cn("w-64 flex-col bg-slate-900 text-white flex-shrink-0", className)}>
       <div className="p-6">
         <h2 className="text-xl font-bold tracking-tight">KT-Portal</h2>
         <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">

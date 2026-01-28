@@ -1,6 +1,12 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
 import { DashboardSidebar } from "@/components/layout/sidebar";
 
 export default async function DashboardLayout({
@@ -19,12 +25,24 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen">
-      <DashboardSidebar />
+      <DashboardSidebar className="hidden md:flex" />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col bg-slate-50 min-h-0 min-w-0">
-        <header className="h-16 border-b bg-white flex items-center justify-between px-8 shadow-sm flex-shrink-0">
-          <h1 className="font-semibold text-lg">Dashboard</h1>
+        <header className="h-16 border-b bg-white flex items-center justify-between px-4 md:px-8 shadow-sm flex-shrink-0">
+          <div className="flex items-center gap-4">
+            <Sheet>
+              <SheetTrigger asChild>
+                <button className="md:hidden p-2 -ml-2 text-slate-500 hover:bg-slate-100 rounded-md">
+                  <Menu size={24} />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-72 bg-slate-900 border-r-slate-800 text-white">
+                 <DashboardSidebar className="flex w-full h-full" />
+              </SheetContent>
+            </Sheet>
+            <h1 className="font-semibold text-lg">Dashboard</h1>
+          </div>
           <div className="flex items-center gap-4">
             <Link
               href="/dashboard/profile"

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import {
   Card,
@@ -59,10 +60,12 @@ export default async function ProfilePage() {
                 <div className="relative">
                   <div className="h-28 w-28 rounded-full bg-slate-100 border-4 border-white shadow-xl flex items-center justify-center text-3xl font-bold text-slate-300">
                     {profile?.avatar_url ? (
-                      <img
+                      <Image
                         src={profile.avatar_url}
                         alt="Avatar"
-                        className="rounded-full h-full w-full object-cover"
+                        className="rounded-full object-cover"
+                        fill
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       />
                     ) : (
                       user?.email?.charAt(0).toUpperCase()

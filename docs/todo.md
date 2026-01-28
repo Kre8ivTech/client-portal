@@ -64,7 +64,7 @@
 - ✅ Database schema design (Migrations)
 - ✅ Initial organizations/profiles tables
 - ✅ Authentication triggers
-- 🔲 RLS Policies verification
+- ✅ RLS Policies verification
 - 🔲 Storage bucket configuration
 - 🔲 Edge Functions for business logic (if needed)
 
@@ -76,9 +76,10 @@
 - ✅ Router configuration (Next.js App Router)
 - ✅ Supabase Client setup
 - ✅ Auth middleware and basic layout
-- 🔲 Login/Landing UI Polish
+- ✅ Login/Landing UI Polish
 - 🔲 Registration / invite flow
 - ✅ Basic dashboard layout
+- 🔲 Mobile navigation (Sidebar hidden on mobile)
 - 🔲 Breadcrumb navigation
 - 🔲 Dashboard View Skeletons
 
@@ -86,9 +87,9 @@
 
 #### Backend
 
-- ⬜ Ticket model and migrations
-- ⬜ Ticket CRUD endpoints
-- ⬜ Ticket comments endpoints
+- ✅ Ticket model and migrations
+- ✅ Ticket CRUD endpoints
+- ✅ Ticket comments endpoints
 - ⬜ Ticket number generation (tenant-prefixed)
 - ⬜ Queue position calculation
 - ⬜ Auto-assignment logic
@@ -98,18 +99,18 @@
 
 #### Frontend
 
-- ⬜ Ticket list view (mobile-first)
+- ✅ Ticket list view (mobile-first)
   - ⬜ Filter bar
   - ⬜ Sort options
   - ⬜ Infinite scroll
-- ⬜ Ticket detail view
+- ✅ Ticket detail view
   - ⬜ Status badge
   - ⬜ Queue position display
-  - ⬜ Comment thread
+  - ✅ Comment thread
   - ⬜ Internal notes (staff)
-- ⬜ Create ticket form
-  - ⬜ Category selection
-  - ⬜ Priority selection
+- ✅ Create ticket form
+  - ✅ Category selection
+  - ✅ Priority selection
   - ⬜ File upload
   - ⬜ Rich text description
 - ⬜ Ticket actions (close, assign, update)

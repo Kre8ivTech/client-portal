@@ -116,7 +116,7 @@ export default async function SettingsPage() {
               </div>
               <Button size="sm" variant="outline" disabled>Configure</Button>
             </div>
-          </div>
+          </CardContent>
         </Card>
       </div>
     </div>

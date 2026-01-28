@@ -20,6 +20,14 @@ Thumbs.db
 
 # Node
 node_modules/
+.npm
+package-lock.json
+
+# Next.js
+.next/
+out/
+build/
+tsconfig.tsbuildinfo
 
 # Personal configs (if any)
 personal/
@@ -27,3 +35,4 @@ private/
 
 # Session templates (not committed)
 examples/sessions/*.tmp
+docs/sessions/*.tmp

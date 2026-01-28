@@ -1,47 +1,50 @@
 # Kre8ivTech Client Portal
+
 ## Project Task List
+
 **Last Updated:** January 20, 2026
 
 ---
 
 ## Status Legend
 
-| Symbol | Meaning |
-|--------|---------|
-| ⬜ | Not started |
-| 🔲 | In progress |
-| ✅ | Completed |
-| ⏸️ | On hold |
-| ❌ | Cancelled |
+| Symbol | Meaning     |
+| ------ | ----------- |
+| ⬜     | Not started |
+| 🔲     | In progress |
+| ✅     | Completed   |
+| ⏸️     | On hold     |
+| ❌     | Cancelled   |
 
 ---
 
 ## Phase 0: Planning & Setup (Current)
 
 ### Documentation
+
 - ✅ Initial requirements gathering
 - ✅ User roles & permissions defined
 - ✅ Core modules specified
-- ✅ Technical stack decided (FastAPI + React + PostgreSQL)
-- ✅ Database schema designed
+- ✅ Technical stack decided (Next.js + Supabase + Tailwind)
+- ✅ Database schema designed (Supabase Migrations)
 - ✅ API specification drafted
 - ✅ Consolidated PRD created
 - ⬜ Wireframes / UI mockups
 - ⬜ Final stakeholder sign-off
 
 ### Infrastructure Setup
-- ⬜ Create GitHub/GitLab repository
-- ⬜ Set up development environment
-- ⬜ Configure Docker Compose (local dev)
-- ⬜ Set up PostgreSQL database
-- ⬜ Set up Redis instance
-- ⬜ Configure AWS S3 bucket
+
+- ✅ Created GitHub/GitLab repository
+- ✅ Set up development environment (Next.js 14+)
+- ✅ Set up Supabase database (Migrations)
+- ⬜ Set up Supabase Storage
 - ⬜ Set up SendGrid/Postmark account
 - ⬜ Set up Stripe account (test mode)
 - ⬜ Configure Cloudflare DNS
 - ⬜ Set up CI/CD pipeline
 
 ### Design
+
 - ⬜ Design system / component library selection
 - ⬜ Color palette and typography
 - ⬜ Mobile wireframes (priority screens)
@@ -56,6 +59,7 @@
 ### Sprint 1-2: Foundation (Weeks 1-4)
 
 #### Backend Core
+
 - ⬜ FastAPI project structure
 - ⬜ Database migrations setup (Alembic)
 - ⬜ Core models (Organization, User)
@@ -70,17 +74,19 @@
 - ⬜ API key generation and validation
 - ⬜ Rate limiting middleware
 
-#### Frontend Core
-- ⬜ React project setup (Vite + TypeScript)
-- ⬜ Tailwind CSS configuration
-- ⬜ Component library setup (Shadcn/ui)
-- ⬜ Router configuration
-- ⬜ Auth context and hooks
-- ⬜ API client setup (React Query)
+#### Frontend Core (Next.js)
+
+- ✅ Next.js project setup (App Router + TypeScript)
+- ✅ Tailwind CSS configuration
+- 🔲 Component library setup (Shadcn/ui)
+- ✅ Router configuration (Next.js App Router)
+- ✅ Supabase Client setup
+- ⬜ Auth middleware and hooks
+- ⬜ API Route logic (if needed)
 - ⬜ Login page
 - ⬜ Registration / invite flow
 - ⬜ Password reset flow
-- ⬜ Basic layout components
+- ✅ Basic layout components (Root)
   - ⬜ Mobile navigation (bottom nav)
   - ⬜ Desktop sidebar
   - ⬜ Header component
@@ -89,6 +95,7 @@
 ### Sprint 3-4: Tickets (Weeks 5-8)
 
 #### Backend
+
 - ⬜ Ticket model and migrations
 - ⬜ Ticket CRUD endpoints
 - ⬜ Ticket comments endpoints
@@ -100,6 +107,7 @@
 - ⬜ Email notifications (ticket created, updated)
 
 #### Frontend
+
 - ⬜ Ticket list view (mobile-first)
   - ⬜ Filter bar
   - ⬜ Sort options
@@ -119,6 +127,7 @@
 ### Sprint 5-6: Invoicing (Weeks 9-12)
 
 #### Backend
+
 - ⬜ Invoice model and migrations
 - ⬜ Payment terms model
 - ⬜ Invoice CRUD endpoints
@@ -133,6 +142,7 @@
 - ⬜ Payment terms admin endpoints
 
 #### Frontend
+
 - ⬜ Invoice list view
 - ⬜ Invoice detail view
 - ⬜ Invoice PDF preview
@@ -147,6 +157,7 @@
 ### Sprint 7-8: Dashboards & Messaging (Weeks 13-16)
 
 #### Backend
+
 - ⬜ Dashboard aggregation endpoints
 - ⬜ Notification model
 - ⬜ Notification preferences
@@ -158,6 +169,7 @@
 - ⬜ Global search endpoint
 
 #### Frontend
+
 - ⬜ Admin dashboard
   - ⬜ Stats cards
   - ⬜ Activity feed
@@ -179,6 +191,7 @@
 - ⬜ Global search bar (Cmd+K)
 
 ### MVP Polish & Launch Prep
+
 - ⬜ Form builder (basic version)
 - ⬜ Basic branding (logo, colors)
 - ⬜ Subdomain routing
@@ -197,6 +210,7 @@
 ## Phase 2: Enhanced Features (10-12 weeks)
 
 ### Knowledge Base
+
 - ⬜ Category model and CRUD
 - ⬜ Article model and CRUD
 - ⬜ Rich text editor integration
@@ -210,6 +224,7 @@
 - ⬜ KB admin (article management)
 
 ### Contracts & Proposals
+
 - ⬜ Contract template model
 - ⬜ Contract model
 - ⬜ Variable substitution engine
@@ -222,6 +237,7 @@
 - ⬜ Email notifications
 
 ### Live Chat
+
 - ⬜ Chat session model
 - ⬜ Chat message model
 - ⬜ WebSocket chat handler
@@ -235,6 +251,7 @@
 - ⬜ Satisfaction survey
 
 ### Service Requests
+
 - ⬜ Service request model
 - ⬜ Dynamic form integration
 - ⬜ Quote generation
@@ -243,6 +260,7 @@
 - ⬜ Quote acceptance UI
 
 ### Advanced Features
+
 - ⬜ Custom domain support
   - ⬜ DNS verification
   - ⬜ SSL provisioning
@@ -261,6 +279,7 @@
 ## Phase 3: Advanced (10-12 weeks)
 
 ### Time & Projects
+
 - ⬜ Time entry model
 - ⬜ Timer widget
 - ⬜ Timesheet view
@@ -269,6 +288,7 @@
 - ⬜ Visual feedback system
 
 ### API & Integrations
+
 - ⬜ Full REST API documentation
 - ⬜ Webhooks system
 - ⬜ Webhook delivery & retries
@@ -279,12 +299,14 @@
 - ⬜ Calendar sync
 
 ### Analytics
+
 - ⬜ Custom report builder
 - ⬜ Partner performance reports
 - ⬜ Export functionality
 - ⬜ Scheduled reports
 
 ### PWA & Mobile
+
 - ⬜ Service worker
 - ⬜ Offline support (critical pages)
 - ⬜ Push notifications
@@ -295,6 +317,7 @@
 ## Phase 4: Future (Backlog)
 
 ### AI Features
+
 - ⬜ Ticket auto-categorization
 - ⬜ Priority suggestion
 - ⬜ Response suggestions
@@ -302,6 +325,7 @@
 - ⬜ Chatbot (first-line)
 
 ### Advanced
+
 - ⬜ Multi-language support
 - ⬜ Native mobile app
 - ⬜ Client health scoring
@@ -333,17 +357,17 @@
 
 ## Bugs / Issues
 
-*No bugs logged yet*
+_No bugs logged yet_
 
 ---
 
 ## Technical Debt
 
-*Track items to revisit*
+_Track items to revisit_
 
 | Item | Priority | Notes |
-|------|----------|-------|
-| | | |
+| ---- | -------- | ----- |
+|      |          |       |
 
 ---
 
@@ -351,27 +375,27 @@
 
 ### Decisions Log
 
-| Date | Decision | Rationale |
-|------|----------|-----------|
-| 2026-01-20 | FastAPI + React stack | Aligns with existing expertise, scalable |
-| 2026-01-20 | Mobile-first design | Primary user base expected on mobile |
+| Date       | Decision                     | Rationale                             |
+| ---------- | ---------------------------- | ------------------------------------- |
+| 2026-01-20 | Next.js + Supabase stack     | Transition to v2 for speed and scale  |
+| 2026-01-20 | Mobile-first design          | Primary user base expected on mobile  |
 | 2026-01-20 | Partners cannot create forms | Simplify initial scope, admin control |
-| 2026-01-20 | 30-day audit retention | Balance compliance with storage costs |
-| 2026-01-20 | 5GB default storage | Reasonable for most clients |
+| 2026-01-20 | 30-day audit retention       | Balance compliance with storage costs |
+| 2026-01-20 | 5GB default storage          | Reasonable for most clients           |
 
 ### Blockers
 
-*None currently*
+_None currently_
 
 ### Dependencies
 
-| Dependency | Status | Owner |
-|------------|--------|-------|
-| AWS S3 setup | ⬜ | TBD |
-| Stripe account | ⬜ | TBD |
-| Domain (portal.kre8ivtech.com) | ⬜ | TBD |
-| SendGrid account | ⬜ | TBD |
+| Dependency                     | Status | Owner |
+| ------------------------------ | ------ | ----- |
+| AWS S3 setup                   | ⬜     | TBD   |
+| Stripe account                 | ⬜     | TBD   |
+| Domain (portal.kre8ivtech.com) | ⬜     | TBD   |
+| SendGrid account               | ⬜     | TBD   |
 
 ---
 
-*Task list for KT-Portal Project*
+_Task list for KT-Portal Project_

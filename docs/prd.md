@@ -1,5 +1,7 @@
 # Kre8ivTech Client Portal
+
 ## Product Requirements Document (PRD)
+
 **Version:** 2.0  
 **Last Updated:** January 20, 2026  
 **Project Codename:** KT-Portal  
@@ -38,23 +40,23 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 
 ### 1.3 Key Decisions
 
-| Decision | Resolution |
-|----------|------------|
-| Partner portal access | Free with established relationship/retainer |
-| Partner ticket visibility | Partners see all their clients' tickets |
-| Client ticket visibility | Clients see queue position relative to others |
-| Payment terms | Admin-configurable through settings |
-| Partner commission | None, but track work volume per partner |
-| Knowledge base | Yes, for clients, partners, and staff |
-| Contracts/proposals | Yes, required feature |
-| Design approach | Mobile-first responsive |
-| Live communication | Live agent chat + async messaging |
-| Form creation | Admin/staff only (partners cannot create) |
-| Email domains | Use existing domains |
-| Time tracking | Internal only (staff/admin visibility) |
-| Audit log retention | 30 days |
-| API access | Yes, tiered by role |
-| File storage | 5GB per client (adjustable), AWS S3 |
+| Decision                  | Resolution                                    |
+| ------------------------- | --------------------------------------------- |
+| Partner portal access     | Free with established relationship/retainer   |
+| Partner ticket visibility | Partners see all their clients' tickets       |
+| Client ticket visibility  | Clients see queue position relative to others |
+| Payment terms             | Admin-configurable through settings           |
+| Partner commission        | None, but track work volume per partner       |
+| Knowledge base            | Yes, for clients, partners, and staff         |
+| Contracts/proposals       | Yes, required feature                         |
+| Design approach           | Mobile-first responsive                       |
+| Live communication        | Live agent chat + async messaging             |
+| Form creation             | Admin/staff only (partners cannot create)     |
+| Email domains             | Use existing domains                          |
+| Time tracking             | Internal only (staff/admin visibility)        |
+| Audit log retention       | 30 days                                       |
+| API access                | Yes, tiered by role                           |
+| File storage              | 5GB per client (adjustable), AWS S3           |
 
 ---
 
@@ -63,6 +65,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 ### 2.1 Client Segments
 
 **White Label Partners**
+
 - Agencies/companies Kre8ivTech works behind the scenes for
 - Need branded experience for their end clients
 - Require custom domains and full branding control
@@ -70,6 +73,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Pay via retainer or established relationship
 
 **Direct Clients**
+
 - Businesses engaging Kre8ivTech directly
 - Use Kre8ivTech branded portal
 - Self-service ticket submission and tracking
@@ -87,64 +91,64 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 
 ### 3.1 Role Definitions
 
-| Role | Description | Scope |
-|------|-------------|-------|
-| **Super Admin** | Kre8ivTech ownership/management | Full system access, all tenants |
-| **Staff** | Kre8ivTech team members | Assigned work, limited admin |
-| **Partner** | White label agency owners/managers | Their tenant + their clients |
-| **Partner Staff** | White label agency team members | Limited partner access |
-| **Client** | End customers (direct or via partner) | Own data only |
+| Role              | Description                           | Scope                           |
+| ----------------- | ------------------------------------- | ------------------------------- |
+| **Super Admin**   | Kre8ivTech ownership/management       | Full system access, all tenants |
+| **Staff**         | Kre8ivTech team members               | Assigned work, limited admin    |
+| **Partner**       | White label agency owners/managers    | Their tenant + their clients    |
+| **Partner Staff** | White label agency team members       | Limited partner access          |
+| **Client**        | End customers (direct or via partner) | Own data only                   |
 
 ### 3.2 Permission Matrix
 
-| Feature | Super Admin | Staff | Partner | Partner Staff | Client |
-|---------|:-----------:|:-----:|:-------:|:-------------:|:------:|
-| **Tenant Management** |
-| View all tenants | ✓ | — | — | — | — |
-| Manage system settings | ✓ | — | — | — | — |
-| **User Management** |
-| Manage staff | ✓ | — | — | — | — |
-| Manage partners | ✓ | ✓ | — | — | — |
-| Manage partner's clients | ✓ | ✓ | ✓ | ✓ | — |
-| **Branding** |
-| Configure branding | ✓ | — | ✓ | — | — |
-| Custom domain setup | ✓ | — | Request | — | — |
-| **Tickets** |
-| Submit tickets | ✓ | ✓ | ✓ | ✓ | ✓ |
-| View own tickets | ✓ | ✓ | ✓ | ✓ | ✓ |
-| View queue position | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Manage all tickets | ✓ | ✓ | — | — | — |
-| Manage tenant tickets | ✓ | ✓ | ✓ | ✓ | — |
-| **Invoicing** |
-| Create invoices | ✓ | ✓ | ✓ | — | — |
-| View own invoices | ✓ | — | ✓ | — | ✓ |
-| Configure payment terms | ✓ | — | — | — | — |
-| **Contracts** |
-| Create contracts/proposals | ✓ | ✓ | ✓ | — | — |
-| Sign contracts | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Knowledge Base** |
-| Manage KB (system) | ✓ | ✓ | — | — | — |
-| Manage KB (own tenant) | ✓ | ✓ | ✓ | — | — |
-| View KB | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Forms** |
-| Create/edit forms | ✓ | ✓ | — | — | — |
-| Submit forms | ✓ | ✓ | ✓ | ✓ | ✓ |
-| View submissions | ✓ | ✓ | ✓ (own) | — | — |
-| **Communication** |
-| Live chat (agent) | ✓ | ✓ | ✓ | ✓ | — |
-| Live chat (client) | — | — | — | — | ✓ |
-| Direct messaging | ✓ | ✓ | ✓ | ✓ | ✓ |
-| **Time Tracking** |
-| Log time | ✓ | ✓ | — | — | — |
-| View time reports | ✓ | ✓ | — | — | — |
-| **Reporting** |
-| View all reports | ✓ | ✓ | — | — | — |
-| View tenant reports | ✓ | ✓ | ✓ | — | — |
-| Partner volume tracking | ✓ | ✓ | ✓ (own) | — | — |
-| **API Access** |
-| Full API | ✓ | Scoped | — | — | — |
-| Tenant-scoped API | ✓ | ✓ | ✓ | — | — |
-| Read-only API | ✓ | ✓ | ✓ | ✓ | Optional |
+| Feature                    | Super Admin | Staff  | Partner | Partner Staff |  Client  |
+| -------------------------- | :---------: | :----: | :-----: | :-----------: | :------: |
+| **Tenant Management**      |
+| View all tenants           |      ✓      |   —    |    —    |       —       |    —     |
+| Manage system settings     |      ✓      |   —    |    —    |       —       |    —     |
+| **User Management**        |
+| Manage staff               |      ✓      |   —    |    —    |       —       |    —     |
+| Manage partners            |      ✓      |   ✓    |    —    |       —       |    —     |
+| Manage partner's clients   |      ✓      |   ✓    |    ✓    |       ✓       |    —     |
+| **Branding**               |
+| Configure branding         |      ✓      |   —    |    ✓    |       —       |    —     |
+| Custom domain setup        |      ✓      |   —    | Request |       —       |    —     |
+| **Tickets**                |
+| Submit tickets             |      ✓      |   ✓    |    ✓    |       ✓       |    ✓     |
+| View own tickets           |      ✓      |   ✓    |    ✓    |       ✓       |    ✓     |
+| View queue position        |      ✓      |   ✓    |    ✓    |       ✓       |    ✓     |
+| Manage all tickets         |      ✓      |   ✓    |    —    |       —       |    —     |
+| Manage tenant tickets      |      ✓      |   ✓    |    ✓    |       ✓       |    —     |
+| **Invoicing**              |
+| Create invoices            |      ✓      |   ✓    |    ✓    |       —       |    —     |
+| View own invoices          |      ✓      |   —    |    ✓    |       —       |    ✓     |
+| Configure payment terms    |      ✓      |   —    |    —    |       —       |    —     |
+| **Contracts**              |
+| Create contracts/proposals |      ✓      |   ✓    |    ✓    |       —       |    —     |
+| Sign contracts             |      ✓      |   ✓    |    ✓    |       ✓       |    ✓     |
+| **Knowledge Base**         |
+| Manage KB (system)         |      ✓      |   ✓    |    —    |       —       |    —     |
+| Manage KB (own tenant)     |      ✓      |   ✓    |    ✓    |       —       |    —     |
+| View KB                    |      ✓      |   ✓    |    ✓    |       ✓       |    ✓     |
+| **Forms**                  |
+| Create/edit forms          |      ✓      |   ✓    |    —    |       —       |    —     |
+| Submit forms               |      ✓      |   ✓    |    ✓    |       ✓       |    ✓     |
+| View submissions           |      ✓      |   ✓    | ✓ (own) |       —       |    —     |
+| **Communication**          |
+| Live chat (agent)          |      ✓      |   ✓    |    ✓    |       ✓       |    —     |
+| Live chat (client)         |      —      |   —    |    —    |       —       |    ✓     |
+| Direct messaging           |      ✓      |   ✓    |    ✓    |       ✓       |    ✓     |
+| **Time Tracking**          |
+| Log time                   |      ✓      |   ✓    |    —    |       —       |    —     |
+| View time reports          |      ✓      |   ✓    |    —    |       —       |    —     |
+| **Reporting**              |
+| View all reports           |      ✓      |   ✓    |    —    |       —       |    —     |
+| View tenant reports        |      ✓      |   ✓    |    ✓    |       —       |    —     |
+| Partner volume tracking    |      ✓      |   ✓    | ✓ (own) |       —       |    —     |
+| **API Access**             |
+| Full API                   |      ✓      | Scoped |    —    |       —       |    —     |
+| Tenant-scoped API          |      ✓      |   ✓    |    ✓    |       —       |    —     |
+| Read-only API              |      ✓      |   ✓    |    ✓    |       ✓       | Optional |
 
 ---
 
@@ -153,14 +157,14 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 ### 4.1 Authentication & Multi-Tenancy
 
 **Features:**
-- Email/password authentication
-- Magic link / passwordless login
-- Two-factor authentication (TOTP, SMS)
-- Single sign-on capability (future)
-- Session management across domains
-- Tenant isolation with row-level security
+
+- Supabase Auth (Email, Magic link, OAuth)
+- Multi-factor authentication
+- Session management (Supabase Auth)
+- Tenant isolation with Supabase Row-Level Security
 
 **Multi-Tenant Architecture:**
+
 - Subdomain routing: `{partner-slug}.portal.kre8ivtech.com`
 - Custom domain mapping: `portal.{partnerdomain}.com`
 - Wildcard SSL for subdomains
@@ -172,6 +176,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 ### 4.2 Trouble Ticket System
 
 **Ticket Properties:**
+
 - Unique ID (tenant-prefixed: `KT-1001`, `PARTNER-1001`)
 - Subject & description (rich text)
 - Priority: Low, Medium, High, Critical
@@ -182,17 +187,20 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - SLA tracking
 
 **Queue Position System:**
+
 - Clients see: "Your ticket is #X of Y in the [Priority] queue"
-- Real-time updates via WebSocket
+- Real-time updates via Supabase Realtime / WebSockets
 - Estimated response time based on historical data
 - Position change notifications
 
 **Partner Visibility:**
+
 - Full view of all client tickets within tenant
 - Aggregate stats and filtering
 - Bulk actions capability
 
 **Workflow Features:**
+
 - Auto-assignment rules
 - Escalation triggers
 - Email + push notifications
@@ -205,6 +213,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 ### 4.3 Service Request System
 
 **Request Types:**
+
 - New website development
 - Website maintenance/updates
 - Hosting setup
@@ -215,6 +224,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Consulting/strategy
 
 **Request Flow:**
+
 1. Client selects service type
 2. Dynamic form based on service type
 3. File uploads (briefs, assets)
@@ -224,6 +234,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 7. Converts to project
 
 **Quote Features:**
+
 - Line items with descriptions
 - Optional vs. required items
 - Package selection
@@ -236,6 +247,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 ### 4.4 Invoicing System
 
 **Invoice Properties:**
+
 - Sequential invoice numbers (per tenant)
 - Client/partner association
 - Line items: description, quantity, rate, amount
@@ -244,6 +256,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Status: Draft, Sent, Viewed, Partial, Paid, Overdue, Void
 
 **Admin-Configurable Payment Terms:**
+
 - Preset terms: Net 15, Net 30, Net 45, Net 60, Due on Receipt
 - Custom terms creation
 - Per-client/partner overrides
@@ -251,12 +264,14 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Early payment discounts
 
 **Payment Integration:**
+
 - Stripe (primary)
 - PayPal
 - ACH/Bank transfer
 - Payment plans / installments
 
 **Automation:**
+
 - Recurring invoices
 - Configurable reminder intervals
 - Late fee calculation
@@ -268,6 +283,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 ### 4.5 Contract & Proposal Generation
 
 **Document Types:**
+
 - Service proposals
 - Project contracts
 - Maintenance agreements
@@ -276,12 +292,14 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Custom types
 
 **Template System:**
+
 - Pre-built templates
 - Variable placeholders
 - Conditional sections
 - White-label branding support
 
 **Workflow:**
+
 1. Generate from template or service request
 2. Customize content
 3. Internal review (optional)
@@ -292,6 +310,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 8. Auto-create project/invoice
 
 **E-Signature:**
+
 - Built-in draw/type signature
 - Audit trail (IP, timestamp, hash)
 - PDF generation
@@ -302,18 +321,21 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 ### 4.6 Knowledge Base / Wiki System
 
 **Content Structure:**
+
 - Categories (3 levels deep)
 - Articles with rich text, images, video
 - Tags and related articles
 - Version history
 
 **Access Levels:**
+
 - Public: All users
 - Partner: Partners and their clients
 - Internal: Staff only
 - Client-specific: Per-client docs
 
 **Features:**
+
 - Full-text search
 - Article feedback (helpful/not helpful)
 - View analytics
@@ -327,6 +349,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 ### 4.7 Form Builder System
 
 **Field Types (25+):**
+
 - Text (single/multi-line), Email, Phone, Number, Currency
 - Date, Date/Time, Time
 - Dropdown (single/multi), Radio, Checkboxes, Toggle
@@ -336,6 +359,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Address, URL, Color picker, Matrix/Grid
 
 **Features:**
+
 - Visual drag-and-drop builder
 - Conditional logic (show/hide, skip, calculate)
 - Validation rules
@@ -345,11 +369,13 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Submission limits and scheduling
 
 **Access:**
+
 - Only Admin/Staff can create forms
 - Partners cannot create forms
 - All roles can submit forms
 
 **Analytics:**
+
 - Completion rates
 - Drop-off analysis
 - Field-level metrics
@@ -361,7 +387,8 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 
 **Live Chat (Real-Time):**
 
-*Client Side:*
+_Client Side:_
+
 - Floating chat widget
 - Pre-chat form
 - Queue position + estimated wait
@@ -369,7 +396,8 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - File sharing
 - Typing indicators
 
-*Agent Side:*
+_Agent Side:_
+
 - Multi-chat handling
 - Queue management
 - Visitor info panel
@@ -380,6 +408,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Whisper mode
 
 **Async Messaging:**
+
 - Threaded conversations
 - Direct messages (1:1)
 - Group conversations
@@ -388,6 +417,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Push notifications (mobile + browser)
 
 **Presence:**
+
 - Online/offline/away/DND status
 - Business hours configuration
 - Auto-responses
@@ -398,6 +428,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 ### 4.9 White Label & Branding
 
 **Customizable Elements:**
+
 - Logo (header, favicon, email)
 - Color scheme (primary, secondary, accent)
 - Typography (Google Fonts)
@@ -408,6 +439,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Terms/privacy URLs
 
 **Domain Configuration:**
+
 - Subdomain auto-provisioning
 - Custom domain verification
 - SSL auto-management
@@ -418,6 +450,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 ### 4.10 Notification Center
 
 **Notification Center:**
+
 - Unified inbox
 - Filter by type
 - Mark read/unread
@@ -426,6 +459,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - History
 
 **User Preferences:**
+
 - Per-notification-type settings
 - Channels: Email, Push, In-App, SMS
 - Digest options: Real-time, Hourly, Daily, Weekly
@@ -436,6 +470,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 ### 4.11 Global Search
 
 **Search Scope:**
+
 - Tickets, Messages, Invoices, Contracts
 - Knowledge base articles
 - Organizations, Users
@@ -443,6 +478,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Projects, Files
 
 **Features:**
+
 - Unified search bar (Cmd/Ctrl + K)
 - Type-ahead suggestions
 - Filters and advanced syntax
@@ -453,49 +489,57 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 ### 4.12 Additional Modules
 
 **Announcement System:**
+
 - System-wide or targeted broadcasts
 - Banner, modal, notification, email
 - Scheduling and expiration
 - Read tracking
 
 **Audit Logging:**
+
 - Track all sensitive actions
 - 30-day retention
 - Filterable and exportable
 - Anomaly alerts
 
 **Task Management (Internal):**
+
 - Tasks separate from tickets
 - Assignees, due dates, priorities
 - Linked to tickets/projects
 - Kanban and list views
 
 **Email Integration:**
+
 - Email-to-ticket creation
 - Reply via email
 - Branded templates
 - Thread detection
 
 **Custom Fields:**
+
 - Per entity type (org, user, ticket, etc.)
 - Same types as form builder
 - Required/optional
 - Conditional display
 
 **Saved Views & Bulk Actions:**
+
 - Save filter combinations
 - Personal or shared views
 - Bulk status/assignment changes
 
 **Partner Work Volume Tracking:**
+
 - Tickets, requests, projects per partner
 - Revenue attribution
 - Trend analysis
 - Monthly reports
 
 **File/Asset Management:**
+
 - 5GB per client (adjustable)
-- AWS S3 storage
+- Supabase Storage (S3-compatible)
 - Organized by client/project
 - Version history
 - Sharing links with expiration
@@ -509,6 +553,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 **Mobile Layout:** Collapsible cards, bottom nav, pull-to-refresh
 
 **Widgets:**
+
 - System health indicator
 - Active tenants count
 - Revenue overview (MRR, ARR)
@@ -521,6 +566,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Activity feed
 
 **Quick Actions:**
+
 - Create partner/staff account
 - View all tickets
 - View chat queue
@@ -534,6 +580,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 **Mobile Layout:** Active chats priority, swipe actions, quick timer
 
 **Widgets:**
+
 - Active chat sessions
 - My assigned tickets
 - Unassigned/escalated tickets
@@ -544,6 +591,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - KB shortcuts
 
 **Quick Actions:**
+
 - Accept chat
 - Create ticket
 - Log time
@@ -557,6 +605,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 **Mobile Layout:** Client cards, ticket overview, quick search
 
 **Widgets:**
+
 - Active clients count
 - Open tickets by client
 - Client queue positions
@@ -569,6 +618,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Message notifications
 
 **Quick Actions:**
+
 - Add client
 - Create ticket for client
 - Submit service request
@@ -584,6 +634,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 **Mobile Layout:** Queue position prominent, quick actions grid, chat launcher
 
 **Widgets:**
+
 - Open tickets with queue position
 - "Your position: #3 in queue" display
 - Estimated response time
@@ -596,6 +647,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Recent KB articles
 
 **Quick Actions:**
+
 - Submit ticket
 - Start live chat
 - Request service
@@ -748,36 +800,36 @@ Auto-create project (if configured)
 
 ### 8.1 Operational KPIs
 
-| Metric | Target |
-|--------|--------|
-| Ticket first response time | < 4 hours |
-| Ticket resolution time (by priority) | SLA defined |
-| SLA compliance rate | > 95% |
-| Live chat response time | < 30 seconds |
-| Chat resolution rate | > 80% |
-| Client satisfaction (CSAT) | > 4.5/5 |
-| KB deflection rate | > 20% |
+| Metric                               | Target       |
+| ------------------------------------ | ------------ |
+| Ticket first response time           | < 4 hours    |
+| Ticket resolution time (by priority) | SLA defined  |
+| SLA compliance rate                  | > 95%        |
+| Live chat response time              | < 30 seconds |
+| Chat resolution rate                 | > 80%        |
+| Client satisfaction (CSAT)           | > 4.5/5      |
+| KB deflection rate                   | > 20%        |
 
 ### 8.2 Business KPIs
 
-| Metric | Target |
-|--------|--------|
-| Revenue processed | Track growth |
-| Invoice collection rate (on-time) | > 90% |
-| Service request conversion | > 60% |
-| Contract signing time | < 48 hours |
-| Partner retention rate | > 95% |
-| Client churn rate | < 5% annually |
+| Metric                            | Target        |
+| --------------------------------- | ------------- |
+| Revenue processed                 | Track growth  |
+| Invoice collection rate (on-time) | > 90%         |
+| Service request conversion        | > 60%         |
+| Contract signing time             | < 48 hours    |
+| Partner retention rate            | > 95%         |
+| Client churn rate                 | < 5% annually |
 
 ### 8.3 Engagement KPIs
 
-| Metric | Tracking |
-|--------|----------|
-| DAU/MAU | Active users |
-| Mobile vs. desktop | Usage split |
-| KB article views | Trending content |
-| Chat vs. ticket preference | Channel mix |
-| Self-service resolution | KB effectiveness |
+| Metric                     | Tracking         |
+| -------------------------- | ---------------- |
+| DAU/MAU                    | Active users     |
+| Mobile vs. desktop         | Usage split      |
+| KB article views           | Trending content |
+| Chat vs. ticket preference | Channel mix      |
+| Self-service resolution    | KB effectiveness |
 
 ---
 
@@ -786,6 +838,7 @@ Auto-create project (if configured)
 ### Phase 1: MVP (12-16 weeks)
 
 **Core Infrastructure:**
+
 - [ ] Authentication (email/password, magic link)
 - [ ] Multi-tenancy & tenant management
 - [ ] Role system (Admin, Staff, Partner, Client)
@@ -793,39 +846,46 @@ Auto-create project (if configured)
 - [ ] Subdomain routing
 
 **Tickets:**
+
 - [ ] Ticket CRUD & workflows
 - [ ] Queue position system
 - [ ] Partner client ticket visibility
 - [ ] Email notifications
 
 **Invoicing:**
+
 - [ ] Invoice creation (manual)
 - [ ] Admin-configurable payment terms
 - [ ] Stripe integration
 - [ ] Basic tracking
 
 **Communication:**
+
 - [ ] Async messaging system
 - [ ] Conversation threads
 - [ ] Notifications
 
 **Forms:**
+
 - [ ] Form builder (admin/staff only)
 - [ ] Core field types
 - [ ] Form submissions
 
 **Dashboards:**
+
 - [ ] Admin dashboard
 - [ ] Staff dashboard
 - [ ] Partner dashboard
 - [ ] Client dashboard
 
 **Search & Notifications:**
+
 - [ ] Global search (basic)
 - [ ] Notification center
 - [ ] User preferences
 
 **Branding:**
+
 - [ ] Basic branding (logo, colors)
 - [ ] Subdomain per partner
 
@@ -834,29 +894,34 @@ Auto-create project (if configured)
 ### Phase 2: Enhanced Features (10-12 weeks)
 
 **Knowledge Base:**
+
 - [ ] Article management
 - [ ] Categories & search
 - [ ] Access levels
 - [ ] Partner KB support
 
 **Contracts:**
+
 - [ ] Template system
 - [ ] Document generation
 - [ ] E-signature (built-in)
 - [ ] PDF generation
 
 **Live Chat:**
+
 - [ ] Chat widget
 - [ ] Agent interface
 - [ ] Queue management
 - [ ] Chat-to-ticket
 
 **Service Requests:**
+
 - [ ] Request system
 - [ ] Dynamic forms
 - [ ] Quote generation
 
 **Advanced Features:**
+
 - [ ] Custom domain support
 - [ ] Advanced branding
 - [ ] SLA tracking
@@ -872,18 +937,21 @@ Auto-create project (if configured)
 ### Phase 3: Advanced (10-12 weeks)
 
 **Time & Projects:**
+
 - [ ] Time tracking (internal)
 - [ ] Project management module
 - [ ] Visual feedback system
 - [ ] Milestone tracking
 
 **Communication Enhanced:**
+
 - [ ] Group conversations
 - [ ] File sharing in chat
 - [ ] Presence indicators
 - [ ] PWA push notifications
 
 **API & Integrations:**
+
 - [ ] REST API (full)
 - [ ] Webhooks
 - [ ] DocuSign/HelloSign
@@ -892,6 +960,7 @@ Auto-create project (if configured)
 - [ ] Calendar integrations
 
 **Analytics:**
+
 - [ ] Advanced reporting
 - [ ] Custom report builder
 - [ ] Partner performance reports
@@ -925,13 +994,13 @@ Auto-create project (if configured)
 
 ### 10.2 Risks & Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| Scope creep | Timeline delay | Strict phase boundaries, MVP focus |
-| Multi-tenant complexity | Development time | Start with proven patterns |
-| Real-time performance | User experience | Proper WebSocket architecture |
-| Custom domain SSL | Operational overhead | Automate with Let's Encrypt/Caddy |
-| Partner adoption | Business impact | Early partner feedback, beta program |
+| Risk                    | Impact               | Mitigation                           |
+| ----------------------- | -------------------- | ------------------------------------ |
+| Scope creep             | Timeline delay       | Strict phase boundaries, MVP focus   |
+| Multi-tenant complexity | Development time     | Start with proven patterns           |
+| Real-time performance   | User experience      | Proper WebSocket architecture        |
+| Custom domain SSL       | Operational overhead | Automate with Let's Encrypt/Caddy    |
+| Partner adoption        | Business impact      | Early partner feedback, beta program |
 
 ### 10.3 Dependencies
 
@@ -943,5 +1012,5 @@ Auto-create project (if configured)
 
 ---
 
-*Product Requirements Document for Kre8ivTech Client Portal*  
-*Version 2.0 — January 20, 2026*
+_Product Requirements Document for Kre8ivTech Client Portal_  
+_Version 2.0 — January 20, 2026_

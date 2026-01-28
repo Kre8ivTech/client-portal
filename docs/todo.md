@@ -91,10 +91,10 @@
 - ✅ Ticket CRUD endpoints
 - ✅ Ticket comments endpoints
 - ⬜ Ticket number generation (tenant-prefixed)
-- ⬜ Queue position calculation
+- ✅ Queue position calculation
 - ⬜ Auto-assignment logic
 - ⬜ Status workflow validation
-- ⬜ File attachment handling
+- 🔲 File attachment handling (AWS S3)
 - ⬜ Email notifications (ticket created, updated)
 
 #### Frontend
@@ -113,7 +113,7 @@
   - ✅ Priority selection
   - ⬜ File upload
   - ⬜ Rich text description
-- ⬜ Ticket actions (close, assign, update)
+- ✅ Ticket actions (close, status update)
 
 ### Sprint 5-6: Invoicing (Weeks 9-12)
 

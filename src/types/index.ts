@@ -11,3 +11,6 @@ export * from './plans'
 
 // Ticket-related types
 export * from './tickets'
+
+// Invoice-related types
+export * from './invoices'

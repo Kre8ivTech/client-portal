@@ -7,3 +7,4 @@
 // Plan-related validators
 export * from './plan'
 export * from './ticket'
+export * from './invoice'

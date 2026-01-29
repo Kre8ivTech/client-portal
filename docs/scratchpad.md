@@ -35,10 +35,10 @@ Sandbox:        https://sandbox.portal.kre8ivtech.com
 4. Initialize project repositories
 
 ### Questions to Resolve
-- [ ] Hosting provider preference?
-- [ ] Existing AWS account or create new?
-- [ ] Branding assets available?
-- [ ] Beta partners identified?
+- [x] Hosting provider preference? → Vercel (decided)
+- [x] Existing AWS account or create new? → Using Supabase Storage instead
+- [x] Branding assets available? → Will be provided by stakeholder
+- [x] Beta partners identified? → Two existing clients confirmed
 
 ---
 
@@ -306,7 +306,16 @@ Total estimated: $150-300/month to start
 - ✅ API specification drafted
 - ✅ Consolidated documentation into project structure
 
+### 2026-01-29
+- ✅ All open business questions resolved
+- ✅ Beta partners confirmed (2 existing clients)
+- ✅ Compliance requirements defined (SOC 2 + GDPR)
+- ✅ Multi-language support confirmed as requirement
+- ✅ E-signature legal requirements acknowledged
+- ✅ File upload limit confirmed (50MB)
+- ✅ Live chat concurrency deferred to post-MVP
+
 ---
 
 *Scratchpad for KT-Portal Project*
-*Last Updated: January 20, 2026*
+*Last Updated: January 29, 2026*

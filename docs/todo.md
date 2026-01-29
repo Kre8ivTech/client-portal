@@ -372,6 +372,12 @@ _Track items to revisit_
 | 2026-01-20 | Partners cannot create forms | Simplify initial scope, admin control |
 | 2026-01-20 | 30-day audit retention       | Balance compliance with storage costs |
 | 2026-01-20 | 5GB default storage          | Reasonable for most clients           |
+| 2026-01-29 | 50MB max file upload         | Confirmed by stakeholder              |
+| 2026-01-29 | Multi-language required      | Internationalization needed           |
+| 2026-01-29 | SOC 2 + GDPR compliance      | Security and privacy requirements     |
+| 2026-01-29 | Live chat MVP: no concurrency | Simplify MVP, add later              |
+| 2026-01-29 | E-signature legal compliance | Must address regional requirements    |
+| 2026-01-29 | Two beta partners identified | Ready for testing when MVP complete   |
 
 ### Blockers
 
@@ -379,12 +385,14 @@ _None currently_
 
 ### Dependencies
 
-| Dependency                     | Status | Owner |
-| ------------------------------ | ------ | ----- |
-| AWS S3 setup                   | ⬜     | TBD   |
-| Stripe account                 | ⬜     | TBD   |
-| Domain (portal.kre8ivtech.com) | ⬜     | TBD   |
-| SendGrid account               | ⬜     | TBD   |
+| Dependency                     | Status | Owner | Notes |
+| ------------------------------ | ------ | ----- | ----- |
+| Supabase project credentials   | ⬜     | TBD   | Required to run app |
+| Stripe account (test mode)     | ⬜     | TBD   | Required for invoicing |
+| Domain (portal.kre8ivtech.com) | ⬜     | TBD   | Confirm domain choice |
+| Resend account                 | ⬜     | TBD   | For transactional email |
+| Branding assets                | ⬜     | TBD   | Logo, colors - stakeholder will provide |
+| Beta partner access            | ⬜     | TBD   | Two clients identified |
 
 ---
 

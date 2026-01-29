@@ -984,13 +984,19 @@ Auto-create project (if configured)
 
 ### 10.1 Open Questions
 
-1. Preferred hosting provider (existing vs. new)?
-2. Target concurrent live chat sessions?
-3. Existing branding assets/design system?
-4. E-signature legal requirements by region?
-5. Multi-language support needed?
-6. Maximum file upload size preference?
-7. Specific compliance requirements?
+~~All questions resolved as of January 2026.~~
+
+### 10.1.1 Resolved Decisions
+
+| Question | Decision | Date |
+|----------|----------|------|
+| Beta partners | Two existing clients identified | 2026-01-29 |
+| Branding assets | Will be provided by stakeholder | 2026-01-29 |
+| Maximum file upload size | 50MB | 2026-01-29 |
+| Concurrent live chat | Nice-to-have, not required for MVP | 2026-01-29 |
+| E-signature legal requirements | Yes, must address regional requirements | 2026-01-29 |
+| Multi-language support | Yes, required | 2026-01-29 |
+| Compliance requirements | SOC 2 and GDPR | 2026-01-29 |
 
 ### 10.2 Risks & Mitigations
 

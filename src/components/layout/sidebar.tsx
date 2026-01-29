@@ -2,13 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Ticket, FileText, Users, Settings, LogOut } from "lucide-react";
+import {
+  Home,
+  Ticket,
+  FileText,
+  Users,
+  Settings,
+  LogOut,
+  Shield,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", icon: Home, label: "Overview" },
   { href: "/dashboard/tickets", icon: Ticket, label: "Tickets" },
+  { href: "/dashboard/vault", icon: Shield, label: "Secure Vault" },
   { href: "/dashboard/invoices", icon: FileText, label: "Invoices" },
   { href: "/dashboard/clients", icon: Users, label: "Clients" },
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },

@@ -9,3 +9,9 @@ export {
   WeeklyAvailabilityCalendar,
   TeamWorkloadSummary,
 } from './workload-card'
+
+export {
+  ConnectCalendarButton,
+  CalendarConnectionCard,
+  CalendarConnectionsList,
+} from './calendar-connection'

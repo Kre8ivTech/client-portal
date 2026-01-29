@@ -41,3 +41,6 @@ export * from './organizations'
 
 // AI service types
 export * from './ai'
+
+// Calendar sync types
+export * from './calendar'

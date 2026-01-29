@@ -193,6 +193,15 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Estimated response time based on historical data
 - Position change notifications
 
+**AI-Powered Completion Estimation:**
+
+- Analyzes ticket complexity and category
+- Reviews staff work calendars and availability
+- Considers current workload and queue position
+- Provides client-visible estimated completion dates
+- Confidence levels (low/medium/high) with explanations
+- Updates dynamically as conditions change
+
 **Partner Visibility:**
 
 - Full view of all client tickets within tenant
@@ -889,6 +898,15 @@ Auto-create project (if configured)
 - [ ] Basic branding (logo, colors)
 - [ ] Subdomain per partner
 
+**AI Integration (MVP-Critical):**
+
+- [ ] Ticket auto-categorization
+- [ ] Priority suggestion
+- [ ] Sentiment analysis
+- [ ] Staff workload analysis
+- [ ] Completion time estimation for clients
+- [ ] AI analysis caching
+
 ---
 
 ### Phase 2: Enhanced Features (10-12 weeks)
@@ -969,14 +987,13 @@ Auto-create project (if configured)
 
 ### Phase 4: Scale (Ongoing)
 
-- [ ] AI-powered ticket triage
-- [ ] Chatbot (first-line)
-- [ ] Sentiment analysis
+- [ ] AI chatbot (first-line support)
 - [ ] Client health scoring
-- [ ] Multi-language/localization
-- [ ] Native mobile app
-- [ ] Advanced automation rules
-- [ ] Status page
+- [ ] Native mobile app (iOS/Android)
+- [ ] Advanced automation rules engine
+- [ ] Status page with incident management
+- [ ] AI response suggestions
+- [ ] Predictive analytics
 
 ---
 

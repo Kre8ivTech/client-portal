@@ -17,3 +17,6 @@ export * from './invoices'
 
 // Organization-related types
 export * from './organizations'
+
+// AI service types
+export * from './ai'

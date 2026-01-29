@@ -7,6 +7,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [2.1.0] - 2026-01-29
+
+### Added
+- **Tickets Module Foundation** — Database schema, types, validation, and UI components
+- **Database Migrations** — tickets, ticket_comments, ticket_categories tables with RLS
+- **TypeScript Types** — Full type definitions for ticket entities
+- **Zod Validators** — Input validation schemas for ticket operations
+- **UI Components** — TicketCard, TicketList, TicketFilters, CreateTicketForm
+- **UI Primitives** — Badge (with status/priority variants), Select, Textarea
+
+### Changed
+- **Domain** — Production domain confirmed as `clients.kre8ivtech.com`
+- **Dependencies** — Added react-hook-form, @hookform/resolvers
+
+### Resolved
+- All open business questions answered (beta partners, compliance, i18n, etc.)
+
+---
+
 ## [2.0.0] - 2026-01-20
 
 ### Added

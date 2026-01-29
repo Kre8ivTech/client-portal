@@ -72,11 +72,11 @@
 
 - ✅ Next.js project setup (App Router + TypeScript)
 - ✅ Tailwind CSS configuration
-- 🔲 Component library setup (Shadcn/ui)
+- ✅ Component library setup (Shadcn/ui) - Badge, Select, Textarea, Card, Button, Input, Label
 - ✅ Router configuration (Next.js App Router)
 - ✅ Supabase Client setup
 - ✅ Auth middleware and basic layout
-- 🔲 Login/Landing UI Polish
+- ✅ Login/Landing UI Polish
 - 🔲 Registration / invite flow
 - ✅ Basic dashboard layout
 - 🔲 Breadcrumb navigation
@@ -86,11 +86,14 @@
 
 #### Backend
 
-- ⬜ Ticket model and migrations
-- ⬜ Ticket CRUD endpoints
-- ⬜ Ticket comments endpoints
-- ⬜ Ticket number generation (tenant-prefixed)
-- ⬜ Queue position calculation
+- ✅ Ticket model and migrations
+- ✅ Ticket comments model and migrations
+- ✅ Ticket categories with defaults
+- ✅ RLS policies for multi-tenant access
+- ✅ Ticket number generation (tenant-prefixed)
+- 🔲 Ticket CRUD endpoints (API routes)
+- 🔲 Ticket comments endpoints
+- 🔲 Queue position calculation (Edge Function)
 - ⬜ Auto-assignment logic
 - ⬜ Status workflow validation
 - ⬜ File attachment handling
@@ -98,21 +101,21 @@
 
 #### Frontend
 
-- ⬜ Ticket list view (mobile-first)
-  - ⬜ Filter bar
-  - ⬜ Sort options
-  - ⬜ Infinite scroll
-- ⬜ Ticket detail view
-  - ⬜ Status badge
-  - ⬜ Queue position display
-  - ⬜ Comment thread
-  - ⬜ Internal notes (staff)
-- ⬜ Create ticket form
-  - ⬜ Category selection
-  - ⬜ Priority selection
-  - ⬜ File upload
-  - ⬜ Rich text description
-- ⬜ Ticket actions (close, assign, update)
+- ✅ Ticket list view (mobile-first)
+  - ✅ Filter bar (status, priority, search)
+  - ✅ Sort options
+  - 🔲 Infinite scroll / pagination
+- 🔲 Ticket detail view
+  - ✅ Status badge
+  - ✅ Queue position display
+  - 🔲 Comment thread
+  - 🔲 Internal notes (staff)
+- ✅ Create ticket form
+  - ✅ Category selection
+  - ✅ Priority selection
+  - 🔲 File upload (UI placeholder exists)
+  - 🔲 Rich text description
+- 🔲 Ticket actions (close, assign, update)
 
 ### Sprint 5-6: Invoicing (Weeks 9-12)
 

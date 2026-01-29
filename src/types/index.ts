@@ -14,3 +14,6 @@ export * from './tickets'
 
 // Invoice-related types
 export * from './invoices'
+
+// Organization-related types
+export * from './organizations'

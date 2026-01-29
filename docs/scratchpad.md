@@ -6,13 +6,11 @@
 
 ## Quick Reference
 
-### Project URLs (Planned)
+### Project URLs (Confirmed)
 ```
-Production:     https://portal.kre8ivtech.com
-API:            https://api.portal.kre8ivtech.com
-Partner:        https://{slug}.portal.kre8ivtech.com
-Custom Domain:  https://portal.{partnerdomain}.com
-Sandbox:        https://sandbox.portal.kre8ivtech.com
+Production:     https://clients.kre8ivtech.com
+Partner:        https://{slug}.clients.kre8ivtech.com
+Custom Domain:  https://portal.{partnerdomain}.com (partner-owned)
 ```
 
 ### Key Contacts

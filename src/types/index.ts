@@ -8,3 +8,6 @@
 
 // Plan-related types
 export * from './plans'
+
+// Ticket-related types
+export * from './tickets'

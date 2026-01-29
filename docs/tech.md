@@ -16,7 +16,8 @@
 7. [Security Implementation](#7-security-implementation)
 8. [Infrastructure & DevOps](#8-infrastructure--devops)
 9. [Third-Party Integrations](#9-third-party-integrations)
-10. [Mobile-First Design](#10-mobile-first-design)
+10. [AI Integration](#10-ai-integration)
+11. [Mobile-First Design](#11-mobile-first-design)
 
 ---
 
@@ -1495,7 +1496,170 @@ async def create_payment_intent(invoice_id: str, amount: int):
 
 ---
 
-## 10. Mobile-First Design
+## 10. AI Integration
+
+### 10.1 AI Services Overview
+
+KT-Portal integrates AI capabilities as a core MVP feature for intelligent ticket management and workload estimation.
+
+| Service | Purpose | Model |
+|---------|---------|-------|
+| Ticket Analyzer | Categorization, priority, sentiment | Claude Sonnet |
+| Workload Estimator | Staff availability, completion dates | Claude Haiku/Sonnet |
+| Response Generator | Suggested replies (future) | Claude Sonnet |
+
+### 10.2 Ticket Analysis
+
+```typescript
+// Automatic ticket analysis on creation
+const analysis = await analyzeTicket({
+  subject: ticket.subject,
+  description: ticket.description,
+  available_categories: ['technical-support', 'billing', 'general-inquiry'],
+  customer_history: {
+    previous_tickets: 5,
+    avg_priority: 'medium',
+    sentiment_trend: 'neutral'
+  }
+})
+
+// Result structure
+{
+  suggested_category: 'technical-support',
+  suggested_priority: 'high',
+  category_confidence: 0.85,
+  priority_confidence: 0.78,
+  sentiment: 'concerned',
+  sentiment_score: -0.3,
+  urgency_indicators: ['revenue impact', 'multiple users'],
+  key_issues: ['Mobile performance degradation'],
+  requires_escalation: false,
+  suggested_kb_articles: [{ id: '...', relevance_score: 0.9 }]
+}
+```
+
+### 10.3 Workload Analysis
+
+```typescript
+// Analyze staff member workload
+const workload = analyzeWorkload(
+  staffId,
+  schedules,      // Weekly availability
+  calendarBlocks, // Meetings, time off
+  openTickets,    // Current assignments
+  openTasks       // Current tasks
+)
+
+// Result structure
+{
+  staff_id: 'staff-123',
+  current_tickets: 5,
+  current_tasks: 3,
+  estimated_hours_queued: 18.5,
+  available_hours_today: 4.0,
+  available_hours_week: 30.0,
+  utilization_percent: 62,
+  hours_by_priority: { critical: 2, high: 8, medium: 6, low: 2.5 },
+  can_take_new_work: true,
+  next_available_slot: '2026-01-30T09:00:00Z'
+}
+```
+
+### 10.4 Completion Estimation
+
+The system provides client-visible completion estimates by analyzing:
+
+1. **Ticket Complexity** - Based on description, category, and historical data
+2. **Staff Availability** - Work schedules minus calendar blocks
+3. **Current Workload** - Queued tickets and tasks
+4. **Queue Position** - Priority-weighted queue calculation
+5. **Historical Data** - Average completion times for similar tickets
+
+```typescript
+const estimate = await estimateCompletion(
+  ticket,
+  { id: staffId, workload, availability },
+  historicalData
+)
+
+// Client-facing result
+{
+  estimated_completion_date: '2026-02-01',
+  confidence_level: 'medium',
+  confidence_percent: 72,
+  client_message: 'We expect to complete this by Saturday. Your ticket has been assigned to Sarah who specializes in performance issues.',
+  queue_position: 2,
+  tickets_ahead: 1
+}
+```
+
+### 10.5 Database Schema (AI-Related)
+
+```sql
+-- Staff work schedules
+CREATE TABLE staff_schedules (
+  id UUID PRIMARY KEY,
+  profile_id UUID REFERENCES profiles(id),
+  day_of_week INTEGER CHECK (day_of_week BETWEEN 0 AND 6),
+  start_time TIME,
+  end_time TIME,
+  is_working_day BOOLEAN DEFAULT TRUE,
+  available_hours NUMERIC(4,2) DEFAULT 6.0
+);
+
+-- Calendar blocks (meetings, time off)
+CREATE TABLE staff_calendar_blocks (
+  id UUID PRIMARY KEY,
+  profile_id UUID REFERENCES profiles(id),
+  block_type VARCHAR(30), -- 'time_off', 'meeting', 'focus_time'
+  start_at TIMESTAMP WITH TIME ZONE,
+  end_at TIMESTAMP WITH TIME ZONE,
+  all_day BOOLEAN DEFAULT FALSE
+);
+
+-- Completion estimates (client-visible)
+CREATE TABLE completion_estimates (
+  id UUID PRIMARY KEY,
+  ticket_id UUID REFERENCES tickets(id),
+  estimated_completion_date DATE NOT NULL,
+  confidence_level VARCHAR(20), -- 'low', 'medium', 'high'
+  confidence_percent INTEGER,
+  ai_reasoning JSONB,
+  client_message TEXT,
+  visible_to_client BOOLEAN DEFAULT TRUE
+);
+
+-- AI analysis cache
+CREATE TABLE ai_analysis_cache (
+  id UUID PRIMARY KEY,
+  entity_type VARCHAR(30),
+  entity_id UUID,
+  analysis_type VARCHAR(50),
+  analysis_result JSONB,
+  model_used VARCHAR(100),
+  expires_at TIMESTAMP WITH TIME ZONE
+);
+```
+
+### 10.6 Caching Strategy
+
+AI analyses are cached to reduce costs and latency:
+
+- **Ticket Classification**: 1 hour TTL, invalidated on content edit
+- **Workload Analysis**: 15 minutes TTL, invalidated on assignment change
+- **Completion Estimates**: 30 minutes TTL, invalidated on status change
+
+### 10.7 Fallback Behavior
+
+When AI is unavailable:
+
+1. **Rule-based fallback** for ticket classification (keyword matching)
+2. **Default estimates** based on category averages
+3. **Graceful degradation** - features work without AI insights
+
+---
+
+## 11. Mobile-First Design
 
 ### 10.1 Responsive Breakpoints
 

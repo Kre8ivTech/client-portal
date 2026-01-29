@@ -257,9 +257,7 @@ export default function InvoicesPage() {
   const router = useRouter()
 
   const handleInvoiceClick = (invoice: InvoiceWithRelations) => {
-    // TODO: Navigate to invoice detail page
-    // router.push(`/invoices/${invoice.id}`)
-    alert(`Invoice ${invoice.invoice_number} clicked - detail page coming soon`)
+    router.push(`/invoices/${invoice.id}`)
   }
 
   const handleCreateClick = () => {

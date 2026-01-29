@@ -5,3 +5,4 @@
 
 export { InvoiceCard, InvoiceCardCompact } from './invoice-card'
 export { InvoiceList } from './invoice-list'
+export { InvoiceDetail } from './invoice-detail'

@@ -189,10 +189,7 @@ export default function TicketsPage() {
   const router = useRouter()
 
   const handleTicketClick = (ticket: TicketWithRelations) => {
-    // In production, this would navigate to the ticket detail page
-    // router.push(`/tickets/${ticket.id}`)
-    console.log('Ticket clicked:', ticket.ticket_number)
-    alert(`Navigate to ticket ${ticket.ticket_number} (not implemented yet)`)
+    router.push(`/tickets/${ticket.id}`)
   }
 
   const handleCreateTicket = async (data: CreateTicketInput) => {

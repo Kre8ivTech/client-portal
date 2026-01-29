@@ -12,8 +12,29 @@ export * from './plans'
 // Ticket-related types
 export * from './tickets'
 
-// Invoice-related types
-export * from './invoices'
+// Invoice-related types (exclude utility functions that conflict with plans)
+export type {
+  InvoiceStatus,
+  PaymentStatus,
+  PaymentMethod,
+  InvoiceLineItem,
+  RecurringConfig,
+  Invoice,
+  InvoiceWithRelations,
+  Payment,
+  CreditNote,
+  CreateInvoiceInput,
+  UpdateInvoiceInput,
+  InvoiceFilters,
+  RecordPaymentInput,
+} from './invoices'
+export {
+  INVOICE_STATUS_CONFIG,
+  PAYMENT_STATUS_CONFIG,
+  formatCents,
+  centsToDollars,
+  calculateInvoiceTotals,
+} from './invoices'
 
 // Organization-related types
 export * from './organizations'

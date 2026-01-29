@@ -4,9 +4,11 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { TicketDetail } from '@/components/tickets/ticket-detail'
 import { CommentThread } from '@/components/tickets/comment-thread'
+import { CompletionEstimateCard } from '@/components/tickets/completion-estimate'
 import { Button } from '@/components/ui/button'
 import { Loader2, AlertCircle } from 'lucide-react'
 import type { TicketWithRelations, TicketStatus, TicketCommentWithUser } from '@/types/tickets'
+import type { CompletionEstimate } from '@/types/ai'
 
 // Mock data - will be replaced with real Supabase queries
 const MOCK_TICKET: TicketWithRelations = {
@@ -54,6 +56,47 @@ Please investigate and let us know what might be causing this slowdown.`,
     avatar_url: null,
   },
   comments_count: 3,
+}
+
+// Mock completion estimate - will be computed by AI service
+const MOCK_COMPLETION_ESTIMATE: CompletionEstimate = {
+  ticket_id: '1',
+  estimated_start_date: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().split('T')[0],
+  estimated_completion_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  confidence_level: 'medium',
+  confidence_percent: 72,
+  estimated_hours: 6,
+  complexity_score: 0.65,
+  factors: [
+    {
+      factor: 'High priority',
+      impact: 'decreases',
+      description: 'Prioritized and will be worked on soon',
+      weight: 0.2,
+    },
+    {
+      factor: 'Queue position',
+      impact: 'increases',
+      description: '1 ticket ahead in queue',
+      weight: 0.1,
+    },
+    {
+      factor: 'Medium complexity',
+      impact: 'neutral',
+      description: 'Issue requires investigation but is well-documented',
+      weight: 0.15,
+    },
+  ],
+  assigned_to: 'staff-1',
+  staff_availability: [
+    { date: new Date(Date.now()).toISOString().split('T')[0], available_hours: 6, blocked_hours: 2, net_hours: 4 },
+    { date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], available_hours: 6, blocked_hours: 1, net_hours: 5 },
+    { date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], available_hours: 6, blocked_hours: 0, net_hours: 6 },
+    { date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], available_hours: 6, blocked_hours: 3, net_hours: 3 },
+  ],
+  queue_position: 2,
+  tickets_ahead: 1,
+  client_message: 'We expect to complete this by Friday. Your ticket has been assigned to Sarah Tech who specializes in performance issues.',
 }
 
 const MOCK_COMMENTS: TicketCommentWithUser[] = [
@@ -146,6 +189,7 @@ export default function TicketDetailPage() {
 
   const [ticket, setTicket] = useState<TicketWithRelations | null>(null)
   const [comments, setComments] = useState<TicketCommentWithUser[]>([])
+  const [estimate, setEstimate] = useState<CompletionEstimate | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -163,6 +207,7 @@ export default function TicketDetailPage() {
         // For now, use mock data
         setTicket(MOCK_TICKET)
         setComments(MOCK_COMMENTS)
+        setEstimate(MOCK_COMPLETION_ESTIMATE)
       } catch (err) {
         setError('Failed to load ticket')
       } finally {
@@ -271,6 +316,14 @@ export default function TicketDetailPage() {
         onStatusChange={handleStatusChange}
         isStaff={isStaff}
       />
+
+      {/* Show completion estimate for open/in-progress tickets */}
+      {estimate && ticket.status !== 'closed' && ticket.status !== 'resolved' && (
+        <CompletionEstimateCard 
+          estimate={estimate} 
+          showDetails={isStaff} // Staff see full details, clients see summary
+        />
+      )}
 
       <CommentThread
         comments={comments}

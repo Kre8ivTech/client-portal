@@ -121,31 +121,32 @@
 
 #### Backend
 
-- ⬜ Invoice model and migrations
-- ⬜ Payment terms model
-- ⬜ Invoice CRUD endpoints
-- ⬜ Invoice number generation
-- ⬜ PDF generation (WeasyPrint)
+- ✅ Invoice model and migrations
+- ✅ Payments model and migrations
+- ✅ Credit notes model
+- ✅ Invoice reminders model
+- ✅ Invoice number generation (auto)
+- ✅ RLS policies for invoices/payments
+- 🔲 Invoice CRUD endpoints (API routes)
+- ⬜ PDF generation
 - ⬜ Stripe integration
   - ⬜ Payment intent creation
   - ⬜ Webhook handling
-  - ⬜ Payment recording
-- ⬜ Invoice status transitions
+  - 🔲 Payment recording (schema ready)
 - ⬜ Email notifications (invoice sent, paid)
-- ⬜ Payment terms admin endpoints
 
 #### Frontend
 
-- ⬜ Invoice list view
-- ⬜ Invoice detail view
+- ✅ Invoice list view with filtering
+- ✅ Invoice card component
+- ✅ Stats cards (draft, outstanding, overdue, paid)
+- 🔲 Invoice detail view
 - ⬜ Invoice PDF preview
 - ⬜ Create/edit invoice form
 - ⬜ Line item management
-- ⬜ Payment terms selector
 - ⬜ Send invoice action
 - ⬜ Payment page (client)
 - ⬜ Payment confirmation
-- ⬜ Admin: Payment terms settings
 
 ### Sprint 7-8: Dashboards & Messaging (Weeks 13-16)
 

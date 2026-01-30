@@ -16,46 +16,46 @@ export default function MessagesPage() {
   const supabase = createClient() as any
 
   useEffect(() => {
+    let isActive = true
+    let channel: any = null
+
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (!isActive) return
+      if (authError || !user) {
+        setLoading(false)
+        return
+      }
+
       setUserId(user.id)
 
-      // Fetch conversations
-      const { data: convs } = await supabase
-        .from('conversations')
-        .select(`
-          *,
-          profiles:participant_ids (
-            id,
-            name,
-            avatar_url
-          )
-        `)
-        .order('last_message_at', { ascending: false })
-
-      setConversations(convs || [])
+      const convs = await fetchConversations()
+      if (!isActive) return
+      setConversations(convs)
       setLoading(false)
 
-      // Subscribe to conversation updates
-      const channel = supabase
+      channel = supabase
         .channel('conversations_changes')
         .on('postgres_changes', { 
           event: '*', 
           schema: 'public', 
           table: 'conversations' 
         }, () => {
-          // Re-fetch on change for simplicity, or update state manually
           refreshConversations()
         })
         .subscribe()
 
-      return () => {
+      if (!isActive && channel) {
         supabase.removeChannel(channel)
       }
     }
 
     init()
+
+    return () => {
+      isActive = false
+      if (channel) supabase.removeChannel(channel)
+    }
   }, [])
 
   useEffect(() => {
@@ -91,19 +91,46 @@ export default function MessagesPage() {
     }
   }, [activeId])
 
-  async function refreshConversations() {
-    const { data } = await supabase
+  async function fetchConversations() {
+    const { data: convs, error } = await supabase
       .from('conversations')
-      .select(`
-        *,
-        profiles:participant_ids (
-          id,
-          name,
-          avatar_url
-        )
-      `)
+      .select('*')
       .order('last_message_at', { ascending: false })
-    setConversations(data || [])
+
+    if (error || !convs) {
+      return []
+    }
+
+    const participantIds = Array.from(
+      new Set(convs.flatMap((conv) => conv.participant_ids ?? []))
+    )
+
+    if (participantIds.length === 0) {
+      return convs.map((conv) => ({ ...conv, profiles: [] }))
+    }
+
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, name, avatar_url')
+      .in('id', participantIds)
+
+    if (profilesError || !profiles) {
+      return convs.map((conv) => ({ ...conv, profiles: [] }))
+    }
+
+    const profilesById = new Map(profiles.map((profile) => [profile.id, profile]))
+
+    return convs.map((conv) => ({
+      ...conv,
+      profiles: (conv.participant_ids ?? [])
+        .map((id: string) => profilesById.get(id))
+        .filter(Boolean),
+    }))
+  }
+
+  async function refreshConversations() {
+    const convs = await fetchConversations()
+    setConversations(convs)
   }
 
   async function handleSendMessage(content: string) {

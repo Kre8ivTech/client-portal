@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createTicketSchema } from '@/lib/validators/ticket'
+import { createNotifications } from '@/lib/notifications'
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,6 +49,20 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    try {
+      await createNotifications({
+        organizationId: profile.organization_id,
+        recipientIds: [user.id],
+        createdBy: user.id,
+        title: `Ticket created: ${ticket.subject}`,
+        body: 'Your ticket has been created and added to the queue.',
+        type: 'ticket.created',
+        metadata: { ticket_id: ticket.id },
+      })
+    } catch {
+      // Ignore notification failures
     }
 
     return NextResponse.json({ data: ticket }, { status: 201 })

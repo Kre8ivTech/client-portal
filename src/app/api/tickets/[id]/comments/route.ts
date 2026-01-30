@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createTicketCommentSchema } from '@/lib/validators/ticket'
+import { createNotifications } from '@/lib/notifications'
 
 const internalCommentRoles = new Set(['staff', 'super_admin', 'partner', 'partner_staff'])
 
@@ -43,7 +44,7 @@ export async function POST(
 
     const { data: ticket, error: ticketError } = await supabase
       .from('tickets')
-      .select('id')
+      .select('id, created_by, assigned_to, subject, organization_id')
       .eq('id', params.id)
       .single()
 
@@ -64,6 +65,28 @@ export async function POST(
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    const recipients = [ticket.created_by, ticket.assigned_to].filter(
+      (recipient) => recipient && recipient !== user.id
+    ) as string[]
+
+    if (recipients.length > 0) {
+      try {
+        await createNotifications({
+          organizationId: ticket.organization_id,
+          recipientIds: recipients,
+          createdBy: user.id,
+          title: `New comment on ticket: ${ticket.subject}`,
+          body: isInternal
+            ? 'An internal note was added to the ticket.'
+            : 'A new comment was added to the ticket.',
+          type: 'ticket.comment',
+          metadata: { ticket_id: ticket.id, comment_id: comment.id },
+        })
+      } catch {
+        // Ignore notification failures
+      }
     }
 
     return NextResponse.json({ data: comment }, { status: 201 })

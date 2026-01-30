@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { updateTicketStatusSchema } from '@/lib/validators/ticket'
+import { createNotifications } from '@/lib/notifications'
 
 const privilegedRoles = new Set(['staff', 'super_admin', 'partner', 'partner_staff'])
+const statusTransitions: Record<string, string[]> = {
+  new: ['open', 'in_progress', 'pending_client', 'resolved', 'closed'],
+  open: ['in_progress', 'pending_client', 'resolved', 'closed'],
+  in_progress: ['pending_client', 'resolved', 'closed'],
+  pending_client: ['in_progress', 'resolved', 'closed'],
+  resolved: ['closed', 'open', 'in_progress'],
+  closed: [],
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -36,12 +45,33 @@ export async function PATCH(
       return NextResponse.json({ error: 'Organization not found' }, { status: 400 })
     }
 
+    if (!privilegedRoles.has(profile.role) && profile.role !== 'client') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const { data: currentTicket, error: ticketError } = await supabase
+      .from('tickets')
+      .select('id, status, created_by, assigned_to, subject, organization_id')
+      .eq('id', params.id)
+      .single()
+
+    if (ticketError || !currentTicket) {
+      return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
+    }
+
+    if (profile.role === 'client' && currentTicket.status === 'closed') {
+      return NextResponse.json({ error: 'Ticket already closed' }, { status: 400 })
+    }
+
     if (profile.role === 'client' && result.data.status !== 'closed') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    if (!privilegedRoles.has(profile.role) && profile.role !== 'client') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (result.data.status !== currentTicket.status) {
+      const allowed = statusTransitions[currentTicket.status] || []
+      if (!allowed.includes(result.data.status)) {
+        return NextResponse.json({ error: 'Invalid status transition' }, { status: 400 })
+      }
     }
 
     const { data: ticket, error } = await supabase
@@ -53,6 +83,26 @@ export async function PATCH(
 
     if (error || !ticket) {
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
+    }
+
+    if (result.data.status !== currentTicket.status) {
+      const recipients = [currentTicket.created_by, currentTicket.assigned_to].filter(
+        (recipient) => recipient && recipient !== user.id
+      ) as string[]
+
+      try {
+        await createNotifications({
+          organizationId: currentTicket.organization_id,
+          recipientIds: recipients,
+          createdBy: user.id,
+          title: `Ticket status updated: ${currentTicket.subject}`,
+          body: `Status changed to ${result.data.status.replace('_', ' ')}.`,
+          type: 'ticket.status_updated',
+          metadata: { ticket_id: currentTicket.id, status: result.data.status },
+        })
+      } catch {
+        // Ignore notification failures
+      }
     }
 
     return NextResponse.json({ data: ticket }, { status: 200 })

@@ -1,8 +1,18 @@
 'use client'
 
+import { useMemo, useState } from 'react'
 import { TicketComments } from './ticket-comments'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { format } from 'date-fns'
 import { Calendar, User, Tag, Clock, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -17,9 +27,57 @@ type Ticket = Database['public']['Tables']['tickets']['Row'] & {
 interface TicketDetailProps {
   ticket: Ticket
   userId: string
+  userRole: string
 }
 
-export function TicketDetail({ ticket, userId }: TicketDetailProps) {
+export function TicketDetail({ ticket, userId, userRole }: TicketDetailProps) {
+  const [status, setStatus] = useState<Ticket['status']>(ticket.status)
+  const [selectedStatus, setSelectedStatus] = useState<Ticket['status']>(ticket.status)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const statusOptions = useMemo(
+    () => [
+      { value: 'new', label: 'New' },
+      { value: 'open', label: 'Open' },
+      { value: 'in_progress', label: 'In progress' },
+      { value: 'pending_client', label: 'Pending client' },
+      { value: 'resolved', label: 'Resolved' },
+      { value: 'closed', label: 'Closed' },
+    ],
+    []
+  )
+
+  const allowedStatuses =
+    userRole === 'client' ? ['closed'] : statusOptions.map((option) => option.value)
+
+  const canCloseTicket = userRole === 'client' && status !== 'closed'
+
+  const updateStatus = async (nextStatus: Ticket['status']) => {
+    setError(null)
+    setIsUpdating(true)
+
+    const response = await fetch(`/api/tickets/${ticket.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: nextStatus }),
+    })
+
+    const payload = await response.json()
+
+    if (!response.ok) {
+      setError(payload.error || 'Failed to update ticket status')
+      setIsUpdating(false)
+      return
+    }
+
+    setStatus(payload.data.status)
+    setSelectedStatus(payload.data.status)
+    setIsUpdating(false)
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Link 
@@ -36,7 +94,7 @@ export function TicketDetail({ ticket, userId }: TicketDetailProps) {
             <span className="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider">
               Ticket #{ticket.ticket_number}
             </span>
-            <StatusBadge status={ticket.status} />
+            <StatusBadge status={status} />
             <PriorityBadge priority={ticket.priority} />
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{ticket.subject}</h1>
@@ -102,6 +160,54 @@ export function TicketDetail({ ticket, userId }: TicketDetailProps) {
                   <span className="text-xs text-slate-400 italic">No tags</span>
                 )}
               </div>
+            </div>
+
+            <div className="pt-4 border-t border-slate-100 space-y-3">
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-tighter block">Status</span>
+              {userRole === 'client' ? (
+                <Button
+                  type="button"
+                  className="w-full"
+                  onClick={() => updateStatus('closed')}
+                  disabled={!canCloseTicket || isUpdating}
+                >
+                  {isUpdating ? 'Closing ticket...' : 'Close Ticket'}
+                </Button>
+              ) : (
+                <div className="space-y-3">
+                  <Select
+                    value={selectedStatus}
+                    onValueChange={(value) => setSelectedStatus(value as Ticket['status'])}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions
+                        .filter((option) => allowedStatuses.includes(option.value))
+                        .map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={() => updateStatus(selectedStatus)}
+                    disabled={isUpdating || selectedStatus === status}
+                  >
+                    {isUpdating ? 'Updating status...' : 'Update Status'}
+                  </Button>
+                </div>
+              )}
+              {error && (
+                <Alert variant="destructive">
+                  <AlertTitle>Unable to update ticket</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
             </div>
           </div>
         </div>

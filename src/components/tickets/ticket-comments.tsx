@@ -5,8 +5,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { format } from 'date-fns'
-import { MessageSquare, Send, Loader2, User } from 'lucide-react'
+import { MessageSquare, Send, Loader2, User, AlertCircle } from 'lucide-react'
 import { Database } from '@/types/database'
 
 type Comment = Database['public']['Tables']['ticket_comments']['Row'] & {
@@ -24,6 +25,7 @@ interface TicketCommentsProps {
 export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
   const [newComment, setNewComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const supabase = createClient() as any
   const queryClient = useQueryClient()
 
@@ -70,20 +72,25 @@ export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
     if (!newComment.trim() || isSubmitting) return
 
     setIsSubmitting(true)
-    const { error } = await supabase
-      .from('ticket_comments')
-      .insert({
-        ticket_id: ticketId,
-        author_id: userId,
-        content: newComment.trim(),
-        is_internal: false
-      })
+    setError(null)
 
-    if (error) {
-      console.error('Error posting comment:', error)
-      alert('Failed to post comment. Please try again.')
+    const response = await fetch(`/api/tickets/${ticketId}/comments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        content: newComment.trim(),
+      }),
+    })
+
+    const payload = await response.json()
+
+    if (!response.ok) {
+      setError(payload.error || 'Failed to post comment. Please try again.')
     } else {
       setNewComment('')
+      queryClient.invalidateQueries({ queryKey: ['ticket-comments', ticketId] })
     }
     setIsSubmitting(false)
   }
@@ -136,6 +143,14 @@ export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
           ))
         )}
       </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Unable to post comment</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <form onSubmit={handlePostComment} className="relative pt-2">
         <Input

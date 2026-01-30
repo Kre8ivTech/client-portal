@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
 import * as z from 'zod'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -44,16 +43,10 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
-interface CreateTicketFormProps {
-  organizationId: string
-  userId: string
-}
-
-export function CreateTicketForm({ organizationId, userId }: CreateTicketFormProps) {
+export function CreateTicketForm() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isSuccess, setIsSuccess] = useState(false)
-  const supabase = createClient() as any
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -72,29 +65,26 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
     setIsSuccess(false)
 
     try {
-      const { data, error: submitError } = await supabase
-        .from('tickets')
-        .insert({
-          organization_id: organizationId,
-          created_by: userId,
-          subject: values.subject,
-          description: values.description,
-          priority: values.priority,
-          category: values.category,
-          status: 'new',
-          tags: [] as any,
-        })
-        .select()
-        .single()
+      const response = await fetch('/api/tickets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(values),
+      })
 
-      if (submitError) throw submitError
+      const payload = await response.json()
+
+      if (!response.ok) {
+        throw new Error(payload.error || 'Failed to create ticket')
+      }
 
       setIsSuccess(true)
       form.reset()
       
       // Navigate to the new ticket after a brief delay
       setTimeout(() => {
-        router.push(`/dashboard/tickets/${data.id}`)
+        router.push(`/dashboard/tickets/${payload.data.id}`)
       }, 1500)
       
     } catch (err: any) {

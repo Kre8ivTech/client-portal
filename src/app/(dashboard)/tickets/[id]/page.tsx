@@ -15,7 +15,7 @@ export default async function TicketPage({
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('organization_id')
+    .select('organization_id, role')
     .eq('id', user.id)
     .single()
 
@@ -36,5 +36,5 @@ export default async function TicketPage({
     return notFound()
   }
 
-  return <TicketDetail ticket={ticket as any} userId={user.id} />
+  return <TicketDetail ticket={ticket as any} userId={user.id} userRole={profile.role} />
 }

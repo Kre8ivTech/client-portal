@@ -2,6 +2,7 @@
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { encrypt, decrypt } from "@/lib/crypto";
+import { createVaultItemSchema } from "@/lib/validators/vault";
 import { revalidatePath } from "next/cache";
 
 export async function createVaultItem(formData: FormData) {
@@ -22,11 +23,19 @@ export async function createVaultItem(formData: FormData) {
   if (!profile?.organization_id)
     throw new Error("No organization found for user");
 
-  const label = formData.get("label") as string;
-  const description = formData.get("description") as string;
-  const service_url = formData.get("service_url") as string;
-  const username = formData.get("username") as string;
-  const password = formData.get("password") as string;
+  const result = createVaultItemSchema.safeParse({
+    label: formData.get("label"),
+    description: formData.get("description"),
+    service_url: formData.get("service_url"),
+    username: formData.get("username"),
+    password: formData.get("password"),
+  });
+
+  if (!result.success) {
+    throw new Error("Validation failed");
+  }
+
+  const { label, description, service_url, username, password } = result.data;
 
   // Encrypt password before storage
   const { encryptedData, iv, authTag } = encrypt(password);

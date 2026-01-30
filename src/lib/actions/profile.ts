@@ -1,13 +1,22 @@
 "use server";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { updateProfileSchema } from "@/lib/validators/profile";
 import { revalidatePath } from "next/cache";
 
 export async function updateProfile(formData: FormData) {
   const supabase = (await createServerSupabaseClient()) as any;
 
-  const name = formData.get("name") as string;
-  const avatar_url = formData.get("avatar_url") as string;
+  const result = updateProfileSchema.safeParse({
+    name: formData.get("name"),
+    avatar_url: formData.get("avatar_url"),
+  });
+
+  if (!result.success) {
+    throw new Error("Validation failed");
+  }
+
+  const { name, avatar_url } = result.data;
 
   const {
     data: { user },
@@ -21,7 +30,7 @@ export async function updateProfile(formData: FormData) {
     .from("profiles")
     .update({
       name,
-      avatar_url,
+      avatar_url: avatar_url ?? null,
       updated_at: new Date().toISOString(),
     })
     .eq("id", user.id);

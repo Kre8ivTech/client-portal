@@ -23,6 +23,13 @@ type Ticket = Database['public']['Tables']['tickets']['Row'] & {
   creator?: {
     name: string | null
   }
+  ai_summary?: string | null
+  ai_sentiment?: string | null
+  ai_suggested_priority?: string | null
+  ai_suggested_category?: string | null
+  ai_tags?: string[] | null
+  ai_action_items?: string[] | null
+  ai_generated_at?: string | null
 }
 
 interface TicketDetailProps {
@@ -252,6 +259,76 @@ export function TicketDetail({
               organizationId={organizationId}
               userId={userId}
             />
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-bold text-slate-900">AI Analysis</h3>
+              {ticket.ai_generated_at && (
+                <span className="text-xs text-slate-400">
+                  Updated {format(new Date(ticket.ai_generated_at), 'MMM d, h:mm a')}
+                </span>
+              )}
+            </div>
+
+            {ticket.ai_summary ? (
+              <div className="space-y-4">
+                <p className="text-sm text-slate-700 leading-relaxed">{ticket.ai_summary}</p>
+
+                <div className="grid gap-3 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Sentiment</span>
+                    <Badge variant="outline" className="capitalize">
+                      {ticket.ai_sentiment || 'Unknown'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Suggested Priority</span>
+                    <Badge variant="outline" className="capitalize">
+                      {ticket.ai_suggested_priority || 'Not provided'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Suggested Category</span>
+                    <span className="text-sm text-slate-700">
+                      {ticket.ai_suggested_category || 'Not provided'}
+                    </span>
+                  </div>
+                </div>
+
+                {ticket.ai_tags && ticket.ai_tags.length > 0 && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
+                      Key Tags
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {ticket.ai_tags.map((tag) => (
+                        <Badge key={tag} variant="secondary" className="text-[10px] font-bold uppercase">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {ticket.ai_action_items && ticket.ai_action_items.length > 0 && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
+                      Suggested Actions
+                    </span>
+                    <ul className="list-disc pl-5 text-sm text-slate-700 space-y-1">
+                      {ticket.ai_action_items.map((item, idx) => (
+                        <li key={`${item}-${idx}`}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500 italic">
+                AI analysis is not available yet. It will appear once processing completes.
+              </p>
+            )}
           </div>
         </div>
       </div>

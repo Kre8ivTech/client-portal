@@ -36,5 +36,20 @@ export default async function TicketPage({
     return notFound()
   }
 
-  return <TicketDetail ticket={ticket as any} userId={user.id} userRole={profile.role} />
+  const { data: queueData } = await supabase.rpc('get_ticket_queue_position', {
+    ticket_id: params.id,
+  })
+
+  const queue = Array.isArray(queueData) ? queueData[0] : null
+
+  return (
+    <TicketDetail
+      ticket={ticket as any}
+      userId={user.id}
+      userRole={profile.role}
+      organizationId={profile.organization_id}
+      queuePosition={queue?.position ?? null}
+      queueTotal={queue?.total ?? null}
+    />
+  )
 }

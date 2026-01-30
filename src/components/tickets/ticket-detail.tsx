@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { TicketComments } from './ticket-comments'
+import { TicketAttachments } from './ticket-attachments'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -28,9 +29,19 @@ interface TicketDetailProps {
   ticket: Ticket
   userId: string
   userRole: string
+  organizationId: string
+  queuePosition?: number | null
+  queueTotal?: number | null
 }
 
-export function TicketDetail({ ticket, userId, userRole }: TicketDetailProps) {
+export function TicketDetail({
+  ticket,
+  userId,
+  userRole,
+  organizationId,
+  queuePosition,
+  queueTotal,
+}: TicketDetailProps) {
   const [status, setStatus] = useState<Ticket['status']>(ticket.status)
   const [selectedStatus, setSelectedStatus] = useState<Ticket['status']>(ticket.status)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -48,8 +59,19 @@ export function TicketDetail({ ticket, userId, userRole }: TicketDetailProps) {
     []
   )
 
+  const transitionMap: Record<Ticket['status'], Ticket['status'][]> = {
+    new: ['open', 'in_progress', 'pending_client', 'resolved', 'closed'],
+    open: ['in_progress', 'pending_client', 'resolved', 'closed'],
+    in_progress: ['pending_client', 'resolved', 'closed'],
+    pending_client: ['in_progress', 'resolved', 'closed'],
+    resolved: ['closed', 'open', 'in_progress'],
+    closed: [],
+  }
+
   const allowedStatuses =
-    userRole === 'client' ? ['closed'] : statusOptions.map((option) => option.value)
+    userRole === 'client'
+      ? ['closed']
+      : [status, ...(transitionMap[status] || [])]
 
   const canCloseTicket = userRole === 'client' && status !== 'closed'
 
@@ -148,6 +170,19 @@ export function TicketDetail({ ticket, userId, userRole }: TicketDetailProps) {
               label="Category" 
               value={ticket.category || 'Uncategorized'} 
             />
+
+            <DetailItem
+              icon={<Clock className="h-4 w-4 text-slate-400" />}
+              label="Queue Position"
+              value={
+                queuePosition !== null &&
+                queuePosition !== undefined &&
+                queueTotal !== null &&
+                queueTotal !== undefined
+                  ? `#${queuePosition} of ${queueTotal}`
+                  : 'Not in queue'
+              }
+            />
             
             <div className="pt-2">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-tighter mb-2 block">Tags</span>
@@ -209,6 +244,14 @@ export function TicketDetail({ ticket, userId, userRole }: TicketDetailProps) {
                 </Alert>
               )}
             </div>
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+            <TicketAttachments
+              ticketId={ticket.id}
+              organizationId={organizationId}
+              userId={userId}
+            />
           </div>
         </div>
       </div>

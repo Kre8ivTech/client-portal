@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { User, Mail, Bell, Shield, Camera } from "lucide-react";
+import { WorkScheduleForm } from "@/components/profile/work-schedule-form";
 
 export default async function ProfilePage() {
   const supabase = (await createServerSupabaseClient()) as any
@@ -20,6 +21,12 @@ export default async function ProfilePage() {
     .from('profiles')
     .select('*')
     .eq('id', user.id)
+    .single()
+
+  const { data: schedule } = await supabase
+    .from('staff_work_schedules')
+    .select('time_zone, work_days, start_time, end_time')
+    .eq('user_id', user.id)
     .single()
 
   return (
@@ -110,6 +117,23 @@ export default async function ProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {profile?.role && ['staff', 'super_admin'].includes(profile.role) && (
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <Shield className="text-primary w-5 h-5" />
+                  Work Schedule
+                </CardTitle>
+                <CardDescription>
+                  Set your working hours to improve capacity and delivery estimates.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <WorkScheduleForm initialSchedule={schedule as any} />
+              </CardContent>
+            </Card>
+          )}
 
           {/* Notifications Card */}
           <Card className="border-slate-200 shadow-sm">

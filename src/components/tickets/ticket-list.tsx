@@ -19,17 +19,19 @@ type Ticket = Database['public']['Tables']['tickets']['Row']
 
 interface TicketListProps {
   initialTickets: Ticket[]
+  organizationId: string
 }
 
-export function TicketList({ initialTickets }: TicketListProps) {
+export function TicketList({ initialTickets, organizationId }: TicketListProps) {
   const supabase = createClient()
 
   const { data: tickets } = useQuery({
-    queryKey: ['tickets'],
+    queryKey: ['tickets', organizationId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tickets')
         .select('*')
+        .eq('organization_id', organizationId)
         .order('created_at', { ascending: false })
 
       if (error) throw error

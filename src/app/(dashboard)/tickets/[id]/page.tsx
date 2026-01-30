@@ -10,14 +10,25 @@ export default async function TicketPage({
   const supabase = await createServerSupabaseClient()
 
   // Get current user to pass to client components
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) return null
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single()
+
+  if (profileError || !profile?.organization_id) {
+    return notFound()
+  }
 
   // Fetch ticket with creator profile join
   const { data: ticket, error } = await supabase
     .from('tickets')
     .select('*, creator:profiles!created_by(name)')
     .eq('id', params.id)
+    .eq('organization_id', profile.organization_id)
     .single()
 
   if (error || !ticket) {

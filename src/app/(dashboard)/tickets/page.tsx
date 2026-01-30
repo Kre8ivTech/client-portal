@@ -3,13 +3,30 @@ import { TicketList } from '@/components/tickets/ticket-list'
 import { Button } from '@/components/ui/button'
 import { PlusCircle } from 'lucide-react'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 export default async function TicketsPage() {
   const supabase = await createServerSupabaseClient()
 
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+  if (authError || !user) {
+    redirect('/login')
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('organization_id')
+    .eq('id', user.id)
+    .single()
+
+  if (profileError || !profile?.organization_id) {
+    throw new Error('Organization not found for user')
+  }
+
   const { data: tickets, error } = await supabase
     .from('tickets')
     .select('*')
+    .eq('organization_id', profile.organization_id)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -33,7 +50,7 @@ export default async function TicketsPage() {
         </Button>
       </div>
 
-      <TicketList initialTickets={tickets || []} />
+      <TicketList initialTickets={tickets || []} organizationId={profile.organization_id} />
     </div>
   )
 }

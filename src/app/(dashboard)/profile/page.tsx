@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { User, Mail, Bell, Shield, Camera } from "lucide-react";
 import { WorkScheduleForm } from "@/components/profile/work-schedule-form";
+import Link from "next/link";
 
 export default async function ProfilePage() {
   const supabase = (await createServerSupabaseClient()) as any
@@ -28,6 +29,11 @@ export default async function ProfilePage() {
     .select('time_zone, work_days, start_time, end_time')
     .eq('user_id', user.id)
     .single()
+
+  const { data: integrations } = await supabase
+    .from('calendar_integrations')
+    .select('provider, status, account_email, last_synced_at')
+    .eq('user_id', user.id)
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -131,6 +137,47 @@ export default async function ProfilePage() {
               </CardHeader>
               <CardContent>
                 <WorkScheduleForm initialSchedule={schedule as any} />
+              </CardContent>
+            </Card>
+          )}
+
+          {profile?.role && ['staff', 'super_admin'].includes(profile.role) && (
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <Shield className="text-primary w-5 h-5" />
+                  Calendar Integrations
+                </CardTitle>
+                <CardDescription>
+                  Connect Google Calendar or Microsoft 365 to sync availability.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-wrap gap-3">
+                  <Button asChild variant="outline">
+                    <Link href="/api/calendar/connect/google">Connect Google</Link>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link href="/api/calendar/connect/microsoft">Connect Microsoft</Link>
+                  </Button>
+                </div>
+                {integrations && integrations.length > 0 ? (
+                  <div className="space-y-2 text-sm text-slate-600">
+                    {integrations.map((integration) => (
+                      <div key={integration.provider} className="flex items-center justify-between border rounded-lg px-3 py-2">
+                        <div>
+                          <p className="font-medium capitalize">{integration.provider}</p>
+                          <p className="text-xs text-slate-400">{integration.account_email || 'No email on file'}</p>
+                        </div>
+                        <span className="text-xs uppercase tracking-wider text-slate-400">
+                          {integration.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500">No calendars connected yet.</p>
+                )}
               </CardContent>
             </Card>
           )}

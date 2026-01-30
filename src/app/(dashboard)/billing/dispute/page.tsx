@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,6 +14,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   Select,
   SelectContent,
@@ -26,6 +27,8 @@ import { useForm } from 'react-hook-form'
 import * as z from 'zod'
 import { AlertCircle, CheckCircle2, ChevronLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 
 const formSchema = z.object({
   type: z.enum(['time_logged', 'invoice_amount', 'coverage', 'other']),
@@ -40,6 +43,12 @@ const formSchema = z.object({
 export default function BillingDisputePage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [organizationId, setOrganizationId] = useState<string | null>(null)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+  const router = useRouter()
+  const supabase = useMemo(() => createClient(), [])
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -50,12 +59,82 @@ export default function BillingDisputePage() {
     },
   })
 
+  useEffect(() => {
+    let isActive = true
+
+    async function loadProfile() {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (!isActive) return
+
+      if (authError || !user) {
+        router.push('/login')
+        return
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('organization_id')
+        .eq('id', user.id)
+        .single()
+
+      if (!isActive) return
+
+      if (profileError || !profile?.organization_id) {
+        setError('Organization not found for your account.')
+        setIsLoadingProfile(false)
+        return
+      }
+
+      setUserId(user.id)
+      setOrganizationId(profile.organization_id)
+      setIsLoadingProfile(false)
+    }
+
+    loadProfile()
+
+    return () => {
+      isActive = false
+    }
+  }, [router, supabase])
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    setError(null)
     setIsSubmitting(true)
-    // Stub: Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+
+    if (!userId || !organizationId) {
+      setError('Unable to submit dispute. Please refresh and try again.')
+      setIsSubmitting(false)
+      return
+    }
+
+    const description = `${values.subject}\n\n${values.description}`
+
+    const { error: submitError } = await supabase
+      .from('billing_disputes')
+      .insert({
+        organization_id: organizationId,
+        submitted_by: userId,
+        dispute_type: values.type,
+        description,
+      })
+
+    if (submitError) {
+      setError(submitError.message)
+      setIsSubmitting(false)
+      return
+    }
+
     setIsSubmitting(false)
     setIsSuccess(true)
+  }
+
+  if (isLoadingProfile) {
+    return (
+      <div className="max-w-2xl mx-auto py-16 flex items-center justify-center text-slate-500">
+        <Loader2 className="h-6 w-6 animate-spin mr-2" />
+        Loading billing profile...
+      </div>
+    )
   }
 
   if (isSuccess) {
@@ -93,6 +172,14 @@ export default function BillingDisputePage() {
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Billing Dispute</h1>
         <p className="text-slate-500">Submit a dispute regarding hours logged, invoice amounts, or plan coverage.</p>
       </div>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Unable to submit dispute</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-white p-8 border rounded-2xl shadow-sm">

@@ -18,6 +18,31 @@
 
 ---
 
+## Implementation Status Update (2026-01-30)
+
+This section reflects actual repository implementation status and is used to
+reconcile the roadmap below.
+
+### Completed
+- Auth magic-link login + recovery UI: src/app/(auth)/login, forgot-password
+- Supabase schema + RLS for orgs, profiles, plans, tickets, messaging, KB, vault
+- Dashboard layout + sidebar: src/app/(dashboard)/layout.tsx, src/components/layout/sidebar.tsx
+
+### In Progress
+- Tickets: list/detail/create/comments UI; missing queue, attachments, notifications
+- Messaging: conversation list + thread UI with realtime; missing creation/presence
+- Billing: plan assignment view and dispute submission wired; invoices placeholders
+- Knowledge Base: read-only category/article UI; missing admin CRUD, search wiring, analytics
+
+### Not Started / Missing
+- Registration/invite flow (no /signup route)
+- API routes for tickets/invoices/notifications (no src/app/api)
+- Stripe integration and invoice backend
+- Notification center, global search, form builder
+- CI/CD, storage setup, custom domain automation
+
+---
+
 ## Phase 0: Planning & Setup (Current)
 
 ### Documentation

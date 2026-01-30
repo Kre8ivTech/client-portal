@@ -118,6 +118,9 @@ kt-portal/
 
 ## [Unreleased]
 
+### Updated
+- Roadmap status section in docs/todo.md aligned to repository implementation
+
 ### Planned
 - Wireframes and UI mockups
 - Database ERD diagram

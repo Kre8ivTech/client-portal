@@ -8,14 +8,15 @@ import { Settings, Globe, Palette, ShieldCheck, Mail } from 'lucide-react'
 export default async function SettingsPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
 
   const { data: profile } = await supabase
     .from('profiles')
     .select('*, organizations(*)')
-    .eq('id', user?.id)
+    .eq('id', user.id)
     .single()
 
-  const organization = profile?.organizations as any
+  const organization = (profile as any)?.organizations
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -116,7 +117,7 @@ export default async function SettingsPage() {
               </div>
               <Button size="sm" variant="outline" disabled>Configure</Button>
             </div>
-          </div>
+          </CardContent>
         </Card>
       </div>
     </div>

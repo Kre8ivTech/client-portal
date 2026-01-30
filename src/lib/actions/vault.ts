@@ -5,7 +5,7 @@ import { encrypt, decrypt } from "@/lib/crypto";
 import { revalidatePath } from "next/cache";
 
 export async function createVaultItem(formData: FormData) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = (await createServerSupabaseClient()) as any;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -50,7 +50,7 @@ export async function createVaultItem(formData: FormData) {
 }
 
 export async function getDecryptedPassword(itemId: string) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = (await createServerSupabaseClient()) as any;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -75,7 +75,7 @@ export async function getDecryptedPassword(itemId: string) {
 }
 
 export async function deleteVaultItem(itemId: string) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = (await createServerSupabaseClient()) as any;
   const { error } = await supabase
     .from("vault_items")
     .delete()

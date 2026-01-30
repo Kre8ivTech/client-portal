@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { DashboardSidebar } from "@/components/layout/sidebar";
+import { LiveChatWidget } from "@/components/messaging/live-chat-widget";
 
 export default async function DashboardLayout({
   children,
@@ -42,6 +43,9 @@ export default async function DashboardLayout({
 
         <main className="p-8 flex-1 overflow-auto">{children}</main>
       </div>
+      
+      {/* Global Live Chat */}
+      <LiveChatWidget />
     </div>
   );
 }

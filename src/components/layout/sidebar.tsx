@@ -10,6 +10,8 @@ import {
   Settings,
   LogOut,
   Shield,
+  MessageSquare,
+  BookOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -18,6 +20,9 @@ const navItems = [
   { href: "/dashboard", icon: Home, label: "Overview" },
   { href: "/dashboard/tickets", icon: Ticket, label: "Tickets" },
   { href: "/dashboard/vault", icon: Shield, label: "Secure Vault" },
+  { href: "/dashboard/billing", icon: FileText, label: "Billing & Plans" },
+  { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },
+  { href: "/dashboard/kb", icon: BookOpen, label: "Knowledge Base" },
   { href: "/dashboard/invoices", icon: FileText, label: "Invoices" },
   { href: "/dashboard/clients", icon: Users, label: "Clients" },
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },

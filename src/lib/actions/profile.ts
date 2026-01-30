@@ -4,7 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function updateProfile(formData: FormData) {
-  const supabase = await createServerSupabaseClient();
+  const supabase = (await createServerSupabaseClient()) as any;
 
   const name = formData.get("name") as string;
   const avatar_url = formData.get("avatar_url") as string;

@@ -12,16 +12,15 @@ import { Button } from "@/components/ui/button";
 import { User, Mail, Bell, Shield, Camera } from "lucide-react";
 
 export default async function ProfilePage() {
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const supabase = (await createServerSupabaseClient()) as any
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
 
   const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user?.id)
-    .single();
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

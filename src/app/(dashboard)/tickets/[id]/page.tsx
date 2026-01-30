@@ -42,6 +42,15 @@ export default async function TicketPage({
 
   const queue = Array.isArray(queueData) ? queueData[0] : null
 
+  const { data: estimates } = await supabase
+    .from('ticket_estimates')
+    .select('*')
+    .eq('ticket_id', params.id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  const estimate = estimates?.[0] ?? null
+
   return (
     <TicketDetail
       ticket={ticket as any}
@@ -50,6 +59,7 @@ export default async function TicketPage({
       organizationId={profile.organization_id}
       queuePosition={queue?.position ?? null}
       queueTotal={queue?.total ?? null}
+      estimate={estimate as any}
     />
   )
 }

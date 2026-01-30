@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createTicketSchema } from '@/lib/validators/ticket'
 import { createNotifications } from '@/lib/notifications'
+import { createTicketEstimate } from '@/lib/ai/ticket-estimator'
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,6 +64,18 @@ export async function POST(request: NextRequest) {
       })
     } catch {
       // Ignore notification failures
+    }
+
+    try {
+      await createTicketEstimate({
+        ticketId: ticket.id,
+        organizationId: profile.organization_id,
+        createdBy: user.id,
+        priority: ticket.priority,
+        description: ticket.description,
+      })
+    } catch {
+      // Ignore estimation failures
     }
 
     return NextResponse.json({ data: ticket }, { status: 201 })

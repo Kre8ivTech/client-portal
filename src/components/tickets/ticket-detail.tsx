@@ -32,6 +32,8 @@ type Ticket = Database['public']['Tables']['tickets']['Row'] & {
   ai_generated_at?: string | null
 }
 
+type TicketEstimate = Database['public']['Tables']['ticket_estimates']['Row']
+
 interface TicketDetailProps {
   ticket: Ticket
   userId: string
@@ -39,6 +41,7 @@ interface TicketDetailProps {
   organizationId: string
   queuePosition?: number | null
   queueTotal?: number | null
+  estimate?: TicketEstimate | null
 }
 
 export function TicketDetail({
@@ -48,6 +51,7 @@ export function TicketDetail({
   organizationId,
   queuePosition,
   queueTotal,
+  estimate,
 }: TicketDetailProps) {
   const [status, setStatus] = useState<Ticket['status']>(ticket.status)
   const [selectedStatus, setSelectedStatus] = useState<Ticket['status']>(ticket.status)
@@ -327,6 +331,51 @@ export function TicketDetail({
             ) : (
               <p className="text-sm text-slate-500 italic">
                 AI analysis is not available yet. It will appear once processing completes.
+              </p>
+            )}
+          </div>
+
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-3">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-bold text-slate-900">Estimated Timeline</h3>
+              {estimate?.created_at && (
+                <span className="text-xs text-slate-400">
+                  Generated {format(new Date(estimate.created_at), 'MMM d, h:mm a')}
+                </span>
+              )}
+            </div>
+
+            {estimate ? (
+              <div className="space-y-3 text-sm text-slate-700">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Estimated Hours</span>
+                  <span className="font-semibold">{estimate.estimated_hours} hrs</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Estimated Cost</span>
+                  <span className="font-semibold">
+                    {estimate.estimated_cost_cents !== null
+                      ? `$${(estimate.estimated_cost_cents / 100).toFixed(2)}`
+                      : 'Covered by plan'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Estimated Completion</span>
+                  <span className="font-semibold">
+                    {estimate.estimated_completion_at
+                      ? format(new Date(estimate.estimated_completion_at), 'MMM d, yyyy')
+                      : 'Pending'}
+                  </span>
+                </div>
+                {estimate.estimated_completion_reason && (
+                  <p className="text-xs text-slate-500">
+                    {estimate.estimated_completion_reason}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500 italic">
+                Estimate pending. This will update after workload analysis completes.
               </p>
             )}
           </div>

@@ -8,3 +8,4 @@
 export * from './plan'
 export * from './profile'
 export * from './vault'
+export * from './ticket'

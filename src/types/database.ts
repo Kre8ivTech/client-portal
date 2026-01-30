@@ -229,6 +229,13 @@ export type Database = {
           status: "new" | "open" | "in_progress" | "pending_client" | "resolved" | "closed";
           category: string | null;
           tags: Json;
+          ai_summary: string | null;
+          ai_sentiment: string | null;
+          ai_suggested_priority: string | null;
+          ai_suggested_category: string | null;
+          ai_tags: Json;
+          ai_action_items: Json;
+          ai_generated_at: string | null;
           created_by: string;
           assigned_to: string | null;
           parent_ticket_id: string | null;
@@ -248,6 +255,13 @@ export type Database = {
           status?: "new" | "open" | "in_progress" | "pending_client" | "resolved" | "closed";
           category?: string | null;
           tags?: Json;
+          ai_summary?: string | null;
+          ai_sentiment?: string | null;
+          ai_suggested_priority?: string | null;
+          ai_suggested_category?: string | null;
+          ai_tags?: Json;
+          ai_action_items?: Json;
+          ai_generated_at?: string | null;
           created_by: string;
           assigned_to?: string | null;
           parent_ticket_id?: string | null;
@@ -267,6 +281,13 @@ export type Database = {
           status?: "new" | "open" | "in_progress" | "pending_client" | "resolved" | "closed";
           category?: string | null;
           tags?: Json;
+          ai_summary?: string | null;
+          ai_sentiment?: string | null;
+          ai_suggested_priority?: string | null;
+          ai_suggested_category?: string | null;
+          ai_tags?: Json;
+          ai_action_items?: Json;
+          ai_generated_at?: string | null;
           created_by?: string;
           assigned_to?: string | null;
           parent_ticket_id?: string | null;
@@ -307,6 +328,325 @@ export type Database = {
           attachments?: Json;
           created_at?: string;
           updated_at?: string;
+        };
+      };
+      ticket_attachments: {
+        Row: {
+          id: string;
+          organization_id: string;
+          ticket_id: string;
+          uploaded_by: string;
+          file_path: string;
+          file_name: string;
+          file_size: number | null;
+          mime_type: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          ticket_id: string;
+          uploaded_by: string;
+          file_path: string;
+          file_name: string;
+          file_size?: number | null;
+          mime_type?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          ticket_id?: string;
+          uploaded_by?: string;
+          file_path?: string;
+          file_name?: string;
+          file_size?: number | null;
+          mime_type?: string | null;
+          created_at?: string;
+        };
+      };
+      ticket_estimates: {
+        Row: {
+          id: string;
+          ticket_id: string;
+          organization_id: string;
+          estimated_hours: number;
+          estimated_cost_cents: number | null;
+          estimated_completion_at: string | null;
+          estimated_completion_reason: string | null;
+          created_by: string | null;
+          ai_model: string | null;
+          ai_confidence: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          ticket_id: string;
+          organization_id: string;
+          estimated_hours: number;
+          estimated_cost_cents?: number | null;
+          estimated_completion_at?: string | null;
+          estimated_completion_reason?: string | null;
+          created_by?: string | null;
+          ai_model?: string | null;
+          ai_confidence?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          ticket_id?: string;
+          organization_id?: string;
+          estimated_hours?: number;
+          estimated_cost_cents?: number | null;
+          estimated_completion_at?: string | null;
+          estimated_completion_reason?: string | null;
+          created_by?: string | null;
+          ai_model?: string | null;
+          ai_confidence?: number | null;
+          created_at?: string;
+        };
+      };
+      notifications: {
+        Row: {
+          id: string;
+          organization_id: string;
+          user_id: string;
+          created_by: string | null;
+          type: string;
+          title: string;
+          body: string | null;
+          metadata: Json;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          user_id: string;
+          created_by?: string | null;
+          type: string;
+          title: string;
+          body?: string | null;
+          metadata?: Json;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          user_id?: string;
+          created_by?: string | null;
+          type?: string;
+          title?: string;
+          body?: string | null;
+          metadata?: Json;
+          read_at?: string | null;
+          created_at?: string;
+        };
+      };
+      calendar_integrations: {
+        Row: {
+          id: string;
+          organization_id: string;
+          user_id: string;
+          provider: string;
+          account_email: string | null;
+          access_token_encrypted: string | null;
+          refresh_token_encrypted: string | null;
+          token_expires_at: string | null;
+          scope: string | null;
+          status: string;
+          last_synced_at: string | null;
+          error_message: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          user_id: string;
+          provider: string;
+          account_email?: string | null;
+          access_token_encrypted?: string | null;
+          refresh_token_encrypted?: string | null;
+          token_expires_at?: string | null;
+          scope?: string | null;
+          status?: string;
+          last_synced_at?: string | null;
+          error_message?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          user_id?: string;
+          provider?: string;
+          account_email?: string | null;
+          access_token_encrypted?: string | null;
+          refresh_token_encrypted?: string | null;
+          token_expires_at?: string | null;
+          scope?: string | null;
+          status?: string;
+          last_synced_at?: string | null;
+          error_message?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      calendar_calendars: {
+        Row: {
+          id: string;
+          organization_id: string;
+          user_id: string;
+          integration_id: string;
+          external_id: string;
+          name: string;
+          time_zone: string | null;
+          is_primary: boolean;
+          is_enabled: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          user_id: string;
+          integration_id: string;
+          external_id: string;
+          name: string;
+          time_zone?: string | null;
+          is_primary?: boolean;
+          is_enabled?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          user_id?: string;
+          integration_id?: string;
+          external_id?: string;
+          name?: string;
+          time_zone?: string | null;
+          is_primary?: boolean;
+          is_enabled?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      calendar_events: {
+        Row: {
+          id: string;
+          organization_id: string;
+          user_id: string;
+          calendar_id: string;
+          external_id: string;
+          title: string | null;
+          start_at: string;
+          end_at: string;
+          is_busy: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          user_id: string;
+          calendar_id: string;
+          external_id: string;
+          title?: string | null;
+          start_at: string;
+          end_at: string;
+          is_busy?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          user_id?: string;
+          calendar_id?: string;
+          external_id?: string;
+          title?: string | null;
+          start_at?: string;
+          end_at?: string;
+          is_busy?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      staff_work_schedules: {
+        Row: {
+          id: string;
+          organization_id: string;
+          user_id: string;
+          time_zone: string;
+          work_days: number[];
+          start_time: string;
+          end_time: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          user_id: string;
+          time_zone?: string;
+          work_days?: number[];
+          start_time?: string;
+          end_time?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          user_id?: string;
+          time_zone?: string;
+          work_days?: number[];
+          start_time?: string;
+          end_time?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      capacity_snapshots: {
+        Row: {
+          id: string;
+          organization_id: string;
+          window_start: string;
+          window_end: string;
+          total_available_hours: number | null;
+          total_booked_hours: number | null;
+          total_capacity_hours: number | null;
+          generated_by: string | null;
+          notes: Json;
+          generated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          window_start: string;
+          window_end: string;
+          total_available_hours?: number | null;
+          total_booked_hours?: number | null;
+          total_capacity_hours?: number | null;
+          generated_by?: string | null;
+          notes?: Json;
+          generated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          window_start?: string;
+          window_end?: string;
+          total_available_hours?: number | null;
+          total_booked_hours?: number | null;
+          total_capacity_hours?: number | null;
+          generated_by?: string | null;
+          notes?: Json;
+          generated_at?: string;
         };
       };
       vault_items: {

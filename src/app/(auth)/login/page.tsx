@@ -19,6 +19,7 @@ import {
   ArrowRight,
   Loader2,
   Mail,
+  Lock,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ type LoginBranding = {
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -51,26 +53,34 @@ export default function LoginPage() {
   const tagline = branding?.tagline ?? "Client Portal";
   const logoUrl = branding?.logo_url;
 
-  const handleMagicLink = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
 
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-
-      if (error) {
-        setMessage({ type: "error", text: getAuthErrorMessage(error) });
+      if (password.trim()) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          setMessage({ type: "error", text: getAuthErrorMessage(error) });
+        } else {
+          window.location.href = "/dashboard";
+        }
       } else {
-        setMessage({
-          type: "success",
-          text: "We've sent a magic link to your inbox. Please click it to sign in.",
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
         });
+        if (error) {
+          setMessage({ type: "error", text: getAuthErrorMessage(error) });
+        } else {
+          setMessage({
+            type: "success",
+            text: "We've sent a magic link to your inbox. Please click it to sign in.",
+          });
+        }
       }
     } catch (err) {
       setMessage({
@@ -111,13 +121,13 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleMagicLink} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label
                 htmlFor="email"
                 className="text-slate-300 font-medium ml-1"
               >
-                Email Address
+                Email
               </Label>
               <div className="relative group">
                 <Input
@@ -137,6 +147,33 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <div className="space-y-2">
+              <Label
+                htmlFor="password"
+                className="text-slate-300 font-medium ml-1"
+              >
+                Password
+              </Label>
+              <div className="relative group">
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Leave blank for magic link"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-slate-950/50 border-slate-800 text-white h-12 px-4 focus:ring-primary focus:border-primary transition-all pr-12"
+                  disabled={loading}
+                  autoComplete="current-password"
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">
+                  <Lock size={18} />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">
+                Leave blank to receive a sign-in link by email.
+              </p>
+            </div>
+
             <Button
               type="submit"
               className="w-full h-12 font-semibold text-base bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/10 transition-all hover:translate-y-[-1px] active:translate-y-0"
@@ -145,11 +182,11 @@ export default function LoginPage() {
               {loading ? (
                 <div className="flex items-center gap-2">
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  <span>Preparing link...</span>
+                  <span>{password.trim() ? "Signing in..." : "Sending link..."}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <span>Sign In with Magic Link</span>
+                  <span>{password.trim() ? "Sign in" : "Send magic link"}</span>
                   <ArrowRight className="h-4 w-4" />
                 </div>
               )}

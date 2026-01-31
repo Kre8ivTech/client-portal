@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   Loader2,
   UserPlus,
+  Lock,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ import { getAuthErrorMessage } from "@/lib/auth-errors";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -39,23 +41,39 @@ export default function SignupPage() {
     setMessage(null);
 
     try {
-      // For this example, we'll just send a magic link.
-      // In a real application, you might want to create a user record here
-      // with a pending status and have an admin approve it.
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-
-      if (error) {
-        setMessage({ type: "error", text: getAuthErrorMessage(error) });
-      } else {
-        setMessage({
-          type: "success",
-          text: "We've sent a verification link to your email. Please click it to continue.",
+      if (password.trim()) {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
         });
+        if (error) {
+          setMessage({ type: "error", text: getAuthErrorMessage(error) });
+        } else if (data.session) {
+          window.location.href = "/dashboard";
+        } else {
+          setMessage({
+            type: "success",
+            text: "Check your email to confirm your account, then sign in.",
+          });
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        });
+        if (error) {
+          setMessage({ type: "error", text: getAuthErrorMessage(error) });
+        } else {
+          setMessage({
+            type: "success",
+            text: "We've sent a verification link to your email. Please click it to continue.",
+          });
+        }
       }
     } catch (err) {
       setMessage({
@@ -80,14 +98,14 @@ export default function SignupPage() {
             Request Access
           </CardTitle>
           <CardDescription className="text-center text-slate-400">
-            Enter your email to request access to the client portal.
+            Create an account with email and password, or request a magic link.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignup} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-slate-300">
-                Email Address
+                Email
               </Label>
               <Input
                 id="email"
@@ -98,7 +116,26 @@ export default function SignupPage() {
                 required
                 className="w-full bg-slate-950/50 border-slate-800 text-white h-11"
                 disabled={loading}
+                autoComplete="email"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-slate-300">
+                Password
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Leave blank for magic link"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-950/50 border-slate-800 text-white h-11"
+                disabled={loading}
+                autoComplete="new-password"
+              />
+              <p className="text-xs text-slate-500">
+                Leave blank to receive a sign-in link by email instead.
+              </p>
             </div>
             <Button
               type="submit"
@@ -107,8 +144,10 @@ export default function SignupPage() {
             >
               {loading ? (
                 <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+              ) : password.trim() ? (
+                "Create account"
               ) : (
-                "Request Access"
+                "Send magic link"
               )}
             </Button>
           </form>

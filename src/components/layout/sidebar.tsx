@@ -154,10 +154,18 @@ export function DashboardSidebar({
           const items = group.items.filter((item) => allowedHrefs.includes(item.href));
           if (items.length === 0) return null;
 
+          const isAdminGroup = group.label === "Admin";
+          const showAdminBadge = isAdminGroup && profile?.role === "super_admin";
+
           return (
             <div key={group.label}>
-              <p className="px-3 mb-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider">
+              <p className="px-3 mb-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider flex items-center gap-2">
                 {group.label}
+                {showAdminBadge && (
+                  <span className="rounded bg-sidebar-accent/20 px-1.5 py-0.5 text-[10px] font-medium text-sidebar-accent">
+                    Admin
+                  </span>
+                )}
               </p>
               <ul className="space-y-0.5">
                 {items.map((item) => {

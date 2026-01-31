@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { User, Mail, Bell, Shield, Camera } from "lucide-react";
+import { User, Bell, Shield, Camera } from "lucide-react";
+import { updateProfile } from "@/lib/actions/profile";
 
 export default async function ProfilePage() {
   const supabase = (await createServerSupabaseClient()) as any
@@ -85,32 +86,43 @@ export default async function ProfilePage() {
                 </div>
               </div>
 
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-slate-700">
-                    Full Name
-                  </Label>
-                  <Input
-                    id="name"
-                    defaultValue={profile?.name || ""}
-                    className="bg-white border-slate-200"
-                  />
+              <form
+                action={async (formData) => {
+                  await updateProfile(formData);
+                }}
+                className="space-y-6"
+              >
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="name" className="text-slate-700">
+                      Full Name
+                    </Label>
+                    <Input
+                      id="name"
+                      name="name"
+                      defaultValue={profile?.name ?? ""}
+                      className="bg-white border-slate-200"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-slate-700">
+                      Email Address
+                    </Label>
+                    <Input
+                      id="email"
+                      defaultValue={user?.email ?? ""}
+                      disabled
+                      className="bg-slate-50 border-slate-200 cursor-not-allowed"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-slate-700">
-                    Email Address
-                  </Label>
-                  <Input
-                    id="email"
-                    defaultValue={user?.email || ""}
-                    disabled
-                    className="bg-slate-50 border-slate-200 cursor-not-allowed"
-                  />
+                <div className="mt-8 flex justify-end">
+                  <Button type="submit" className="px-8 shadow-md">
+                    Save Changes
+                  </Button>
                 </div>
-              </div>
-              <div className="mt-8 flex justify-end">
-                <Button className="px-8 shadow-md">Save Changes</Button>
-              </div>
+              </form>
             </CardContent>
           </Card>
 

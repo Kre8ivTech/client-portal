@@ -1400,8 +1400,8 @@ services:
 
 ```bash
 # .env.example
-DATABASE_URL=postgresql://user:pass@localhost:5432/ktportal
-REDIS_URL=redis://localhost:6379
+DATABASE_URL=postgresql://user:pass@<db-host>:5432/ktportal
+REDIS_URL=redis://<redis-host>:6379
 
 JWT_SECRET=your-secret-key
 JWT_ALGORITHM=HS256

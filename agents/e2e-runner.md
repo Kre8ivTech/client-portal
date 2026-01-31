@@ -41,7 +41,7 @@ npx playwright test --headed
 npx playwright test --debug
 
 # Generate test code from actions
-npx playwright codegen http://localhost:3000
+npx playwright codegen $BASE_URL
 
 # Run tests with trace
 npx playwright test --trace on
@@ -434,7 +434,7 @@ export default defineConfig({
     ['json', { outputFile: 'playwright-results.json' }]
   ],
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:3000',
+    baseURL: process.env.BASE_URL ?? '',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -461,7 +461,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run dev',
-    url: 'http://localhost:3000',
+    url: process.env.BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

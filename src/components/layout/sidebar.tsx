@@ -102,20 +102,49 @@ function getHrefsForRole(role: Profile["role"]): string[] {
   }
 }
 
-export function DashboardSidebar({ profile }: { profile: Profile | null }) {
+export type SidebarBranding = {
+  app_name: string;
+  tagline: string | null;
+  logo_url: string | null;
+};
+
+export function DashboardSidebar({
+  profile,
+  branding,
+}: {
+  profile: Profile | null;
+  branding?: SidebarBranding | null;
+}) {
   const pathname = usePathname();
   const allowedHrefs = getHrefsForRole(profile?.role || "client");
+  const appName = branding?.app_name ?? "KT-Portal";
+  const tagline = branding?.tagline ?? "Client Portal";
+  const logoUrl = branding?.logo_url;
+  const initials = appName
+    .split(/\s+/)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground flex-shrink-0 border-r border-sidebar-muted/30">
       <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-muted/30">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent text-white font-bold">
-          KT
-        </div>
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt={appName}
+            className="h-9 w-auto max-w-[120px] object-contain shrink-0"
+          />
+        ) : (
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent text-white font-bold text-sm">
+            {initials}
+          </div>
+        )}
         <div className="min-w-0">
-          <h2 className="text-base font-semibold truncate">KT-Portal</h2>
+          <h2 className="text-base font-semibold truncate">{appName}</h2>
           <p className="text-xs text-sidebar-muted uppercase tracking-wider truncate">
-            Client Portal
+            {tagline}
           </p>
         </div>
       </div>

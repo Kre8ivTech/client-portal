@@ -81,8 +81,8 @@ Project-level instructions for AI assistants working on this codebase.
    ```
 
 5. **Verify Setup**
-   - Open http://localhost:3000
-   - Check Supabase Studio: http://localhost:54323
+   - Open your dev server URL (e.g. from `npm run dev`, or set `NEXT_PUBLIC_APP_URL`)
+   - Check Supabase Studio (local: see `supabase status` for URLs)
    - Run tests: `npm test`
 
 ### First-Time Development Setup
@@ -1075,7 +1075,7 @@ supabase gen types typescript --local > src/types/database.ts
 - **Vercel Logs**: Vercel Dashboard → Deployments → [deployment] → Logs
 - **Browser DevTools**: Network tab for Supabase requests
 - **React Query DevTools**: `@tanstack/react-query-devtools`
-- **Supabase Studio**: http://localhost:54323 (local development)
+- **Supabase Studio**: local URL from `supabase status` (local development)
 
 ### Performance Debugging
 

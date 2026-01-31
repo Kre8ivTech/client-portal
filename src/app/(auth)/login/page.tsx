@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { getPortalBranding } from "@/lib/actions/portal-branding";
+
+type LoginBranding = {
+  app_name: string;
+  tagline: string | null;
+  logo_url: string | null;
+  primary_color: string;
+  favicon_url: string | null;
+};
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -30,7 +39,16 @@ export default function LoginPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [branding, setBranding] = useState<LoginBranding | null>(null);
   const supabase = createClient();
+
+  useEffect(() => {
+    getPortalBranding().then(setBranding);
+  }, []);
+
+  const appName = branding?.app_name ?? "KT-Portal";
+  const tagline = branding?.tagline ?? "Client Portal";
+  const logoUrl = branding?.logo_url;
 
   const handleMagicLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,15 +90,23 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-2xl border-slate-800 bg-slate-900/50 backdrop-blur-xl relative z-10 transition-all duration-500 hover:shadow-primary/5">
         <CardHeader className="space-y-2 pb-8">
           <div className="flex justify-center mb-4">
-            <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20 rotate-3">
-              <Mail className="text-white h-7 w-7" />
-            </div>
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={appName}
+                className="h-14 w-auto max-w-[180px] object-contain"
+              />
+            ) : (
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20 rotate-3">
+                <Mail className="text-white h-7 w-7" />
+              </div>
+            )}
           </div>
           <CardTitle className="text-3xl font-bold tracking-tight text-center text-white">
             Welcome Back
           </CardTitle>
           <CardDescription className="text-center text-slate-400 text-base">
-            Secure access to your client portal
+            {tagline}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -164,7 +190,7 @@ export default function LoginPage() {
             </Link>
           </div>
           <p className="text-[11px] text-slate-500 uppercase tracking-widest leading-relaxed opacity-60">
-            Powered by Kre8ivTech Multi-Tenant Infrastructure
+            {appName}
           </p>
         </CardFooter>
       </Card>

@@ -56,6 +56,35 @@ export type Database = {
           updated_at?: string;
         };
       };
+      portal_branding: {
+        Row: {
+          id: string;
+          app_name: string;
+          tagline: string | null;
+          logo_url: string | null;
+          primary_color: string;
+          favicon_url: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          app_name?: string;
+          tagline?: string | null;
+          logo_url?: string | null;
+          primary_color?: string;
+          favicon_url?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          app_name?: string;
+          tagline?: string | null;
+          logo_url?: string | null;
+          primary_color?: string;
+          favicon_url?: string | null;
+          updated_at?: string;
+        };
+      };
       profiles: {
         Row: {
           id: string;

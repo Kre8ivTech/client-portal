@@ -99,7 +99,7 @@ import { GET } from './route'
 
 describe('GET /api/markets/search', () => {
   it('returns 200 with valid results', async () => {
-    const request = new NextRequest('http://localhost/api/markets/search?q=trump')
+    const request = new NextRequest(new URL('/api/markets/search?q=trump', process.env.TEST_BASE_URL ?? 'https://example.com'))
     const response = await GET(request, {})
     const data = await response.json()
 
@@ -109,7 +109,7 @@ describe('GET /api/markets/search', () => {
   })
 
   it('returns 400 for missing query', async () => {
-    const request = new NextRequest('http://localhost/api/markets/search')
+    const request = new NextRequest(new URL('/api/markets/search', process.env.TEST_BASE_URL ?? 'https://example.com'))
     const response = await GET(request, {})
 
     expect(response.status).toBe(400)
@@ -119,7 +119,7 @@ describe('GET /api/markets/search', () => {
     // Mock Redis failure
     jest.spyOn(redis, 'searchMarketsByVector').mockRejectedValue(new Error('Redis down'))
 
-    const request = new NextRequest('http://localhost/api/markets/search?q=test')
+    const request = new NextRequest(new URL('/api/markets/search?q=test', process.env.TEST_BASE_URL ?? 'https://example.com'))
     const response = await GET(request, {})
     const data = await response.json()
 

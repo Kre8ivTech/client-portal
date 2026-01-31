@@ -32,8 +32,20 @@ export default async function ProfilePage() {
 
   const { data: integrations } = await supabase
     .from('calendar_integrations')
-    .select('provider, status, account_email, last_synced_at')
+    .select('id, provider, status, account_email, last_synced_at')
     .eq('user_id', user.id)
+
+  const { data: calendars } = await supabase
+    .from('calendar_calendars')
+    .select('id, name, is_enabled, integration_id')
+    .eq('user_id', user.id)
+
+  const { data: syncLogs } = await supabase
+    .from('calendar_sync_logs')
+    .select('provider, status, message, calendars_synced, events_synced, started_at')
+    .eq('user_id', user.id)
+    .order('started_at', { ascending: false })
+    .limit(5)
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -153,7 +165,11 @@ export default async function ProfilePage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <CalendarIntegrationsPanel integrations={(integrations || []) as any} />
+                <CalendarIntegrationsPanel
+                  integrations={(integrations || []) as any}
+                  calendars={(calendars || []) as any}
+                  logs={(syncLogs || []) as any}
+                />
               </CardContent>
             </Card>
           )}

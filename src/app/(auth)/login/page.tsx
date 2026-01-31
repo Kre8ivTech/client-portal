@@ -49,13 +49,25 @@ export default function LoginPage() {
     getPortalBranding().then(setBranding);
   }, []);
 
-  // Password reset links sometimes land on /?code=... when Supabase Site URL has no path. Send to callback then /reset-password.
+  // When a sign-in or reset link lands on /?code=... (e.g. Site URL has no path), send to callback. Do not force next=/reset-password so magic links go to dashboard.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("code")) {
-      params.set("next", "/reset-password");
       window.location.replace(`/auth/callback?${params.toString()}`);
+    }
+  }, []);
+
+  // Show message when redirected with auth_callback_failed (e.g. callback URL not in Supabase Redirect URLs)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "auth_callback_failed") {
+      setMessage({
+        type: "error",
+        text: "Sign-in link failed. Use a fresh link from your email, or sign in with your password. If this keeps happening, add your callback URL to Supabase: Authentication → URL Configuration → Redirect URLs (e.g. https://your-domain.com/auth/callback).",
+      });
+      window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 

@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { Ticket } from 'lucide-react'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardPage() {
   const supabase = (await createServerSupabaseClient()) as any
   const { data: { user } } = await supabase.auth.getUser()

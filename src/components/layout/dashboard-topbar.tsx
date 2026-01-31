@@ -1,0 +1,143 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { ChevronRight, User, Settings, LogOut } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+
+type UserInfo = { email?: string | null };
+type ProfileInfo = { name?: string | null; avatar_url?: string | null } | null;
+
+const segmentLabels: Record<string, string> = {
+  dashboard: "Overview",
+  tickets: "Tickets",
+  vault: "Secure Vault",
+  billing: "Billing & Plans",
+  messages: "Messages",
+  kb: "Knowledge Base",
+  invoices: "Invoices",
+  clients: "Clients",
+  settings: "Settings",
+  capacity: "Capacity",
+  profile: "Profile",
+  dispute: "Dispute",
+};
+
+function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length <= 1) return [{ label: "Overview" }];
+
+  const crumbs: { label: string; href?: string }[] = [{ label: "Overview", href: "/dashboard" }];
+  let pathSoFar = "/dashboard";
+  for (let i = 1; i < segments.length; i++) {
+    const seg = segments[i];
+    pathSoFar += `/${seg}`;
+    const label =
+      segmentLabels[seg] ?? (seg.match(/^[0-9a-f-]{36}$/i) ? "Detail" : seg);
+    crumbs.push({
+      label,
+      href: i < segments.length - 1 ? pathSoFar : undefined,
+    });
+  }
+  return crumbs;
+}
+
+export function DashboardTopbar({
+  user,
+  profile,
+}: {
+  user: UserInfo;
+  profile: ProfileInfo;
+}) {
+  const pathname = usePathname();
+  const breadcrumbs = getBreadcrumbs(pathname);
+  const displayName = profile?.name?.trim() || user.email?.split("@")[0] || "User";
+
+  return (
+    <header className="h-16 border-b bg-card flex items-center justify-between px-6 shadow-sm flex-shrink-0">
+      <div className="flex items-center gap-2 min-w-0">
+        {breadcrumbs.map((crumb, i) => (
+          <span key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+            {i > 0 && <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" />}
+            {crumb.href ? (
+              <Link
+                href={crumb.href}
+                className="hover:text-foreground font-medium transition-colors truncate"
+              >
+                {crumb.label}
+              </Link>
+            ) : (
+              <span className="font-semibold text-foreground truncate">{crumb.label}</span>
+            )}
+          </span>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-4 shrink-0">
+        <p className="hidden sm:block text-sm text-muted-foreground">
+          Welcome back, <span className="font-medium text-foreground">{displayName}</span>
+        </p>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              className="relative h-9 w-9 rounded-full p-0 focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={profile?.avatar_url ?? undefined} alt={displayName} />
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                  {displayName.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium">{displayName}</p>
+                {user.email && (
+                  <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                )}
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/profile" className="flex items-center gap-2 cursor-pointer">
+                <User className="h-4 w-4" />
+                Profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/settings" className="flex items-center gap-2 cursor-pointer">
+                <Settings className="h-4 w-4" />
+                Settings
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <form action="/auth/signout" method="post" className="w-full">
+                <button
+                  type="submit"
+                  className="flex w-full items-center gap-2 cursor-pointer text-destructive focus:text-destructive"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign out
+                </button>
+              </form>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </header>
+  );
+}

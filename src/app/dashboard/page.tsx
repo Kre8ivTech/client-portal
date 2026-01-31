@@ -1,8 +1,9 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
-import Link from 'next/link'
-import { format } from 'date-fns'
-import { Ticket } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import Link from "next/link";
+import { format } from "date-fns";
+import type { LucideIcon } from "lucide-react";
+import { Ticket, FolderKanban, CreditCard, BookOpen } from "lucide-react";
 
 export const dynamic = 'force-dynamic'
 
@@ -66,80 +67,133 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatsCard
+          icon={Ticket}
           title="Open Tickets"
           value={String(openTicketsCount)}
-          description={openTicketsCount > 0 ? 'Awaiting response' : 'All caught up'}
+          description={openTicketsCount > 0 ? "Awaiting response" : "All caught up"}
         />
         <StatsCard
+          icon={FolderKanban}
           title="Active Projects"
           value="—"
           description="On track"
         />
         <StatsCard
+          icon={CreditCard}
           title="Current Plan"
-          value={planName ?? '—'}
-          description={supportHoursRemaining ?? 'No active plan'}
+          value={planName ?? "—"}
+          description={supportHoursRemaining ?? "No active plan"}
         />
       </div>
 
-      <div className="rounded-xl border bg-white p-6 shadow-sm min-h-[400px]">
-        <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
-        {recentTickets.length === 0 ? (
-          <p className="text-slate-500 italic">No recent activity to display.</p>
-        ) : (
-          <ul className="space-y-3">
-            {recentTickets.map((ticket) => (
-              <li key={ticket.id}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Recent Activity</CardTitle>
+            <CardDescription>Latest ticket updates</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {recentTickets.length === 0 ? (
+              <p className="text-muted-foreground italic py-8 text-center">
+                No recent activity to display.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {recentTickets.map((ticket) => (
+                  <li key={ticket.id}>
+                    <Link
+                      href={`/dashboard/tickets/${ticket.id}`}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                    >
+                      <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                        <Ticket className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                          {ticket.subject}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          #{ticket.ticket_number} ·{" "}
+                          {format(new Date(ticket.created_at), "MMM d, yyyy")}
+                        </p>
+                      </div>
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize shrink-0">
+                        {ticket.status.replace("_", " ")}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {recentTickets.length > 0 && (
+              <div className="mt-4 pt-4 border-t">
                 <Link
-                  href={`/dashboard/tickets/${ticket.id}`}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors group"
+                  href="/dashboard/tickets"
+                  className="text-sm font-medium text-primary hover:underline"
                 >
-                  <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0 group-hover:bg-primary/10 transition-colors">
-                    <Ticket className="h-4 w-4 text-slate-500 group-hover:text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-900 truncate group-hover:text-primary transition-colors">
-                      {ticket.subject}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      #{ticket.ticket_number} · {format(new Date(ticket.created_at), 'MMM d, yyyy')}
-                    </p>
-                  </div>
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 capitalize shrink-0">
-                    {ticket.status.replace('_', ' ')}
-                  </span>
+                  View all tickets
                 </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-        {recentTickets.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-slate-100">
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Quick Actions</CardTitle>
+            <CardDescription>Shortcuts</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
             <Link
-              href="/dashboard/tickets"
-              className="text-sm font-medium text-primary hover:underline"
+              href="/dashboard/tickets/new"
+              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-sm font-medium"
             >
-              View all tickets
+              <Ticket className="h-4 w-4 text-primary shrink-0" />
+              New ticket
             </Link>
-          </div>
-        )}
+            <Link
+              href="/dashboard/kb"
+              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-sm font-medium"
+            >
+              <BookOpen className="h-4 w-4 text-primary shrink-0" />
+              Knowledge Base
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     </div>
-  )
+  );
 }
 
-function StatsCard({ title, value, description }: { title: string; value: string; description: string }) {
+function StatsCard({
+  icon: Icon,
+  title,
+  value,
+  description,
+}: {
+  icon: LucideIcon;
+  title: string;
+  value: string;
+  description: string;
+}) {
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="pb-2">
-        <CardDescription>{title}</CardDescription>
-        <CardTitle className="text-3xl">{value}</CardTitle>
+    <Card className="shadow-sm overflow-hidden">
+      <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
+        <div>
+          <CardDescription className="text-xs uppercase tracking-wide">
+            {title}
+          </CardDescription>
+          <CardTitle className="text-2xl mt-1">{value}</CardTitle>
+        </div>
+        <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+          <Icon className="h-5 w-5 text-primary" />
+        </div>
       </CardHeader>
       <CardContent>
         <p className="text-xs text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
-  )
+  );
 }

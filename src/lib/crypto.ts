@@ -13,14 +13,17 @@ export function encrypt(text: string): {
   authTag: string;
 } {
   const secretKey = process.env.ENCRYPTION_SECRET;
-  if (!secretKey || secretKey.length < 32) {
-    throw new Error("ENCRYPTION_SECRET must be at least 32 characters long");
+  if (!secretKey || secretKey.length < 8) {
+    throw new Error("ENCRYPTION_SECRET must be at least 8 characters long");
   }
+
+  const salt = "a-static-salt-for-key-derivation";
+  const derivedKey = crypto.pbkdf2Sync(secretKey, salt, 100000, 32, "sha512");
 
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(
     ALGORITHM,
-    Buffer.from(secretKey.slice(0, 32)),
+    derivedKey,
     iv,
   );
 
@@ -45,15 +48,18 @@ export function decrypt(
   authTagBase64: string,
 ): string {
   const secretKey = process.env.ENCRYPTION_SECRET;
-  if (!secretKey || secretKey.length < 32) {
-    throw new Error("ENCRYPTION_SECRET must be at least 32 characters long");
+  if (!secretKey || secretKey.length < 8) {
+    throw new Error("ENCRYPTION_SECRET must be at least 8 characters long");
   }
+
+  const salt = "a-static-salt-for-key-derivation";
+  const derivedKey = crypto.pbkdf2Sync(secretKey, salt, 100000, 32, "sha512");
 
   const iv = Buffer.from(ivBase64, "base64");
   const authTag = Buffer.from(authTagBase64, "base64");
   const decipher = crypto.createDecipheriv(
     ALGORITHM,
-    Buffer.from(secretKey.slice(0, 32)),
+    derivedKey,
     iv,
   );
 

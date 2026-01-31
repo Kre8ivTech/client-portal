@@ -18,9 +18,15 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", user.id)
+    .single();
+
   return (
     <div className="flex min-h-screen">
-      <DashboardSidebar />
+      <DashboardSidebar profile={profile} />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col bg-slate-50 min-h-0 min-w-0">

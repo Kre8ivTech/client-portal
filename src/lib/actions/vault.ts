@@ -57,10 +57,20 @@ export async function getDecryptedPassword(itemId: string) {
 
   if (!user) throw new Error("Unauthorized");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("organization_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.organization_id)
+    throw new Error("No organization found for user");
+
   const { data: item, error } = await supabase
     .from("vault_items")
     .select("encrypted_password, iv, auth_tag")
     .eq("id", itemId)
+    .eq("organization_id", profile.organization_id)
     .single();
 
   if (error || !item) throw new Error("Vault item not found or hidden");
@@ -76,10 +86,26 @@ export async function getDecryptedPassword(itemId: string) {
 
 export async function deleteVaultItem(itemId: string) {
   const supabase = (await createServerSupabaseClient()) as any;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Unauthorized");
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("organization_id")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.organization_id)
+    throw new Error("No organization found for user");
+
   const { error } = await supabase
     .from("vault_items")
     .delete()
-    .eq("id", itemId);
+    .eq("id", itemId)
+    .eq("organization_id", profile.organization_id);
 
   if (error) throw new Error(error.message);
 

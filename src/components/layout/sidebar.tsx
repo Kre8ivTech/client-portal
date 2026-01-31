@@ -16,7 +16,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+import { Database } from "@/types/database";
+
+type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+
+const allNavItems = [
   { href: "/dashboard", icon: Home, label: "Overview" },
   { href: "/dashboard/tickets", icon: Ticket, label: "Tickets" },
   { href: "/dashboard/vault", icon: Shield, label: "Secure Vault" },
@@ -28,8 +32,42 @@ const navItems = [
   { href: "/dashboard/settings", icon: Settings, label: "Settings" },
 ];
 
-export function DashboardSidebar() {
+function getNavItemsForRole(role: Profile["role"]) {
+  switch (role) {
+    case "super_admin":
+      return allNavItems;
+    case "staff":
+      return allNavItems.filter(
+        (item) => !["/dashboard/clients"].includes(item.href),
+      );
+    case "partner":
+      return [
+        { href: "/dashboard", icon: Home, label: "Overview" },
+        { href: "/dashboard/tickets", icon: Ticket, label: "Tickets" },
+        { href: "/dashboard/invoices", icon: FileText, label: "Invoices" },
+        { href: "/dashboard/clients", icon: Users, label: "Clients" },
+        { href: "/dashboard/settings", icon: Settings, label: "Settings" },
+      ];
+    case "partner_staff":
+      return [
+        { href: "/dashboard", icon: Home, label: "Overview" },
+        { href: "/dashboard/tickets", icon: Ticket, label: "Tickets" },
+      ];
+    case "client":
+      return [
+        { href: "/dashboard", icon: Home, label: "Overview" },
+        { href: "/dashboard/tickets", icon: Ticket, label: "Tickets" },
+        { href: "/dashboard/invoices", icon: FileText, label: "Invoices" },
+        { href: "/dashboard/settings", icon: Settings, label: "Settings" },
+      ];
+    default:
+      return [];
+  }
+}
+
+export function DashboardSidebar({ profile }: { profile: Profile | null }) {
   const pathname = usePathname();
+  const navItems = getNavItemsForRole(profile?.role || "client");
 
   return (
     <aside className="hidden md:flex w-64 flex-col bg-slate-900 text-white flex-shrink-0">

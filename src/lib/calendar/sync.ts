@@ -31,7 +31,7 @@ export async function syncAllIntegrations() {
   const { data: integrations } = await supabaseAdmin
     .from('calendar_integrations')
     .select('id, organization_id')
-    .eq('status', 'active')
+    .in('status', ['active', 'error'])
 
   const results = {
     total: integrations?.length || 0,
@@ -66,7 +66,7 @@ export async function syncUserIntegrations(userId: string, provider?: string) {
   const query = supabaseAdmin
     .from('calendar_integrations')
     .select('id, organization_id')
-    .eq('status', 'active')
+    .in('status', ['active', 'error'])
     .eq('user_id', userId)
 
   const { data: integrations } = provider ? await query.eq('provider', provider) : await query
@@ -123,6 +123,20 @@ export async function syncIntegrationById(integrationId: string) {
 }
 
 async function syncIntegration(integration: Integration) {
+  const { data: log } = await supabaseAdmin
+    .from('calendar_sync_logs')
+    .insert({
+      integration_id: integration.id,
+      organization_id: integration.organization_id,
+      user_id: integration.user_id,
+      provider: integration.provider,
+      status: 'running',
+      message: null,
+    })
+    .select('id')
+    .single()
+
+  const logId = log?.id
   const accessToken = decryptSecret(integration.access_token_encrypted)
   const refreshToken = decryptSecret(integration.refresh_token_encrypted)
 
@@ -168,6 +182,9 @@ async function syncIntegration(integration: Integration) {
   const rangeStart = startOfDay(new Date())
   const rangeEnd = addDays(rangeStart, LOOKAHEAD_DAYS)
 
+  let calendarsSynced = 0
+  let eventsSynced = 0
+
   for (const calendar of calendars) {
     const stored = calendarIdMap.get(calendar.id)
     if (!stored || stored.is_enabled === false) continue
@@ -199,6 +216,9 @@ async function syncIntegration(integration: Integration) {
         .from('calendar_events')
         .upsert(eventRecords, { onConflict: 'calendar_id,external_id' })
     }
+
+    calendarsSynced += 1
+    eventsSynced += eventRecords.length
   }
 
   await supabaseAdmin
@@ -212,6 +232,19 @@ async function syncIntegration(integration: Integration) {
       error_message: null,
     })
     .eq('id', integration.id)
+
+  if (logId) {
+    await supabaseAdmin
+      .from('calendar_sync_logs')
+      .update({
+        status: 'success',
+        message: `Synced ${calendarsSynced} calendars.`,
+        calendars_synced: calendarsSynced,
+        events_synced: eventsSynced,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', logId)
+  }
 }
 
 async function ensureAccessToken(
@@ -228,6 +261,9 @@ async function ensureAccessToken(
   }
 
   if (integration.provider === 'google') {
+    if (!process.env.GOOGLE_OAUTH_CLIENT_ID || !process.env.GOOGLE_OAUTH_CLIENT_SECRET) {
+      throw new Error('Google OAuth configuration missing.')
+    }
     const response = await refreshGoogleToken({
       refreshToken,
       clientId: process.env.GOOGLE_OAUTH_CLIENT_ID || '',
@@ -241,6 +277,13 @@ async function ensureAccessToken(
     }
   }
 
+  if (
+    !process.env.MICROSOFT_OAUTH_CLIENT_ID ||
+    !process.env.MICROSOFT_OAUTH_CLIENT_SECRET ||
+    !process.env.MICROSOFT_OAUTH_REDIRECT_URI
+  ) {
+    throw new Error('Microsoft OAuth configuration missing.')
+  }
   const response = await refreshMicrosoftToken({
     refreshToken,
     clientId: process.env.MICROSOFT_OAUTH_CLIENT_ID || '',
@@ -323,6 +366,16 @@ async function markIntegrationError(integrationId: string, message: string) {
     .from('calendar_integrations')
     .update({ status: 'error', error_message: message })
     .eq('id', integrationId)
+
+  await supabaseAdmin
+    .from('calendar_sync_logs')
+    .update({
+      status: 'error',
+      message,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('integration_id', integrationId)
+    .eq('status', 'running')
 }
 
 function addSeconds(seconds: number) {

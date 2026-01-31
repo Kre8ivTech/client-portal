@@ -4,6 +4,8 @@ import Link from "next/link";
 import { DashboardSidebar } from "@/components/layout/sidebar";
 import { LiveChatWidget } from "@/components/messaging/live-chat-widget";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardLayout({
   children,
 }: {

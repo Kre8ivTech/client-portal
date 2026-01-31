@@ -576,6 +576,47 @@ export type Database = {
           updated_at?: string;
         };
       };
+      calendar_sync_logs: {
+        Row: {
+          id: string;
+          integration_id: string;
+          organization_id: string;
+          user_id: string;
+          provider: string;
+          status: string;
+          message: string | null;
+          calendars_synced: number | null;
+          events_synced: number | null;
+          started_at: string;
+          completed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          integration_id: string;
+          organization_id: string;
+          user_id: string;
+          provider: string;
+          status: string;
+          message?: string | null;
+          calendars_synced?: number | null;
+          events_synced?: number | null;
+          started_at?: string;
+          completed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          integration_id?: string;
+          organization_id?: string;
+          user_id?: string;
+          provider?: string;
+          status?: string;
+          message?: string | null;
+          calendars_synced?: number | null;
+          events_synced?: number | null;
+          started_at?: string;
+          completed_at?: string | null;
+        };
+      };
       staff_work_schedules: {
         Row: {
           id: string;

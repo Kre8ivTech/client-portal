@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ArrowLeft, Clock, User, Share2, ThumbsUp, ThumbsDown, MessageSquare, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 
@@ -55,9 +56,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         
         <div className="flex flex-wrap items-center gap-6 text-sm text-slate-500 font-medium pb-8 border-b border-slate-100">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden">
+            <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden relative">
               {article.author?.avatar_url ? (
-                <img src={article.author.avatar_url} alt={article.author.name} className="h-full w-full object-cover" />
+                <Image src={article.author.avatar_url} alt={article.author.name ?? 'Author'} fill className="object-cover" sizes="32px" />
               ) : (
                 <User size={16} />
               )}

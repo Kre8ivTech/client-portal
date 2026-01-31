@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { ConversationList } from '@/components/messaging/conversation-list'
 import { MessageThread } from '@/components/messaging/message-thread'
@@ -16,13 +16,27 @@ export default function MessagesPage() {
   const [sendError, setSendError] = useState<string | null>(null)
   const supabase = createClient() as any
 
+  const refreshConversations = useCallback(async () => {
+    const { data } = await supabase
+      .from('conversations')
+      .select(`
+        *,
+        profiles:participant_ids (
+          id,
+          name,
+          avatar_url
+        )
+      `)
+      .order('last_message_at', { ascending: false })
+    setConversations(data || [])
+  }, [supabase])
+
   useEffect(() => {
     async function init() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       setUserId(user.id)
 
-      // Fetch conversations
       const { data: convs } = await supabase
         .from('conversations')
         .select(`
@@ -38,7 +52,6 @@ export default function MessagesPage() {
       setConversations(convs || [])
       setLoading(false)
 
-      // Subscribe to conversation updates
       const channel = supabase
         .channel('conversations_changes')
         .on('postgres_changes', { 
@@ -46,7 +59,6 @@ export default function MessagesPage() {
           schema: 'public', 
           table: 'conversations' 
         }, () => {
-          // Re-fetch on change for simplicity, or update state manually
           refreshConversations()
         })
         .subscribe()
@@ -57,7 +69,7 @@ export default function MessagesPage() {
     }
 
     init()
-  }, [])
+  }, [supabase, refreshConversations])
 
   useEffect(() => {
     if (!activeId) return
@@ -74,7 +86,6 @@ export default function MessagesPage() {
 
     fetchMessages()
 
-    // Subscribe to new messages for this conversation
     const channel = supabase
       .channel(`room:${activeId}`)
       .on('postgres_changes', { 
@@ -90,22 +101,7 @@ export default function MessagesPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [activeId])
-
-  async function refreshConversations() {
-    const { data } = await supabase
-      .from('conversations')
-      .select(`
-        *,
-        profiles:participant_ids (
-          id,
-          name,
-          avatar_url
-        )
-      `)
-      .order('last_message_at', { ascending: false })
-    setConversations(data || [])
-  }
+  }, [activeId, supabase])
 
   async function handleSendMessage(content: string) {
     if (!activeId || !userId) return

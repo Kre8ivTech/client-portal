@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import Image from 'next/image'
 import { format } from 'date-fns'
 import { MessageSquare, Send, Loader2, User, AlertCircle } from 'lucide-react'
 import { Database } from '@/types/database'
@@ -110,9 +111,9 @@ export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
               key={comment.id} 
               className={`flex gap-3 ${comment.author_id === userId ? 'flex-row-reverse' : ''}`}
             >
-              <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 border overflow-hidden">
+              <div className="relative h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0 border overflow-hidden">
                 {comment.author?.avatar_url ? (
-                  <img src={comment.author.avatar_url} alt="" className="h-full w-full object-cover" />
+                  <Image src={comment.author.avatar_url} alt="" fill className="object-cover" sizes="32px" />
                 ) : (
                   <User className="h-4 w-4 text-slate-500" />
                 )}

@@ -76,7 +76,7 @@ export default async function KnowledgeBasePage() {
         <div className="flex justify-between items-end">
           <div>
             <h2 className="text-2xl font-black text-slate-900">Browse by Category</h2>
-            <p className="text-slate-500 font-medium">Find exactly what you're looking for by browsing our categories.</p>
+            <p className="text-slate-500 font-medium">Find exactly what you&apos;re looking for by browsing our categories.</p>
           </div>
         </div>
         

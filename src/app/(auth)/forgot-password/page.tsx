@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
             Trouble signing in?
           </CardTitle>
           <CardDescription className="text-center text-slate-400">
-            Enter your email and we'll send you a secure link to access your
+            Enter your email and we&apos;ll send you a secure link to access your
             account.
           </CardDescription>
         </CardHeader>

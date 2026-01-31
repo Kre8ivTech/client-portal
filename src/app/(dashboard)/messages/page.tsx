@@ -13,6 +13,7 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
+  const [sendError, setSendError] = useState<string | null>(null)
   const supabase = createClient() as any
 
   useEffect(() => {
@@ -108,7 +109,7 @@ export default function MessagesPage() {
 
   async function handleSendMessage(content: string) {
     if (!activeId || !userId) return
-
+    setSendError(null)
     const { error } = await supabase
       .from('messages')
       .insert({
@@ -117,10 +118,7 @@ export default function MessagesPage() {
         content,
         message_type: 'text'
       })
-
-    if (error) {
-      console.error('Error sending message:', error)
-    }
+    if (error) setSendError(error.message)
   }
 
   if (loading) {

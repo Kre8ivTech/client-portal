@@ -66,7 +66,7 @@ export default async function BillingPage() {
             <div className="max-w-md space-y-2">
               <h2 className="text-xl font-bold text-slate-900">No Active Plan Found</h2>
               <p className="text-slate-500 text-sm">
-                Your organization doesn't have an active subscription yet. Contact support or upgrade to get started with Support and Dev pools.
+                Your organization doesn&apos;t have an active subscription yet. Contact support or upgrade to get started with Support and Dev pools.
               </p>
             </div>
             <Button size="lg" className="px-8">View Available Plans</Button>

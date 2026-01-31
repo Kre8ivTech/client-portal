@@ -30,7 +30,7 @@ type Integration = {
 export async function syncAllIntegrations() {
   const { data: integrations } = await supabaseAdmin
     .from('calendar_integrations')
-    .select('*')
+    .select('id, organization_id')
     .eq('status', 'active')
 
   const results = {
@@ -44,11 +44,10 @@ export async function syncAllIntegrations() {
   for (const integration of integrations || []) {
     orgIds.add(integration.organization_id)
     try {
-      await syncIntegration(integration)
+      await syncIntegrationById(integration.id)
       results.succeeded += 1
     } catch (error) {
       results.failed += 1
-      await markIntegrationError(integration.id, error instanceof Error ? error.message : 'Sync failed')
     }
   }
 
@@ -61,6 +60,66 @@ export async function syncAllIntegrations() {
   }
 
   return results
+}
+
+export async function syncUserIntegrations(userId: string, provider?: string) {
+  const query = supabaseAdmin
+    .from('calendar_integrations')
+    .select('id, organization_id')
+    .eq('status', 'active')
+    .eq('user_id', userId)
+
+  const { data: integrations } = provider ? await query.eq('provider', provider) : await query
+
+  const results = {
+    total: integrations?.length || 0,
+    succeeded: 0,
+    failed: 0,
+  }
+
+  const orgIds = new Set<string>()
+
+  for (const integration of integrations || []) {
+    orgIds.add(integration.organization_id)
+    try {
+      await syncIntegrationById(integration.id)
+      results.succeeded += 1
+    } catch {
+      results.failed += 1
+    }
+  }
+
+  for (const orgId of orgIds) {
+    try {
+      await upsertCapacitySnapshotForOrg(orgId)
+    } catch {
+      // Ignore capacity snapshot failures
+    }
+  }
+
+  return results
+}
+
+export async function syncIntegrationById(integrationId: string) {
+  const { data: integration } = await supabaseAdmin
+    .from('calendar_integrations')
+    .select('*')
+    .eq('id', integrationId)
+    .single()
+
+  if (!integration) {
+    throw new Error('Integration not found.')
+  }
+
+  try {
+    await syncIntegration(integration as Integration)
+  } catch (error) {
+    await markIntegrationError(
+      integrationId,
+      error instanceof Error ? error.message : 'Sync failed'
+    )
+    throw error
+  }
 }
 
 async function syncIntegration(integration: Integration) {

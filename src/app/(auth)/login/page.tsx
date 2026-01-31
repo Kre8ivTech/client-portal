@@ -49,6 +49,16 @@ export default function LoginPage() {
     getPortalBranding().then(setBranding);
   }, []);
 
+  // Password reset links sometimes land on /?code=... when Supabase Site URL has no path. Send to callback then /reset-password.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("code")) {
+      params.set("next", "/reset-password");
+      window.location.replace(`/auth/callback?${params.toString()}`);
+    }
+  }, []);
+
   const appName = branding?.app_name ?? "KT-Portal";
   const tagline = branding?.tagline ?? "Client Portal";
   const logoUrl = branding?.logo_url;

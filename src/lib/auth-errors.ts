@@ -13,6 +13,9 @@ export function getAuthErrorMessage(error: { message?: string; status?: number }
   ) {
     return "Too many sign-in emails sent. Please wait a few minutes and try again.";
   }
+  if (msg.includes("session missing") || msg.includes("auth session missing")) {
+    return "Your session expired or the link was already used. Please request a new reset link from the sign-in page.";
+  }
   if (msg.includes("invalid") && msg.includes("email")) {
     return "Please enter a valid email address.";
   }

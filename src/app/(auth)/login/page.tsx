@@ -23,6 +23,7 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { getPortalBranding } from "@/lib/actions/portal-branding";
+import { getAuthErrorMessage } from "@/lib/auth-errors";
 
 type LoginBranding = {
   app_name: string;
@@ -64,7 +65,7 @@ export default function LoginPage() {
       });
 
       if (error) {
-        setMessage({ type: "error", text: error.message });
+        setMessage({ type: "error", text: getAuthErrorMessage(error) });
       } else {
         setMessage({
           type: "success",

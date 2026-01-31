@@ -36,3 +36,6 @@ private/
 # Session templates (not committed)
 examples/sessions/*.tmp
 docs/sessions/*.tmp
+*.md
+skills/vercel-react-best-practices/metadata.json
+next-env.d.ts

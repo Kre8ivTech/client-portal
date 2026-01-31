@@ -100,6 +100,82 @@ export type Database = {
           updated_at?: string;
         };
       };
+      staff_calendar_integrations: {
+        Row: {
+          id: string;
+          profile_id: string;
+          provider: "google" | "microsoft" | "outlook" | "ical";
+          external_calendar_id: string | null;
+          calendar_name: string | null;
+          sync_enabled: boolean;
+          last_sync_at: string | null;
+          sync_token: string | null;
+          timezone: string;
+          token_ref: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          provider: "google" | "microsoft" | "outlook" | "ical";
+          external_calendar_id?: string | null;
+          calendar_name?: string | null;
+          sync_enabled?: boolean;
+          last_sync_at?: string | null;
+          sync_token?: string | null;
+          timezone?: string;
+          token_ref?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          provider?: "google" | "microsoft" | "outlook" | "ical";
+          external_calendar_id?: string | null;
+          calendar_name?: string | null;
+          sync_enabled?: boolean;
+          last_sync_at?: string | null;
+          sync_token?: string | null;
+          timezone?: string;
+          token_ref?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      office_hours: {
+        Row: {
+          id: string;
+          profile_id: string;
+          day_of_week: number;
+          start_time: string;
+          end_time: string;
+          label: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          day_of_week: number;
+          start_time: string;
+          end_time: string;
+          label?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          day_of_week?: number;
+          start_time?: string;
+          end_time?: string;
+          label?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       plans: {
         Row: {
           id: string;

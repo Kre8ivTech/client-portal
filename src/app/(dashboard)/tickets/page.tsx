@@ -13,8 +13,6 @@ export default async function TicketsPage() {
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('Error fetching tickets:', error)
-    // In a real app, handle this more gracefully
     throw new Error('Failed to fetch tickets')
   }
 

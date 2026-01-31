@@ -8,13 +8,15 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { format } from 'date-fns'
 
+type PlanRow = { id: string; name: string; support_hours_included: number; [key: string]: unknown }
+type AssignmentWithPlan = { plans: PlanRow | null; [key: string]: unknown }
+
 export default async function BillingPage() {
   const supabase = (await createServerSupabaseClient()) as any
-  
+
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Get profile to find organization_id
   const { data: profile } = await supabase
     .from('profiles')
     .select('organization_id')
@@ -25,7 +27,6 @@ export default async function BillingPage() {
     return <div>Organization not found</div>
   }
 
-  // Get active plan assignment
   const { data: assignment } = await supabase
     .from('plan_assignments')
     .select('*, plans(*)')
@@ -33,7 +34,7 @@ export default async function BillingPage() {
     .eq('status', 'active')
     .single()
 
-  const plan = (assignment as any)?.plans
+  const plan = (assignment as AssignmentWithPlan | null)?.plans ?? null
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -90,7 +91,7 @@ export default async function BillingPage() {
                 <div className="flex justify-between items-start mb-6">
                   <div className="space-y-1">
                     <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tight">{plan?.name}</h3>
-                    <p className="text-sm text-slate-500">{plan?.description || 'No plan description available.'}</p>
+                    <p className="text-sm text-slate-500">{plan?.description != null ? String(plan.description) : 'No plan description available.'}</p>
                   </div>
                   <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-green-200 px-3 py-1 font-bold">
                     ACTIVE

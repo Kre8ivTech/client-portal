@@ -45,8 +45,11 @@ export default function InvoicesPage() {
           <CardDescription>View and manage all your invoices.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[200px] flex items-center justify-center text-slate-400 border-2 border-dashed rounded-lg">
-            Invoice table component will be implemented here
+          <div className="rounded-lg border-2 border-dashed border-slate-200 bg-slate-50/50 p-8 text-center">
+            <p className="text-slate-600 font-medium mb-1">Invoicing module coming soon</p>
+            <p className="text-sm text-slate-500 max-w-md mx-auto">
+              Invoice list, payment status, and payment history will appear here once the invoicing system is implemented.
+            </p>
           </div>
         </CardContent>
       </Card>

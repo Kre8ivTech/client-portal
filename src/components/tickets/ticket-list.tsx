@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useRealtimeTickets } from '@/hooks/use-realtime-tickets'
 import {
   Table,
   TableBody,
@@ -23,8 +24,9 @@ interface TicketListProps {
 
 export function TicketList({ initialTickets }: TicketListProps) {
   const supabase = createClient()
+  useRealtimeTickets()
 
-  const { data: tickets } = useQuery({
+  const { data: tickets, isError, error } = useQuery({
     queryKey: ['tickets'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -37,6 +39,15 @@ export function TicketList({ initialTickets }: TicketListProps) {
     },
     initialData: initialTickets,
   })
+
+  if (isError) {
+    return (
+      <div className="rounded-md border border-destructive/50 bg-destructive/5 p-6 text-center">
+        <p className="font-medium text-destructive">Failed to load tickets.</p>
+        <p className="text-sm text-slate-600 mt-1">{error?.message ?? 'Please refresh the page.'}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="rounded-md border bg-white shadow-sm overflow-hidden">

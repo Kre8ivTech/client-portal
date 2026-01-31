@@ -12,6 +12,7 @@ import {
   Shield,
   MessageSquare,
   BookOpen,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,7 @@ type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 const allNavItems = [
   { href: "/dashboard", icon: Home, label: "Overview" },
   { href: "/dashboard/tickets", icon: Ticket, label: "Tickets" },
+  { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
   { href: "/dashboard/vault", icon: Shield, label: "Secure Vault" },
   { href: "/dashboard/billing", icon: FileText, label: "Billing & Plans" },
   { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },

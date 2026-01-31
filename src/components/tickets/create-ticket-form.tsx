@@ -4,8 +4,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import * as z from 'zod'
 import { createClient } from '@/lib/supabase/client'
+import { createTicketSchema, TICKET_CATEGORIES } from '@/lib/validators/ticket'
+import type { CreateTicketInput } from '@/lib/validators/ticket'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -29,20 +30,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Loader2, AlertCircle, CheckCircle2, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 
-const formSchema = z.object({
-  subject: z.string().min(5, {
-    message: 'Subject must be at least 5 characters.',
-  }),
-  description: z.string().min(20, {
-    message: 'Description must be at least 20 characters.',
-  }),
-  priority: z.enum(['low', 'medium', 'high', 'critical']),
-  category: z.string().min(1, {
-    message: 'Please select a category.',
-  }),
-})
-
-type FormValues = z.infer<typeof formSchema>
+type FormValues = CreateTicketInput
 
 interface CreateTicketFormProps {
   organizationId: string
@@ -56,7 +44,7 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
   const supabase = createClient() as any
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(createTicketSchema),
     defaultValues: {
       subject: '',
       description: '',
@@ -82,7 +70,7 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
           priority: values.priority,
           category: values.category,
           status: 'new',
-          tags: [] as any,
+          tags: [],
         })
         .select()
         .single()
@@ -97,9 +85,8 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
         router.push(`/dashboard/tickets/${data.id}`)
       }, 1500)
       
-    } catch (err: any) {
-      console.error('Error creating ticket:', err)
-      setError(err.message || 'An unexpected error occurred. Please try again.')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
     }
   }
 
@@ -174,11 +161,9 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="technical_support">Technical Support</SelectItem>
-                      <SelectItem value="billing_payment">Billing & Payments</SelectItem>
-                      <SelectItem value="feature_request">Feature Request</SelectItem>
-                      <SelectItem value="bug_report">Bug Report</SelectItem>
-                      <SelectItem value="account_access">Account Access</SelectItem>
+                      {TICKET_CATEGORIES.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

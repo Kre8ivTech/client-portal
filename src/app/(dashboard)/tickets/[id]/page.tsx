@@ -3,10 +3,11 @@ import { TicketDetail } from '@/components/tickets/ticket-detail'
 import { notFound } from 'next/navigation'
 
 export default async function TicketPage({
-  params
+  params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }> | { id: string }
 }) {
+  const { id } = await Promise.resolve(params)
   const supabase = await createServerSupabaseClient()
 
   // Get current user to pass to client components
@@ -17,13 +18,13 @@ export default async function TicketPage({
   const { data: ticket, error } = await supabase
     .from('tickets')
     .select('*, creator:profiles!created_by(name)')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (error || !ticket) {
-    console.error('Error fetching ticket:', error)
     return notFound()
   }
 
-  return <TicketDetail ticket={ticket as any} userId={user.id} />
+  type TicketWithCreator = typeof ticket & { creator: { name: string | null } | null }
+  return <TicketDetail ticket={ticket as TicketWithCreator} userId={user.id} />
 }

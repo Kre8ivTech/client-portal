@@ -5,8 +5,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { format } from 'date-fns'
-import { MessageSquare, Send, Loader2, User } from 'lucide-react'
+import { MessageSquare, Send, Loader2, User, AlertCircle } from 'lucide-react'
 import { Database } from '@/types/database'
 
 type Comment = Database['public']['Tables']['ticket_comments']['Row'] & {
@@ -24,6 +25,7 @@ interface TicketCommentsProps {
 export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
   const [newComment, setNewComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [postError, setPostError] = useState<string | null>(null)
   const supabase = createClient() as any
   const queryClient = useQueryClient()
 
@@ -80,10 +82,10 @@ export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
       })
 
     if (error) {
-      console.error('Error posting comment:', error)
-      alert('Failed to post comment. Please try again.')
+      setPostError(error.message || 'Failed to post comment. Please try again.')
     } else {
       setNewComment('')
+      setPostError(null)
     }
     setIsSubmitting(false)
   }
@@ -137,6 +139,13 @@ export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
         )}
       </div>
 
+      {postError && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{postError}</AlertDescription>
+        </Alert>
+      )}
       <form onSubmit={handlePostComment} className="relative pt-2">
         <Input
           placeholder="Type your message..."

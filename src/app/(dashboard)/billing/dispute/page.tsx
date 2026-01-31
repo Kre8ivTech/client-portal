@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { submitBillingDispute } from '@/lib/actions/billing-dispute'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,6 +41,7 @@ const formSchema = z.object({
 export default function BillingDisputePage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -52,10 +54,18 @@ export default function BillingDisputePage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
-    // Stub: Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    setError(null)
+    const formData = new FormData()
+    formData.set('type', values.type)
+    formData.set('subject', values.subject)
+    formData.set('description', values.description)
+    const result = await submitBillingDispute(formData)
     setIsSubmitting(false)
-    setIsSuccess(true)
+    if (result.success) {
+      setIsSuccess(true)
+    } else {
+      setError(result.error ?? 'Failed to submit dispute')
+    }
   }
 
   if (isSuccess) {
@@ -160,6 +170,9 @@ export default function BillingDisputePage() {
             </p>
           </div>
 
+          {error && (
+            <p className="text-sm text-destructive font-medium">{error}</p>
+          )}
           <Button type="submit" className="w-full h-12 text-lg font-bold" disabled={isSubmitting}>
             {isSubmitting ? (
               <>

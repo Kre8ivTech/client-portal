@@ -3,10 +3,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { Settings, Globe, Palette, ShieldCheck, Mail } from 'lucide-react'
+import { Settings, Globe, Palette, ShieldCheck } from 'lucide-react'
+import { CalendarOfficeHours } from '@/components/settings/calendar-office-hours'
 
 export default async function SettingsPage() {
-  const supabase = await createServerSupabaseClient()
+  const supabase = (await createServerSupabaseClient()) as any
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
@@ -16,7 +17,9 @@ export default async function SettingsPage() {
     .eq('id', user.id)
     .single()
 
-  const organization = (profile as any)?.organizations
+  const organization = profile?.organizations ?? null
+  const role = profile?.role ?? 'client'
+  const isStaffOrAdmin = role === 'staff' || role === 'super_admin'
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -26,6 +29,11 @@ export default async function SettingsPage() {
       </div>
 
       <div className="grid gap-8">
+        {/* Calendar & Office Hours - Staff/Admin only */}
+        {isStaffOrAdmin && (
+          <CalendarOfficeHours profileId={user.id} />
+        )}
+
         {/* Organization Branding Section */}
         <Card className="border-slate-200 shadow-sm overflow-hidden">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100">

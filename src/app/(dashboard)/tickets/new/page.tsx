@@ -5,7 +5,6 @@ import { redirect } from 'next/navigation'
 export default async function NewTicketPage() {
   const supabase = (await createServerSupabaseClient()) as any
 
-  // Get current user and profile (mainly for organization_id)
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
@@ -15,7 +14,7 @@ export default async function NewTicketPage() {
     .eq('id', user.id)
     .single()
 
-  const organizationId = (profile as any)?.organization_id
+  const organizationId = profile?.organization_id ?? null
 
   if (!organizationId) {
     // In a real app, users always have an organization in this system

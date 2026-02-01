@@ -56,7 +56,7 @@ export function TicketDetail({ ticket, userId }: TicketDetailProps) {
                 <span>Original Request</span>
               </div>
               <span className="text-xs text-slate-400">
-                {format(new Date(ticket.created_at), 'MMMM d, yyyy h:mm a')}
+                {ticket.created_at ? format(new Date(ticket.created_at), 'MMMM d, yyyy h:mm a') : '—'}
               </span>
             </div>
             <CardContent className="p-6">
@@ -76,7 +76,7 @@ export function TicketDetail({ ticket, userId }: TicketDetailProps) {
             <DetailItem 
               icon={<Clock className="h-4 w-4 text-slate-400" />} 
               label="Last Updated" 
-              value={format(new Date(ticket.updated_at), 'MMM d, h:mm a')} 
+              value={ticket.updated_at ? format(new Date(ticket.updated_at), 'MMM d, h:mm a') : '—'} 
             />
             
             <DetailItem 
@@ -122,33 +122,33 @@ function DetailItem({ icon, label, value }: { icon: React.ReactNode, label: stri
   )
 }
 
-function StatusBadge({ status }: { status: Ticket['status'] }) {
-  const styles = {
-    new: 'bg-blue-100 text-blue-700 border-blue-200',
-    open: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-    in_progress: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    pending_client: 'bg-orange-100 text-orange-700 border-orange-200',
-    resolved: 'bg-green-100 text-green-700 border-green-200',
-    closed: 'bg-slate-200 text-slate-700 border-slate-300',
-  }
+const STATUS_STYLES: Record<string, string> = {
+  new: 'bg-blue-100 text-blue-700 border-blue-200',
+  open: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  in_progress: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+  pending_client: 'bg-orange-100 text-orange-700 border-orange-200',
+  resolved: 'bg-green-100 text-green-700 border-green-200',
+  closed: 'bg-slate-200 text-slate-700 border-slate-300',
+}
 
+function StatusBadge({ status }: { status: Ticket['status'] }) {
   return (
-    <Badge className={`${styles[status]} font-bold capitalize px-2.5 py-0.5 rounded-full border shadow-sm text-[11px]`}>
+    <Badge className={`${STATUS_STYLES[status] ?? STATUS_STYLES.new} font-bold capitalize px-2.5 py-0.5 rounded-full border shadow-sm text-[11px]`}>
       {status.replace('_', ' ')}
     </Badge>
   )
 }
 
-function PriorityBadge({ priority }: { priority: Ticket['priority'] }) {
-  const styles = {
-    low: 'bg-slate-50 text-slate-600 border-slate-200',
-    medium: 'bg-blue-50 text-blue-600 border-blue-200',
-    high: 'bg-orange-50 text-orange-600 border-orange-200',
-    critical: 'bg-red-50 text-red-600 border-red-200',
-  }
+const PRIORITY_STYLES: Record<string, string> = {
+  low: 'bg-slate-50 text-slate-600 border-slate-200',
+  medium: 'bg-blue-50 text-blue-600 border-blue-200',
+  high: 'bg-orange-50 text-orange-600 border-orange-200',
+  critical: 'bg-red-50 text-red-600 border-red-200',
+}
 
+function PriorityBadge({ priority }: { priority: Ticket['priority'] }) {
   return (
-    <Badge variant="outline" className={`${styles[priority]} font-bold capitalize px-2.5 py-0.5 rounded-full text-[11px] shadow-sm`}>
+    <Badge variant="outline" className={`${PRIORITY_STYLES[priority] ?? PRIORITY_STYLES.medium} font-bold capitalize px-2.5 py-0.5 rounded-full text-[11px] shadow-sm`}>
       {priority}
     </Badge>
   )

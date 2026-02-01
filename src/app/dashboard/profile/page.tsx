@@ -6,22 +6,36 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { User, Mail, Bell, Shield, Camera } from "lucide-react";
+import { User, Bell, Shield, Camera } from "lucide-react";
+import { ProfileForm } from "@/components/profile/profile-form";
 
 export default async function ProfilePage() {
-  const supabase = (await createServerSupabaseClient()) as any
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  const [
+    { data: userData },
+    { data: profileData },
+  ] = await Promise.all([
+    supabase.from("users").select("id, email, role").eq("id", user.id).single(),
+    supabase.from("user_profiles").select("id, name, avatar_url, organization_name, organization_slug").eq("id", user.id).single(),
+  ]);
+  const userRow = userData as { id: string; email: string; role: string } | null;
+  const profileRow = profileData as { id: string; name: string | null; avatar_url: string | null; organization_name: string | null; organization_slug: string | null } | null;
+  const profile =
+    userRow && profileRow
+      ? {
+          id: userRow.id,
+          email: userRow.email,
+          role: userRow.role,
+          name: profileRow.name,
+          avatar_url: profileRow.avatar_url,
+          organization_name: profileRow.organization_name,
+          organization_slug: profileRow.organization_slug,
+        }
+      : null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -79,38 +93,19 @@ export default async function ProfilePage() {
                     {profile?.name || "Complete your profile"}
                   </h3>
                   <p className="text-sm text-slate-500">{user?.email}</p>
-                  <div className="mt-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary capitalize border border-primary/20">
-                    {profile?.role}
-                  </div>
+                  <p className="mt-3 text-sm text-slate-600">
+                    Your role:{" "}
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                      {formatRole(profile?.role)}
+                    </span>
+                  </p>
                 </div>
               </div>
 
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name" className="text-slate-700">
-                    Full Name
-                  </Label>
-                  <Input
-                    id="name"
-                    defaultValue={profile?.name || ""}
-                    className="bg-white border-slate-200"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-slate-700">
-                    Email Address
-                  </Label>
-                  <Input
-                    id="email"
-                    defaultValue={user?.email || ""}
-                    disabled
-                    className="bg-slate-50 border-slate-200 cursor-not-allowed"
-                  />
-                </div>
-              </div>
-              <div className="mt-8 flex justify-end">
-                <Button className="px-8 shadow-md">Save Changes</Button>
-              </div>
+              <ProfileForm
+                defaultName={profile?.name ?? ""}
+                userEmail={user?.email ?? ""}
+              />
             </CardContent>
           </Card>
 
@@ -148,6 +143,18 @@ export default async function ProfilePage() {
       </div>
     </div>
   );
+}
+
+function formatRole(role: string | null | undefined): string {
+  if (!role) return "—";
+  const labels: Record<string, string> = {
+    super_admin: "Admin",
+    staff: "Staff",
+    partner: "Partner",
+    partner_staff: "Partner Staff",
+    client: "Client",
+  };
+  return labels[role] ?? role.replace(/_/g, " ");
 }
 
 function SectionNav({

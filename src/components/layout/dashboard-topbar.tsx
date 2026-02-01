@@ -16,10 +16,14 @@ import {
 import { cn } from "@/lib/utils";
 
 type UserInfo = { email?: string | null };
-type ProfileInfo = { name?: string | null; avatar_url?: string | null } | null;
+type ProfileInfo = {
+  name?: string | null;
+  avatar_url?: string | null;
+  role?: string | null;
+} | null;
 
 const segmentLabels: Record<string, string> = {
-  dashboard: "Overview",
+  dashboard: "Dashboard",
   tickets: "Tickets",
   vault: "Secure Vault",
   billing: "Billing & Plans",
@@ -31,6 +35,15 @@ const segmentLabels: Record<string, string> = {
   capacity: "Capacity",
   profile: "Profile",
   dispute: "Dispute",
+  service: "Service",
+  contracts: "Contracts",
+  users: "User Management",
+  tenants: "Tenants",
+  financials: "Financials",
+  reports: "Reports",
+  time: "Time Tracking",
+  forms: "Forms",
+  audit: "Audit Log",
 };
 
 function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
@@ -62,6 +75,7 @@ export function DashboardTopbar({
   const pathname = usePathname();
   const breadcrumbs = getBreadcrumbs(pathname);
   const displayName = profile?.name?.trim() || user.email?.split("@")[0] || "User";
+  const isSuperAdmin = profile?.role === "super_admin";
 
   return (
     <header className="h-16 border-b bg-card flex items-center justify-between px-6 shadow-sm flex-shrink-0">
@@ -83,7 +97,12 @@ export function DashboardTopbar({
         ))}
       </div>
 
-      <div className="flex items-center gap-4 shrink-0">
+      <div className="flex items-center gap-3 shrink-0">
+        {isSuperAdmin && (
+          <span className="hidden sm:inline-flex items-center rounded-md border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+            Administrator
+          </span>
+        )}
         <p className="hidden sm:block text-sm text-muted-foreground">
           Welcome back, <span className="font-medium text-foreground">{displayName}</span>
         </p>

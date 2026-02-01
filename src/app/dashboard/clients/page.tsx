@@ -17,7 +17,7 @@ export default async function ClientsPage() {
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('users')
     .select('organization_id, role')
     .eq('id', user.id)
     .single()

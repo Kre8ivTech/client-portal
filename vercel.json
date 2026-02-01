@@ -1,4 +1,10 @@
 {
   "buildCommand": "rm -rf .next && npm run build",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "crons": [
+    {
+      "path": "/api/cron/audit-retention",
+      "schedule": "0 2 * * *"
+    }
+  ]
 }

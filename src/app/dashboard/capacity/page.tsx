@@ -26,7 +26,7 @@ export default async function CapacityPage() {
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('users')
     .select('id, role')
     .eq('id', user.id)
     .single()
@@ -40,14 +40,14 @@ export default async function CapacityPage() {
   const { data: officeHoursRows } = await supabase
     .from('office_hours')
     .select('*')
-    .eq('profile_id', user.id)
+    .eq('user_id', user.id)
     .order('day_of_week')
     .order('start_time')
 
   const { data: integrationsRows } = await supabase
     .from('staff_calendar_integrations')
     .select('id, provider, calendar_name, sync_enabled')
-    .eq('profile_id', user.id)
+    .eq('user_id', user.id)
 
   type OfficeHourRow = { id: string; start_time: string; end_time: string; day_of_week: number; label: string | null }
   type IntegrationRow = { id: string; provider: string; calendar_name: string | null; sync_enabled: boolean }

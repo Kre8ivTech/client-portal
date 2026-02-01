@@ -39,7 +39,7 @@ export default function ResetPasswordPage() {
     supabase.auth.getSession().then(() => {
       setReady(true);
     });
-  }, []);
+  }, [supabase.auth]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

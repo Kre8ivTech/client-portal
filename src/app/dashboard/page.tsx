@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { format } from "date-fns";
 import type { LucideIcon } from "lucide-react";
-import { Ticket, FolderKanban, CreditCard, BookOpen } from "lucide-react";
+import { Ticket, FolderKanban, CreditCard, BookOpen, Wrench } from "lucide-react";
 
 export const dynamic = 'force-dynamic'
 
@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   if (!user) return null
 
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('users')
     .select('organization_id')
     .eq('id', user.id)
     .single()
@@ -92,7 +92,7 @@ export default async function DashboardPage() {
         <Card className="lg:col-span-2 shadow-sm">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Recent Activity</CardTitle>
-            <CardDescription>Latest ticket updates</CardDescription>
+            <CardDescription>Latest support ticket updates</CardDescription>
           </CardHeader>
           <CardContent>
             {recentTickets.length === 0 ? (
@@ -133,7 +133,7 @@ export default async function DashboardPage() {
                   href="/dashboard/tickets"
                   className="text-sm font-medium text-primary hover:underline"
                 >
-                  View all tickets
+                  View all support tickets
                 </Link>
               </div>
             )}
@@ -151,7 +151,14 @@ export default async function DashboardPage() {
               className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-sm font-medium"
             >
               <Ticket className="h-4 w-4 text-primary shrink-0" />
-              New ticket
+              New support ticket
+            </Link>
+            <Link
+              href="/dashboard/service/new"
+              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-sm font-medium"
+            >
+              <Wrench className="h-4 w-4 text-primary shrink-0" />
+              New service request
             </Link>
             <Link
               href="/dashboard/kb"

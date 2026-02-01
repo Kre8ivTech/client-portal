@@ -3,6 +3,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { revalidatePath } from "next/cache";
+import { writeAuditLog } from "@/lib/audit";
 
 export async function createVaultItem(formData: FormData) {
   const supabase = (await createServerSupabaseClient()) as any;
@@ -14,7 +15,7 @@ export async function createVaultItem(formData: FormData) {
 
   // Get current user profile to find organization_id
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("organization_id")
     .eq("id", user.id)
     .single();
@@ -45,6 +46,12 @@ export async function createVaultItem(formData: FormData) {
 
   if (error) throw new Error(error.message);
 
+  await writeAuditLog({
+    action: "vault_item.create",
+    entity_type: "vault_item",
+    details: { label },
+  });
+
   revalidatePath("/dashboard/vault");
   return { success: true };
 }
@@ -58,7 +65,7 @@ export async function getDecryptedPassword(itemId: string) {
   if (!user) throw new Error("Unauthorized");
 
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("organization_id")
     .eq("id", user.id)
     .single();
@@ -93,7 +100,7 @@ export async function deleteVaultItem(itemId: string) {
   if (!user) throw new Error("Unauthorized");
 
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("organization_id")
     .eq("id", user.id)
     .single();

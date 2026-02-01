@@ -54,8 +54,14 @@ export default function LoginPage() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("code")) {
-      params.set("next", "/reset-password");
-      window.location.replace(`/auth/callback?${params.toString()}`);
+  // Show message when redirected with auth_callback_failed (e.g. callback URL not in Supabase Redirect URLs)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "auth_callback_failed") {
+      setMessage({
+      });
+      window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 
@@ -66,7 +72,6 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage(null);
 
     try {
       if (password.trim()) {
@@ -112,6 +117,7 @@ export default function LoginPage() {
         <CardHeader className="space-y-2 pb-8">
           <div className="flex justify-center mb-4">
             {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- dynamic user-provided logo URL
               <img
                 src={logoUrl}
                 alt={appName}

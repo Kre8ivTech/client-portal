@@ -89,7 +89,7 @@ export function TicketList({ initialTickets }: TicketListProps) {
                   <PriorityBadge priority={ticket.priority} />
                 </TableCell>
                 <TableCell className="text-right text-slate-500 text-sm whitespace-nowrap">
-                  {formatDate(ticket.created_at)}
+                  {ticket.created_at ? formatDate(ticket.created_at) : '—'}
                 </TableCell>
               </TableRow>
             ))
@@ -108,33 +108,33 @@ function formatDate(date: string) {
   }
 }
 
-function StatusBadge({ status }: { status: Ticket['status'] }) {
-  const styles = {
-    new: 'bg-blue-50 text-blue-700 border-blue-200',
-    open: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    in_progress: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    pending_client: 'bg-orange-50 text-orange-700 border-orange-200',
-    resolved: 'bg-green-50 text-green-700 border-green-200',
-    closed: 'bg-slate-100 text-slate-600 border-slate-200',
-  }
+const STATUS_STYLES: Record<string, string> = {
+  new: 'bg-blue-50 text-blue-700 border-blue-200',
+  open: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  in_progress: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+  pending_client: 'bg-orange-50 text-orange-700 border-orange-200',
+  resolved: 'bg-green-50 text-green-700 border-green-200',
+  closed: 'bg-slate-100 text-slate-600 border-slate-200',
+}
 
+function StatusBadge({ status }: { status: Ticket['status'] }) {
   return (
-    <Badge variant="outline" className={`${styles[status]} font-medium capitalize py-0.5`}>
+    <Badge variant="outline" className={`${STATUS_STYLES[status] ?? STATUS_STYLES.new} font-medium capitalize py-0.5`}>
       {status.replace('_', ' ')}
     </Badge>
   )
 }
 
-function PriorityBadge({ priority }: { priority: Ticket['priority'] }) {
-  const styles = {
-    low: 'bg-slate-50 text-slate-600 border-slate-200',
-    medium: 'bg-blue-50 text-blue-600 border-blue-200',
-    high: 'bg-orange-50 text-orange-600 border-orange-200',
-    critical: 'bg-red-50 text-red-600 border-red-200',
-  }
+const PRIORITY_STYLES: Record<string, string> = {
+  low: 'bg-slate-50 text-slate-600 border-slate-200',
+  medium: 'bg-blue-50 text-blue-600 border-blue-200',
+  high: 'bg-orange-50 text-orange-600 border-orange-200',
+  critical: 'bg-red-50 text-red-600 border-red-200',
+}
 
+function PriorityBadge({ priority }: { priority: Ticket['priority'] }) {
   return (
-    <Badge variant="outline" className={`${styles[priority]} font-medium capitalize py-0.5`}>
+    <Badge variant="outline" className={`${PRIORITY_STYLES[priority] ?? PRIORITY_STYLES.medium} font-medium capitalize py-0.5`}>
       {priority}
     </Badge>
   )

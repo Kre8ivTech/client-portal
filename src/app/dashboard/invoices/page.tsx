@@ -125,11 +125,9 @@ export default async function InvoicesPage() {
             Export CSV
           </Button>
           {canManage && (
-            <Button className="gap-2" asChild>
-              <Link href="/dashboard/invoices/new">
-                <Plus size={18} />
-                New Invoice
-              </Link>
+            <Button className="gap-2" disabled>
+              <Plus size={18} />
+              New Invoice
             </Button>
           )}
         </div>

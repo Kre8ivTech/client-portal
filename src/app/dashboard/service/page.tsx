@@ -26,18 +26,24 @@ export default async function ServicePage() {
     return <div>Profile not found</div>
   }
 
+  const p = profile as { organization_id: string | null; role: string }
+
   // Fetch service requests
-  let query = supabase
+  let query = (supabase as any)
     .from('service_requests')
     .select(`
       *,
       service:services(id, name, base_rate, rate_type)
     `)
-    .eq('organization_id', profile.organization_id)
-    .order('created_at', { ascending: false })
+  
+  if (p.organization_id) {
+    query = query.eq('organization_id', p.organization_id)
+  }
+  
+  query = query.order('created_at', { ascending: false })
 
   // Clients only see their own requests
-  if (profile.role === 'client') {
+  if (p.role === 'client') {
     query = query.eq('requested_by', user.id)
   }
 
@@ -64,7 +70,7 @@ export default async function ServicePage() {
       {/* Service Requests List */}
       {serviceRequests && serviceRequests.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {serviceRequests.map((request) => (
+          {serviceRequests.map((request: any) => (
             <ServiceRequestCard key={request.id} request={request} />
           ))}
         </div>

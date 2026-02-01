@@ -46,7 +46,8 @@ export default async function BillingPage() {
     return <div>Organization not found</div>
   }
 
-  const isAdmin = profile.role === 'super_admin' || profile.role === 'staff'
+  const p = profile as { organization_id: string; role: string }
+  const isAdmin = p.role === 'super_admin' || p.role === 'staff'
 
   const { data: assignment } = await supabase
     .from('plan_assignments')

@@ -27,20 +27,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
+    const p = profile as { organization_id: string | null; role: string; is_account_manager: boolean }
     const isAuthorized =
-      profile.role === 'super_admin' ||
-      (profile.role === 'staff' && profile.is_account_manager) ||
-      profile.role === 'partner'
+      p.role === 'super_admin' ||
+      (p.role === 'staff' && p.is_account_manager) ||
+      p.role === 'partner'
 
     if (!isAuthorized) {
       return NextResponse.json({ error: 'Forbidden - Account manager access required' }, { status: 403 })
     }
 
     // Fetch invoices with relations
-    const { data: invoices, error } = await supabase
+    const invoicesQuery = (supabase as any)
       .from('invoices')
       .select('*, created_by_user:users!created_by(id, email, profiles(name))')
-      .eq('organization_id', profile.organization_id)
+    
+    if (p.organization_id) {
+      invoicesQuery.eq('organization_id', p.organization_id)
+    }
+    
+    const { data: invoices, error } = await invoicesQuery
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -80,9 +86,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
+    const p = profile as { organization_id: string | null; role: string; is_account_manager: boolean }
     const isAuthorized =
-      profile.role === 'super_admin' ||
-      (profile.role === 'staff' && profile.is_account_manager)
+      p.role === 'super_admin' ||
+      (p.role === 'staff' && p.is_account_manager)
 
     if (!isAuthorized) {
       return NextResponse.json({ error: 'Forbidden - Account manager access required' }, { status: 403 })
@@ -105,12 +112,16 @@ export async function POST(request: NextRequest) {
     const data = result.data
 
     // Verify invoice number is unique for this org
-    const { data: existing } = await supabase
+    const existingQuery = (supabase as any)
       .from('invoices')
       .select('id')
-      .eq('organization_id', profile.organization_id)
       .eq('invoice_number', data.invoice_number)
-      .single()
+    
+    if (p.organization_id) {
+      existingQuery.eq('organization_id', p.organization_id)
+    }
+    
+    const { data: existing } = await existingQuery.single()
 
     if (existing) {
       return NextResponse.json(
@@ -123,10 +134,10 @@ export async function POST(request: NextRequest) {
     const totals = calculateInvoiceTotals(data.line_items, data.tax_rate, data.discount_amount)
 
     // Create invoice
-    const { data: invoice, error: invoiceError } = await supabase
+    const { data: invoice, error: invoiceError } = await (supabase as any)
       .from('invoices')
       .insert({
-        organization_id: profile.organization_id,
+        organization_id: p.organization_id,
         invoice_number: data.invoice_number,
         status: data.status,
         issue_date: data.issue_date,
@@ -164,7 +175,7 @@ export async function POST(request: NextRequest) {
       amount: Math.round(item.quantity * item.unit_price),
     }))
 
-    const { error: lineItemsError } = await supabase
+    const { error: lineItemsError } = await (supabase as any)
       .from('invoice_line_items')
       .insert(lineItemsToInsert)
 

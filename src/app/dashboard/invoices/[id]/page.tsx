@@ -21,7 +21,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
   }
 
   // Fetch invoice with line items
-  const { data: invoice, error } = await supabase
+  const { data: invoice, error } = await (supabase as any)
     .from('invoices')
     .select(`
       *,
@@ -42,7 +42,12 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.organization_id !== invoice.organization_id) {
+  if (!profile) {
+    return <div>Profile not found</div>
+  }
+
+  const p = profile as { organization_id: string | null; role: string }
+  if (p.organization_id !== invoice.organization_id) {
     return <div>Access denied</div>
   }
 

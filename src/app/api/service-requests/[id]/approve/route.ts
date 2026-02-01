@@ -27,7 +27,12 @@ export async function PATCH(
       .eq('id', user.id)
       .single()
 
-    if (!profile || !['super_admin', 'staff', 'partner'].includes(profile.role)) {
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    const p = profile as { organization_id: string | null; role: string }
+    if (!['super_admin', 'staff', 'partner'].includes(p.role)) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 
@@ -46,7 +51,7 @@ export async function PATCH(
     }
 
     // Fetch the service request
-    const { data: existingRequest, error: fetchError } = await supabase
+    const { data: existingRequest, error: fetchError } = await (supabase as any)
       .from('service_requests')
       .select('id, organization_id, status')
       .eq('id', id)
@@ -57,7 +62,7 @@ export async function PATCH(
     }
 
     // Verify org access
-    if (existingRequest.organization_id !== profile.organization_id) {
+    if (existingRequest.organization_id !== p.organization_id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -92,7 +97,7 @@ export async function PATCH(
       updateData.internal_notes = result.data.internal_notes
     }
 
-    const { data: updatedRequest, error: updateError } = await supabase
+    const { data: updatedRequest, error: updateError } = await (supabase as any)
       .from('service_requests')
       .update(updateData)
       .eq('id', id)

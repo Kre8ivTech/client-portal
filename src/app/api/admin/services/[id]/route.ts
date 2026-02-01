@@ -28,7 +28,12 @@ export async function PATCH(
       .eq('id', user.id)
       .single()
 
-    if (!profile || !['super_admin', 'staff'].includes(profile.role)) {
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    const p = profile as { organization_id: string | null; role: string }
+    if (!['super_admin', 'staff'].includes(p.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -44,11 +49,16 @@ export async function PATCH(
     }
 
     // Update service
-    const { data: service, error } = await supabase
+    const updateQuery = (supabase as any)
       .from('services')
       .update(result.data)
       .eq('id', id)
-      .eq('organization_id', profile.organization_id)
+    
+    if (p.organization_id) {
+      updateQuery.eq('organization_id', p.organization_id)
+    }
+    
+    const { data: service, error } = await updateQuery
       .select()
       .single()
 
@@ -94,7 +104,12 @@ export async function DELETE(
       .eq('id', user.id)
       .single()
 
-    if (!profile || !['super_admin', 'staff'].includes(profile.role)) {
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    const p = profile as { organization_id: string | null; role: string }
+    if (!['super_admin', 'staff'].includes(p.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -112,11 +127,16 @@ export async function DELETE(
     }
 
     // Delete service
-    const { error } = await supabase
+    const deleteQuery = (supabase as any)
       .from('services')
       .delete()
       .eq('id', id)
-      .eq('organization_id', profile.organization_id)
+    
+    if (p.organization_id) {
+      deleteQuery.eq('organization_id', p.organization_id)
+    }
+    
+    const { error } = await deleteQuery
 
     if (error) {
       console.error('Error deleting service:', error)

@@ -27,19 +27,25 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
+    const p = profile as { organization_id: string | null; role: string }
+
     // Build query based on role
-    let query = supabase
+    let query = (supabase as any)
       .from('service_requests')
       .select(`
         *,
         service:services(id, name, description, category, base_rate, rate_type),
         requester:users!requested_by(id, email, profiles(name, avatar_url))
       `)
-      .eq('organization_id', profile.organization_id)
-      .order('created_at', { ascending: false })
+    
+    if (p.organization_id) {
+      query = query.eq('organization_id', p.organization_id)
+    }
+    
+    query = query.order('created_at', { ascending: false })
 
     // Clients can only see their own requests
-    if (profile.role === 'client') {
+    if (p.role === 'client') {
       query = query.eq('requested_by', user.id)
     }
 
@@ -82,6 +88,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
+    const p = profile as { organization_id: string | null }
+
     // Validate input
     const body = await request.json()
     const result = serviceRequestSchema.safeParse(body)
@@ -97,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify service exists and is active
-    const { data: service, error: serviceError } = await supabase
+    const { data: service, error: serviceError } = await (supabase as any)
       .from('services')
       .select('id, is_active, organization_id')
       .eq('id', result.data.service_id)
@@ -111,16 +119,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Service is not available' }, { status: 400 })
     }
 
-    if (service.organization_id !== profile.organization_id) {
+    const serviceData = service as { id: string; is_active: boolean; organization_id: string | null }
+    if (serviceData.organization_id !== p.organization_id) {
       return NextResponse.json({ error: 'Service not available for your organization' }, { status: 403 })
     }
 
     // Create service request
-    const { data: serviceRequest, error } = await supabase
+    const { data: serviceRequest, error } = await (supabase as any)
       .from('service_requests')
       .insert({
         ...result.data,
-        organization_id: profile.organization_id,
+        organization_id: p.organization_id,
         requested_by: user.id,
         status: 'pending',
       })

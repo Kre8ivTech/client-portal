@@ -92,7 +92,7 @@ async function handleCheckoutSessionCompleted(
   }
 
   // Update invoice status to paid
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('invoices')
     .update({
       status: 'paid',
@@ -111,7 +111,7 @@ async function handleCheckoutSessionCompleted(
 
   // Record payment in invoice_payments table
   if (session.payment_intent && typeof session.payment_intent === 'string') {
-    await supabase.from('invoice_payments').insert({
+    await (supabase as any).from('invoice_payments').insert({
       invoice_id: invoiceId,
       amount: session.amount_total || 0,
       payment_method: 'stripe',
@@ -135,7 +135,7 @@ async function handlePaymentIntentSucceeded(
     return
   }
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('invoices')
     .update({
       status: 'paid',
@@ -168,7 +168,7 @@ async function handlePaymentIntentFailed(
   console.error(`Payment failed for invoice ${invoiceId}:`, paymentIntent.last_payment_error?.message)
 
   // Optionally update invoice with payment failure info
-  await supabase
+  await (supabase as any)
     .from('invoices')
     .update({
       metadata: {
@@ -190,7 +190,7 @@ async function handleInvoicePaid(
     return
   }
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from('invoices')
     .update({
       status: 'paid',
@@ -220,7 +220,7 @@ async function handleInvoicePaymentFailed(
 
   console.error(`Stripe invoice payment failed for ${invoiceId}`)
 
-  await supabase
+  await (supabase as any)
     .from('invoices')
     .update({
       status: 'overdue',

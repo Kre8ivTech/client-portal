@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
     let stripePriceId: string | null = null
 
     // Sync with Stripe if enabled and configured
-    if (sync_to_stripe && isStripeConfigured()) {
+    if (sync_to_stripe && isStripeConfigured) {
       try {
         const stripeResult = await createStripeProduct({
           name: input.name,

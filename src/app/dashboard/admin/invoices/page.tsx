@@ -21,21 +21,27 @@ export default async function AdminInvoicesPage() {
     .eq('id', user.id)
     .single()
 
+  const p = profile as { organization_id: string | null; role: string; is_account_manager: boolean } | null
   const isAuthorized =
-    profile &&
-    (profile.role === 'super_admin' ||
-      (profile.role === 'staff' && profile.is_account_manager) ||
-      profile.role === 'partner')
+    p &&
+    (p.role === 'super_admin' ||
+      (p.role === 'staff' && p.is_account_manager) ||
+      p.role === 'partner')
 
   if (!isAuthorized) {
     return <div>Forbidden - Account manager access required</div>
   }
 
   // Fetch invoices with line items
-  const { data: invoices } = await supabase
+  const invoicesQuery = (supabase as any)
     .from('invoices')
     .select('*, created_by_user:users!created_by(id, email, profiles(name))')
-    .eq('organization_id', profile!.organization_id)
+  
+  if (p?.organization_id) {
+    invoicesQuery.eq('organization_id', p.organization_id)
+  }
+  
+  const { data: invoices } = await invoicesQuery
     .order('created_at', { ascending: false })
 
   return (
@@ -59,7 +65,7 @@ export default async function AdminInvoicesPage() {
       {/* Invoices Grid */}
       {invoices && invoices.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
-          {invoices.map((invoice) => (
+          {invoices.map((invoice: any) => (
             <div
               key={invoice.id}
               className="border rounded-lg p-6 hover:shadow-md transition-shadow"

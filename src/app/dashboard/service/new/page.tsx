@@ -25,12 +25,19 @@ export default async function NewServiceRequestPage() {
     return <div>Profile not found</div>
   }
 
+  const p = profile as { organization_id: string | null }
+
   // Fetch active services for this organization
-  const { data: services } = await supabase
+  const servicesQuery = (supabase as any)
     .from('services')
     .select('*')
-    .eq('organization_id', profile.organization_id)
     .eq('is_active', true)
+  
+  if (p.organization_id) {
+    servicesQuery.eq('organization_id', p.organization_id)
+  }
+  
+  const { data: services } = await servicesQuery
     .order('display_order', { ascending: true })
     .order('name', { ascending: true })
 

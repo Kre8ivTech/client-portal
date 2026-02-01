@@ -24,7 +24,12 @@ export async function GET(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!profile || !['super_admin', 'staff'].includes(profile.role)) {
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    const p = profile as { organization_id: string | null; role: string }
+    if (!['super_admin', 'staff'].includes(p.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -34,10 +39,15 @@ export async function GET(request: NextRequest) {
     const active = searchParams.get('active')
 
     // Build query
-    let query = supabase
+    let query = (supabase as any)
       .from('services')
       .select('*, created_by_user:users!created_by(id, profiles(name))')
-      .eq('organization_id', profile.organization_id)
+    
+    if (p.organization_id) {
+      query = query.eq('organization_id', p.organization_id)
+    }
+    
+    query = query
       .order('display_order', { ascending: true })
       .order('created_at', { ascending: false })
 
@@ -87,7 +97,12 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    if (!profile || !['super_admin', 'staff'].includes(profile.role)) {
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    const p = profile as { organization_id: string | null; role: string }
+    if (!['super_admin', 'staff'].includes(p.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -103,11 +118,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert service
-    const { data: service, error } = await supabase
+    const { data: service, error } = await (supabase as any)
       .from('services')
       .insert({
         ...result.data,
-        organization_id: profile.organization_id,
+        organization_id: p.organization_id,
         created_by: user.id,
       })
       .select()

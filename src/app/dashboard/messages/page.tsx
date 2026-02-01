@@ -79,7 +79,7 @@ export default function MessagesPage() {
     if (!activeId) return
 
     async function fetchMessages() {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('messages')
         .select('*')
         .eq('conversation_id', activeId)
@@ -110,7 +110,7 @@ export default function MessagesPage() {
   async function handleSendMessage(content: string) {
     if (!activeId || !userId) return
     setSendError(null)
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('messages')
       .insert({
         conversation_id: activeId,

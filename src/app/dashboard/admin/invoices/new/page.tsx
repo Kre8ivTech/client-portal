@@ -20,10 +20,11 @@ export default async function NewInvoicePage() {
     .eq('id', user.id)
     .single()
 
+  const p = profile as { organization_id: string | null; role: string; is_account_manager: boolean } | null
   const isAuthorized =
-    profile &&
-    (profile.role === 'super_admin' ||
-      (profile.role === 'staff' && profile.is_account_manager))
+    p &&
+    (p.role === 'super_admin' ||
+      (p.role === 'staff' && p.is_account_manager))
 
   if (!isAuthorized) {
     return <div>Forbidden - Account manager access required</div>

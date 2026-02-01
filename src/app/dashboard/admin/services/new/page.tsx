@@ -21,7 +21,12 @@ export default async function NewServicePage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile || !['super_admin', 'staff'].includes(profile.role)) {
+  if (!profile) {
+    return <div>Profile not found</div>
+  }
+
+  const p = profile as { organization_id: string | null; role: string }
+  if (!['super_admin', 'staff'].includes(p.role)) {
     return <div>Forbidden - Admin access required</div>
   }
 

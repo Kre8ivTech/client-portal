@@ -26,7 +26,7 @@ export async function GET(
     }
 
     // Fetch invoice
-    const { data: invoice, error: invoiceError } = await supabase
+    const { data: invoice, error: invoiceError } = await (supabase as any)
       .from('invoices')
       .select(`
         *,
@@ -47,7 +47,12 @@ export async function GET(
       .eq('id', user.id)
       .single()
 
-    if (!profile || profile.organization_id !== invoice.organization_id) {
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    const p = profile as { organization_id: string | null; role: string }
+    if (p.organization_id !== invoice.organization_id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

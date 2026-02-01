@@ -26,7 +26,7 @@ export default async function TicketPage({
   }
 
   // Flatten the nested creator data structure (creator.profiles.name → creator.name)
-  type QueryResult = typeof ticket & {
+  type QueryResult = typeof ticketData & {
     creator: {
       id: string
       profiles: {
@@ -36,12 +36,12 @@ export default async function TicketPage({
   }
 
   const ticketWithCreator = {
-    ...ticket,
-    creator: (ticket as QueryResult).creator?.profiles
-      ? { name: (ticket as QueryResult).creator.profiles.name }
+    ...ticketData,
+    creator: (ticketData as QueryResult).creator?.profiles
+      ? { name: (ticketData as QueryResult).creator?.profiles?.name }
       : null
   }
 
-  type TicketWithCreator = typeof ticket & { creator: { name: string | null } | null }
-  return <TicketDetail ticket={ticketWithCreator as TicketWithCreator} userId={user.id} />
+  type TicketWithCreator = typeof ticketData & { creator: { name: string | null } | null }
+  return <TicketDetail ticket={ticketWithCreator as any} userId={user.id} />
 }

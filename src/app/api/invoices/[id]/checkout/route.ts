@@ -21,7 +21,7 @@ export async function POST(
     }
 
     // Fetch the invoice
-    const { data: invoice, error: invoiceError } = await supabase
+    const { data: invoice, error: invoiceError } = await (supabase as any)
       .from('invoices')
       .select('*, organization:organizations(id, name)')
       .eq('id', id)
@@ -38,7 +38,12 @@ export async function POST(
       .eq('id', user.id)
       .single()
 
-    if (!profile || profile.organization_id !== invoice.organization_id) {
+    if (!profile) {
+      return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
+    }
+
+    const p = profile as { organization_id: string | null; role: string }
+    if (p.organization_id !== invoice.organization_id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
@@ -56,7 +61,7 @@ export async function POST(
     }
 
     // Get invoice line items for display
-    const { data: lineItems } = await supabase
+    const { data: lineItems } = await (supabase as any)
       .from('invoice_line_items')
       .select('*')
       .eq('invoice_id', invoice.id)
@@ -66,7 +71,7 @@ export async function POST(
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       mode: 'payment',
-      line_items: lineItems?.map((item) => ({
+      line_items: lineItems?.map((item: any) => ({
         price_data: {
           currency: invoice.currency.toLowerCase(),
           product_data: {

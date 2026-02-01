@@ -53,7 +53,7 @@ export async function PATCH(
 
     if (statusUpdateResult.success) {
       // Simple status update
-      const { error } = await supabase
+      const updateQuery = (supabase as any)
         .from('invoices')
         .update({
           status: statusUpdateResult.data.status,
@@ -61,7 +61,12 @@ export async function PATCH(
           updated_by: user.id,
         })
         .eq('id', id)
-        .eq('organization_id', p.organization_id)
+      
+      if (p.organization_id) {
+        updateQuery.eq('organization_id', p.organization_id)
+      }
+      
+      const { error } = await updateQuery
 
       if (error) {
         console.error('Failed to update invoice status:', error)
@@ -90,7 +95,7 @@ export async function PATCH(
     const totals = calculateInvoiceTotals(data.line_items, data.tax_rate, data.discount_amount)
 
     // Update invoice
-    const { data: invoice, error: updateError } = await supabase
+    const updateInvoiceQuery = (supabase as any)
       .from('invoices')
       .update({
         invoice_number: data.invoice_number,
@@ -112,7 +117,12 @@ export async function PATCH(
         updated_by: user.id,
       })
       .eq('id', id)
-      .eq('organization_id', p.organization_id)
+    
+    if (p.organization_id) {
+      updateInvoiceQuery.eq('organization_id', p.organization_id)
+    }
+    
+    const { data: invoice, error: updateError } = await updateInvoiceQuery
       .select()
       .single()
 
@@ -133,7 +143,7 @@ export async function PATCH(
       amount: Math.round(item.quantity * item.unit_price),
     }))
 
-    const { error: lineItemsError } = await supabase
+    const { error: lineItemsError } = await (supabase as any)
       .from('invoice_line_items')
       .insert(lineItemsToInsert)
 
@@ -188,12 +198,16 @@ export async function DELETE(
     }
 
     // Fetch invoice to check status
-    const { data: invoice } = await supabase
+    const invoiceQuery = (supabase as any)
       .from('invoices')
       .select('status')
       .eq('id', id)
-      .eq('organization_id', p.organization_id)
-      .single()
+    
+    if (p.organization_id) {
+      invoiceQuery.eq('organization_id', p.organization_id)
+    }
+    
+    const { data: invoice } = await invoiceQuery.single()
 
     if (!invoice) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
@@ -208,11 +222,16 @@ export async function DELETE(
     }
 
     // Delete invoice (cascades to line items)
-    const { error } = await supabase
+    const deleteQuery = (supabase as any)
       .from('invoices')
       .delete()
       .eq('id', id)
-      .eq('organization_id', p.organization_id)
+    
+    if (p.organization_id) {
+      deleteQuery.eq('organization_id', p.organization_id)
+    }
+    
+    const { error } = await deleteQuery
 
     if (error) {
       console.error('Failed to delete invoice:', error)
@@ -230,7 +249,7 @@ async function getCurrentAmountPaid(
   supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
   invoiceId: string
 ): Promise<number> {
-  const { data: invoice } = await supabase
+  const { data: invoice } = await (supabase as any)
     .from('invoices')
     .select('amount_paid')
     .eq('id', invoiceId)

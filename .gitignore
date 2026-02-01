@@ -42,3 +42,4 @@ next-env.d.ts
 AGENTS.db
 optimizer/
 .ruvector/intelligence.json
+.blackboxcli/

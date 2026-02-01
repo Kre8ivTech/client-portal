@@ -98,7 +98,7 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
           <div className="space-y-1">
             <AlertTitle className="text-lg font-bold">Ticket Created Successfully!</AlertTitle>
             <AlertDescription>
-              Your support request has been submitted. We&apos;ll be in touch shortly.
+              Your support request has been submitted. We'll be in touch shortly.
               Redirecting you to the ticket details...
             </AlertDescription>
           </div>
@@ -119,7 +119,7 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
 
       <div className="space-y-2">
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">New Support Request</h1>
-        <p className="text-slate-500">Provide details about your issue and we&apos;ll help get it resolved.</p>
+        <p className="text-slate-500">Provide details about your issue and we'll help get it resolved.</p>
       </div>
 
       {error && (
@@ -209,7 +209,7 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
                     {...field} 
                   />
                 </FormControl>
-                <FormDescription>Include steps to reproduce, error messages, and what you&apos;ve tried.</FormDescription>
+                <FormDescription>Include steps to reproduce, error messages, and what you've tried.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}

@@ -1,27 +1,40 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
+import type { Database } from '@/types/database'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  // if "next" is in param, use it as the redirect URL
   const next = searchParams.get('next') ?? '/dashboard'
 
   if (code) {
-    const supabase = await createServerSupabaseClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    
-    if (!error) {
-      const isLocalEnv = process.env.NODE_ENV === 'development'
-      if (isLocalEnv) {
-        // we can be more lenient in dev, but in production we should check origins
-        return NextResponse.redirect(`${origin}${next}`)
-      } else {
-        return NextResponse.redirect(`${origin}${next}`)
+    const cookieStore = await cookies()
+    const redirectResponse = NextResponse.redirect(`${origin}${next}`)
+
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet: { name: string; value: string; options: Record<string, unknown> }[]) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              redirectResponse.cookies.set(name, value, options)
+            })
+          },
+        },
       }
+    )
+
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+
+    if (!error) {
+      return redirectResponse
     }
   }
 
-  // return the user to an error page with instructions
-  return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
+  return NextResponse.redirect(`${origin}/?error=auth_callback_failed`)
 }

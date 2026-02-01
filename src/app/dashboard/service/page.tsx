@@ -1,80 +1,87 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Ticket, BookOpen, PlusCircle, Wrench } from "lucide-react";
-import Link from "next/link";
+import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { ServiceRequestCard } from '@/components/services/ServiceRequestCard'
+import { Button } from '@/components/ui/button'
+import { Plus } from 'lucide-react'
+import Link from 'next/link'
 
 export default async function ServicePage() {
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient()
+
+  // Check auth
   const {
     data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return <div>Unauthorized</div>
+  }
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('organization_id, role')
+    .eq('id', user.id)
+    .single()
+
+  if (!profile) {
+    return <div>Profile not found</div>
+  }
+
+  // Fetch service requests
+  let query = supabase
+    .from('service_requests')
+    .select(`
+      *,
+      service:services(id, name, base_rate, rate_type)
+    `)
+    .eq('organization_id', profile.organization_id)
+    .order('created_at', { ascending: false })
+
+  // Clients only see their own requests
+  if (profile.role === 'client') {
+    query = query.eq('requested_by', user.id)
+  }
+
+  const { data: serviceRequests } = await query
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Service Requests</h1>
-        <p className="text-muted-foreground">
-          Request new services from the team. For ongoing help or issues, use Support Tickets.
-        </p>
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Service Requests</h1>
+          <p className="text-muted-foreground mt-1">
+            Request services from our catalog and track their progress
+          </p>
+        </div>
+        <Link href="/dashboard/service/new">
+          <Button>
+            <Plus className="h-4 w-4 mr-2" />
+            New Request
+          </Button>
+        </Link>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Wrench className="h-4 w-4" />
+      {/* Service Requests List */}
+      {serviceRequests && serviceRequests.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {serviceRequests.map((request) => (
+            <ServiceRequestCard key={request.id} request={request} />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 border-2 border-dashed rounded-lg">
+          <p className="text-muted-foreground">No service requests yet</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Create your first service request to get started
+          </p>
+          <Link href="/dashboard/service/new">
+            <Button className="mt-4">
+              <Plus className="h-4 w-4 mr-2" />
               New Service Request
-            </CardTitle>
-            <CardDescription>Submit a request for a new service or project.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild className="w-full gap-2">
-              <Link href="/dashboard/service/new">
-                <PlusCircle className="h-4 w-4" />
-                New Service Request
-              </Link>
             </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Ticket className="h-4 w-4" />
-              Support Tickets
-            </CardTitle>
-            <CardDescription>View and manage your support tickets for help and issues.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="secondary" className="w-full gap-2">
-              <Link href="/dashboard/tickets">
-                <Ticket className="h-4 w-4" />
-                View Support Tickets
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <BookOpen className="h-4 w-4" />
-              Knowledge Base
-            </CardTitle>
-            <CardDescription>Browse articles and guides.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild variant="secondary" className="w-full gap-2">
-              <Link href="/dashboard/kb">
-                <BookOpen className="h-4 w-4" />
-                Browse KB
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+          </Link>
+        </div>
+      )}
     </div>
-  );
+  )
 }

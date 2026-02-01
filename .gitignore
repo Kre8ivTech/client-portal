@@ -39,3 +39,6 @@ docs/sessions/*.tmp
 *.md
 skills/vercel-react-best-practices/metadata.json
 next-env.d.ts
+AGENTS.db
+optimizer/
+.ruvector/intelligence.json

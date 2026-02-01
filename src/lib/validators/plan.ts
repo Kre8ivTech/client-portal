@@ -29,6 +29,18 @@ export const disputeTypeSchema = z.enum([
   'other',
 ])
 
+export const invoiceStatusSchema = z.enum([
+  'draft',
+  'pending',
+  'sent',
+  'viewed',
+  'partial',
+  'paid',
+  'overdue',
+  'cancelled',
+  'refunded',
+])
+
 // =============================================================================
 // INVOICE TEMPLATE SCHEMAS
 // =============================================================================
@@ -292,9 +304,86 @@ export const listBillingDisputesQuerySchema = z.object({
 })
 
 // =============================================================================
+// INVOICE SCHEMAS
+// =============================================================================
+
+export const createInvoiceLineItemSchema = z.object({
+  description: z.string().min(1).max(500),
+  quantity: z.number().positive().default(1),
+  unit_price: z.number().int().describe('Unit price in cents'),
+  item_type: z.string().max(50).optional(),
+  time_entry_id: z.string().uuid().optional(),
+  sort_order: z.number().int().min(0).default(0),
+})
+
+export const createInvoiceSchema = z.object({
+  organization_id: z.string().uuid(),
+  plan_assignment_id: z.string().uuid().optional(),
+
+  // Dates
+  issue_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional(),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD'),
+  period_start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional(),
+  period_end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional(),
+
+  // Amounts (in cents)
+  tax_rate: z.number().min(0).max(1).default(0),
+  discount_amount: z.number().int().min(0).default(0),
+  discount_description: z.string().max(255).optional(),
+
+  // Template and configuration
+  template_id: z.string().uuid().optional(),
+  payment_terms_days: z.number().int().min(1).max(365).default(30),
+
+  // Notes
+  notes: z.string().max(5000).optional(),
+  internal_notes: z.string().max(5000).optional(),
+
+  // Line items
+  line_items: z.array(createInvoiceLineItemSchema).min(1),
+})
+
+export const updateInvoiceSchema = z.object({
+  status: invoiceStatusSchema.optional(),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').optional(),
+  tax_rate: z.number().min(0).max(1).optional(),
+  discount_amount: z.number().int().min(0).optional(),
+  discount_description: z.string().max(255).optional(),
+  notes: z.string().max(5000).optional(),
+  internal_notes: z.string().max(5000).optional(),
+})
+
+export const recordPaymentSchema = z.object({
+  invoice_id: z.string().uuid(),
+  amount: z.number().int().positive().describe('Payment amount in cents'),
+  payment_method: z.string().max(50).optional(),
+  payment_reference: z.string().max(255).optional(),
+  payment_date: z.string().datetime().optional(),
+  notes: z.string().max(1000).optional(),
+})
+
+export const sendInvoiceSchema = z.object({
+  invoice_id: z.string().uuid(),
+  recipient_emails: z.array(z.string().email()).min(1).max(10),
+  message: z.string().max(2000).optional(),
+})
+
+export const listInvoicesQuerySchema = z.object({
+  organization_id: z.string().uuid().optional(),
+  status: invoiceStatusSchema.optional(),
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  overdue_only: z.boolean().optional(),
+  search: z.string().max(100).optional(),
+  limit: z.number().int().min(1).max(100).default(20),
+  offset: z.number().int().min(0).default(0),
+})
+
+// =============================================================================
 // TYPE EXPORTS
 // =============================================================================
 
+export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>
 export type PlanStatus = z.infer<typeof planStatusSchema>
 export type CoverageType = z.infer<typeof coverageTypeSchema>
 export type DisputeStatus = z.infer<typeof disputeStatusSchema>
@@ -357,3 +446,10 @@ export type ListPlanAssignmentsQuery = z.infer<
 export type ListBillingDisputesQuery = z.infer<
   typeof listBillingDisputesQuerySchema
 >
+
+export type CreateInvoiceLineItemInput = z.infer<typeof createInvoiceLineItemSchema>
+export type CreateInvoiceInput = z.infer<typeof createInvoiceSchema>
+export type UpdateInvoiceInput = z.infer<typeof updateInvoiceSchema>
+export type RecordPaymentInput = z.infer<typeof recordPaymentSchema>
+export type SendInvoiceInput = z.infer<typeof sendInvoiceSchema>
+export type ListInvoicesQuery = z.infer<typeof listInvoicesQuerySchema>

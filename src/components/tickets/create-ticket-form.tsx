@@ -209,7 +209,7 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
                     {...field} 
                   />
                 </FormControl>
-                <FormDescription>Include steps to reproduce, error messages, and what you&apos;ve tried.</FormDescription>
+                <FormDescription>Include steps to reproduce, error messages, and what you have tried.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}

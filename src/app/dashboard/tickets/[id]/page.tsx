@@ -25,18 +25,23 @@ export default async function TicketPage({
     return notFound()
   }
 
-  // Fetch creator profile separately (profiles.user_id = tickets.created_by)
-  let creatorName: string | null = null
-  if (ticketData.created_by) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('name')
-      .eq('user_id', ticketData.created_by as string)
-      .single()
-    creatorName = (profile as { name: string | null } | null)?.name || null
+  // Flatten the nested creator data structure (creator.profiles.name → creator.name)
+  type QueryResult = typeof ticket & {
+    creator: {
+      id: string
+      profiles: {
+        name: string | null
+      } | null
+    } | null
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const ticketWithCreator = { ...ticketData, creator: { name: creatorName } } as any
-  return <TicketDetail ticket={ticketWithCreator} userId={user.id} />
+  const ticketWithCreator = {
+    ...ticket,
+    creator: (ticket as QueryResult).creator?.profiles
+      ? { name: (ticket as QueryResult).creator.profiles.name }
+      : null
+  }
+
+  type TicketWithCreator = typeof ticket & { creator: { name: string | null } | null }
+  return <TicketDetail ticket={ticketWithCreator as TicketWithCreator} userId={user.id} />
 }

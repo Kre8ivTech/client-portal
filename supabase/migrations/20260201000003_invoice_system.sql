@@ -264,6 +264,7 @@ CREATE POLICY "Users can view line items for accessible invoices"
           SELECT 1 FROM public.organizations o
           WHERE o.id = i.organization_id
           AND o.parent_org_id = get_user_organization_id()
+          AND can_view_invoices()
         )
       )
     )

@@ -192,25 +192,9 @@ export default async function InvoicesPage() {
                         )}
                       </td>
                       <td className="py-4 text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/dashboard/invoices/${invoice.id}`}>
-                              <Eye size={16} />
-                            </Link>
-                          </Button>
-                          {canManage && invoice.status === "draft" && (
-                            <Button variant="ghost" size="sm" asChild>
-                              <Link href={`/dashboard/invoices/${invoice.id}/send`}>
-                                <Send size={16} />
-                              </Link>
-                            </Button>
-                          )}
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link href={`/dashboard/invoices/${invoice.id}/pdf`}>
-                              <FileText size={16} />
-                            </Link>
-                          </Button>
-                        </div>
+                        <span className="text-slate-400 text-sm">
+                          No actions available
+                        </span>
                       </td>
                     </tr>
                   ))}

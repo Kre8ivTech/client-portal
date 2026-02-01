@@ -77,14 +77,12 @@ export default async function ProfilePage() {
                     {profile?.name || "Complete your profile"}
                   </h3>
                   <p className="text-sm text-slate-500">{user?.email}</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                      Role
-                    </span>
+                  <p className="mt-3 text-sm text-slate-600">
+                    Your role:{" "}
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
                       {formatRole(profile?.role)}
                     </span>
-                  </div>
+                  </p>
                 </div>
               </div>
 
@@ -134,7 +132,7 @@ export default async function ProfilePage() {
 function formatRole(role: string | null | undefined): string {
   if (!role) return "—";
   const labels: Record<string, string> = {
-    super_admin: "Super Admin",
+    super_admin: "Admin",
     staff: "Staff",
     partner: "Partner",
     partner_staff: "Partner Staff",

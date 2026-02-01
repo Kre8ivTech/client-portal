@@ -27,7 +27,7 @@ export default async function TicketsPage() {
           <Button asChild className="gap-2">
             <Link href="/dashboard/tickets/new">
               <PlusCircle className="h-4 w-4" />
-              <span>New Ticket</span>
+              <span>New Support Ticket</span>
             </Link>
           </Button>
         </div>
@@ -54,7 +54,7 @@ export default async function TicketsPage() {
         <Button asChild className="gap-2">
           <Link href="/dashboard/tickets/new">
             <PlusCircle className="h-4 w-4" />
-            <span>New Ticket</span>
+            <span>New Support Ticket</span>
           </Link>
         </Button>
       </div>

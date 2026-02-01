@@ -46,8 +46,8 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Support",
     items: [
-      { href: "/dashboard/tickets", icon: Ticket, label: "Tickets" },
-      { href: "/dashboard/service", icon: Wrench, label: "Service" },
+      { href: "/dashboard/tickets", icon: Ticket, label: "Support Tickets" },
+      { href: "/dashboard/service", icon: Wrench, label: "Service Requests" },
       { href: "/dashboard/contracts", icon: ClipboardList, label: "Contracts" },
       { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
       { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },

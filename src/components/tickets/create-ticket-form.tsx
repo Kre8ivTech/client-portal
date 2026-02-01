@@ -114,12 +114,12 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
         className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors mb-4 w-fit"
       >
         <ChevronLeft className="h-4 w-4" />
-        Back to Tickets
+        Back to Support Tickets
       </Link>
 
       <div className="space-y-2">
-        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">New Support Request</h1>
-        <p className="text-slate-500">Provide details about your issue and we&apos;ll help get it resolved.</p>
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">New Support Ticket</h1>
+        <p className="text-slate-500">Describe your issue or question and we&apos;ll help get it resolved.</p>
       </div>
 
       {error && (

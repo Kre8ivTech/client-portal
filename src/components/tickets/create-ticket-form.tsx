@@ -98,7 +98,7 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
           <div className="space-y-1">
             <AlertTitle className="text-lg font-bold">Ticket Created Successfully!</AlertTitle>
             <AlertDescription>
-              Your support request has been submitted. We'll be in touch shortly.
+              Your support request has been submitted. We&apos;ll be in touch shortly.
               Redirecting you to the ticket details...
             </AlertDescription>
           </div>
@@ -209,7 +209,7 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
                     {...field} 
                   />
                 </FormControl>
-                <FormDescription>Include steps to reproduce, error messages, and what you've tried.</FormDescription>
+                <FormDescription>Include steps to reproduce, error messages, and what you have tried.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}

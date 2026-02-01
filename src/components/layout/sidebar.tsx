@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Home,
@@ -187,6 +188,16 @@ export function DashboardSidebar({
   branding?: SidebarBranding | null;
 }) {
   const pathname = usePathname();
+  const [hash, setHash] = useState("");
+
+  // Track hash changes for proper active state on hash-based navigation
+  useEffect(() => {
+    const updateHash = () => setHash(window.location.hash);
+    updateHash();
+    window.addEventListener("hashchange", updateHash);
+    return () => window.removeEventListener("hashchange", updateHash);
+  }, []);
+
   // Admin links (e.g. Clients) require profile.role === "super_admin". Ensure profile is loaded (RLS: "Users can read their own profile").
   const role = profile?.role ?? "client";
   const allowedHrefs = getHrefsForRole(role);
@@ -243,11 +254,23 @@ export function DashboardSidebar({
               </p>
               <ul className="space-y-0.5">
                 {items.map((item) => {
-                  const pathOnly = item.href.split("#")[0];
-                  const isActive =
-                    pathname === item.href ||
-                    pathname === pathOnly ||
-                    (item.href !== "/dashboard" && pathname.startsWith(pathOnly));
+                  const [itemPath, itemHash] = item.href.split("#");
+
+                  let isActive = false;
+                  if (itemHash) {
+                    // Hash-based route: must match path AND hash exactly
+                    isActive = pathname === itemPath && hash === `#${itemHash}`;
+                  } else if (item.href === "/dashboard") {
+                    // Dashboard home: exact match only, no hash
+                    isActive = pathname === "/dashboard" && !hash;
+                  } else if (pathname === itemPath) {
+                    // Exact path match with no hash in the item
+                    // Only active if there's no hash in the URL, or if it's not a settings page
+                    isActive = itemPath !== "/dashboard/settings" || !hash;
+                  } else {
+                    // Nested route: startsWith but not for items that have hash siblings
+                    isActive = pathname.startsWith(itemPath + "/");
+                  }
                   return (
                     <li key={item.href}>
                       <Link

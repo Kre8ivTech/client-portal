@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { invoiceSchema, invoiceStatusUpdateSchema, calculateInvoiceTotals } from '@/lib/validators/invoice'
+import type { Database } from '@/types/database'
+
+type UserAuthRow = Pick<
+  Database['public']['Tables']['users']['Row'],
+  'organization_id' | 'role' | 'is_account_manager'
+>
 
 export async function PATCH(
   request: NextRequest,
@@ -31,9 +37,10 @@ export async function PATCH(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
+    const p = profile as UserAuthRow
     const isAuthorized =
-      profile.role === 'super_admin' ||
-      (profile.role === 'staff' && profile.is_account_manager)
+      p.role === 'super_admin' ||
+      (p.role === 'staff' && p.is_account_manager)
 
     if (!isAuthorized) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -54,7 +61,7 @@ export async function PATCH(
           updated_by: user.id,
         })
         .eq('id', id)
-        .eq('organization_id', profile.organization_id)
+        .eq('organization_id', p.organization_id)
 
       if (error) {
         console.error('Failed to update invoice status:', error)
@@ -105,7 +112,7 @@ export async function PATCH(
         updated_by: user.id,
       })
       .eq('id', id)
-      .eq('organization_id', profile.organization_id)
+      .eq('organization_id', p.organization_id)
       .select()
       .single()
 
@@ -171,9 +178,10 @@ export async function DELETE(
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
+    const p = profile as UserAuthRow
     const isAuthorized =
-      profile.role === 'super_admin' ||
-      (profile.role === 'staff' && profile.is_account_manager)
+      p.role === 'super_admin' ||
+      (p.role === 'staff' && p.is_account_manager)
 
     if (!isAuthorized) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -184,7 +192,7 @@ export async function DELETE(
       .from('invoices')
       .select('status')
       .eq('id', id)
-      .eq('organization_id', profile.organization_id)
+      .eq('organization_id', p.organization_id)
       .single()
 
     if (!invoice) {
@@ -204,7 +212,7 @@ export async function DELETE(
       .from('invoices')
       .delete()
       .eq('id', id)
-      .eq('organization_id', profile.organization_id)
+      .eq('organization_id', p.organization_id)
 
     if (error) {
       console.error('Failed to delete invoice:', error)

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const RETENTION_DAYS = 30;
 
@@ -37,6 +36,7 @@ export async function GET(request: NextRequest) {
   cutoff.setDate(cutoff.getDate() - RETENTION_DAYS);
   const cutoffIso = cutoff.toISOString();
 
+  const { supabaseAdmin } = await import("@/lib/supabase/admin");
   const { data, error } = await (supabaseAdmin as any)
     .from("audit_logs")
     .delete()

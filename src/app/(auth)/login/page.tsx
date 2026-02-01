@@ -124,6 +124,7 @@ export default function LoginPage() {
         <CardHeader className="space-y-2 pb-8">
           <div className="flex justify-center mb-4">
             {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- dynamic user-provided logo URL
               <img
                 src={logoUrl}
                 alt={appName}

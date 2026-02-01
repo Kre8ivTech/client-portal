@@ -24,10 +24,15 @@ export function FormSubmitClient({ formId, fields }: { formId: string; fields: F
     const responses: Record<string, string | string[]> = {};
     fields.forEach((f) => {
       const el = form.elements.namedItem(f.id);
-      if (el && "value" in el) {
-        const val = (el as HTMLInputElement | HTMLTextAreaElement).value;
-        if (el instanceof HTMLInputElement && el.type === "checkbox" && el.name.endsWith("[]")) {
-          const name = el.name.replace("[]", "");
+      if (!el) return;
+      const valueEl: HTMLInputElement | HTMLTextAreaElement | null =
+        el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement
+          ? el
+          : null;
+      if (valueEl && "value" in valueEl) {
+        const val = valueEl.value;
+        if (valueEl instanceof HTMLInputElement && valueEl.type === "checkbox" && valueEl.name.endsWith("[]")) {
+          const name = valueEl.name.replace("[]", "");
           if (!responses[name]) responses[name] = [];
           if (Array.isArray(responses[name])) (responses[name] as string[]).push(val);
         } else {

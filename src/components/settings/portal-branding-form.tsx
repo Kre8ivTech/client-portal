@@ -115,6 +115,7 @@ export function PortalBrandingForm({ branding }: { branding: Branding }) {
                 />
                 {branding.logo_url && (
                   <div className="mt-2 h-16 flex items-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- dynamic user-provided logo URL */}
                     <img
                       src={branding.logo_url}
                       alt="Logo preview"

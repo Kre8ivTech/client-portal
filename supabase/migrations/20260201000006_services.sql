@@ -1,16 +1,13 @@
 -- Services and Service Requests Tables
 -- Enables admin-managed service catalog and client service request workflow
 
--- Enable UUID extension if not already enabled
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- ============================================================================
 -- SERVICES TABLE
 -- Admin-created catalog of services offered to clients
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS public.services (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
 
   -- Service details
@@ -40,7 +37,7 @@ CREATE TABLE IF NOT EXISTS public.services (
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS public.service_requests (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
 
   -- Request details

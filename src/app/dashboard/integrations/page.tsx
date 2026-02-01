@@ -34,7 +34,8 @@ export default async function IntegrationsPage() {
     .eq("id", user.id)
     .single();
 
-  if (userData?.role !== "super_admin") {
+  const userRole = userData as { role: string } | null;
+  if (userRole?.role !== "super_admin") {
     redirect("/dashboard");
   }
 

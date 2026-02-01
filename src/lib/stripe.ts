@@ -8,6 +8,14 @@ export const stripe: Stripe = process.env.STRIPE_SECRET_KEY
     })
   : (undefined as unknown as Stripe)
 
+/** Whether Stripe is configured (STRIPE_SECRET_KEY is set). */
+export const isStripeConfigured = Boolean(process.env.STRIPE_SECRET_KEY)
+
+/** Returns the Stripe instance when configured, otherwise null. */
+function getStripe(): Stripe | null {
+  return isStripeConfigured ? stripe : null
+}
+
 // Stripe configuration constants
 export const STRIPE_CONFIG = {
   currency: 'usd',

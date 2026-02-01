@@ -108,15 +108,21 @@ export async function updateOrganization(
       },
     };
 
-    const brandingConfig = {
+    // Only allow branding updates for admin/staff/partners (not clients)
+    const canUpdateBranding = ["super_admin", "staff", "partner", "partner_staff"].includes(access.role);
+    const brandingConfig = canUpdateBranding ? {
       logo_url: logoUrl || null,
       primary_color: primaryColor || null,
-    };
+    } : undefined;
 
     const updateData: Record<string, unknown> = {
       settings,
-      branding_config: brandingConfig,
     };
+
+    // Only include branding_config if user has permission
+    if (brandingConfig !== undefined) {
+      updateData.branding_config = brandingConfig;
+    }
 
     if (name) updateData.name = name;
     if (slug) updateData.slug = slug;

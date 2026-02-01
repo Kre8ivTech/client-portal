@@ -293,7 +293,7 @@ export default async function ClientOrgPage({
         </TabsContent>
 
         <TabsContent value="settings">
-          <OrganizationSettingsForm organization={org} canEdit={canEdit} />
+          <OrganizationSettingsForm organization={org} canEdit={canEdit} userRole={prof?.role} />
         </TabsContent>
 
         <TabsContent value="users">

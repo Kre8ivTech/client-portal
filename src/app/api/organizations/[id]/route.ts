@@ -80,7 +80,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // Get the organization
     const { data: organization, error } = await supabase
       .from("organizations")
-      .select("id, name, slug, type, status, parent_org_id, custom_domain, custom_domain_verified, branding_config, settings, created_at, updated_at")
+      .select("id, name, slug, type, status, parent_org_id, branding_config, settings, created_at, updated_at")
       .eq("id", orgId)
       .single();
 
@@ -190,8 +190,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (input.slug !== undefined) updateData.slug = input.slug;
     if (input.type !== undefined) updateData.type = input.type;
     if (input.status !== undefined) updateData.status = input.status;
-    if (input.custom_domain !== undefined) updateData.custom_domain = input.custom_domain;
-    if (input.branding_config !== undefined) updateData.branding_config = input.branding_config;
+    
+    // Only admin/staff/partners can update branding (not clients)
+    const canUpdateBranding = ["super_admin", "staff", "partner", "partner_staff"].includes(access.role);
+    if (input.branding_config !== undefined && canUpdateBranding) {
+      updateData.branding_config = input.branding_config;
+    }
+    
     if (input.settings !== undefined) updateData.settings = input.settings;
 
     // Only super_admin/staff can change parent_org_id

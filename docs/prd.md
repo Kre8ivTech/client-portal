@@ -68,7 +68,7 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 
 - Agencies/companies Kre8ivTech works behind the scenes for
 - Need branded experience for their end clients
-- Require custom domains and full branding control
+- Full branding control within the portal
 - Submit tickets and requests on behalf of clients
 - Pay via retainer or established relationship
 
@@ -112,7 +112,6 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 | Manage partner's clients   |      ✓      |   ✓    |    ✓    |       ✓       |    —     |
 | **Branding**               |
 | Configure branding         |      ✓      |   —    |    ✓    |       —       |    —     |
-| Custom domain setup        |      ✓      |   —    | Request |       —       |    —     |
 | **Tickets**                |
 | Submit tickets             |      ✓      |   ✓    |    ✓    |       ✓       |    ✓     |
 | View own tickets           |      ✓      |   ✓    |    ✓    |       ✓       |    ✓     |
@@ -165,11 +164,10 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 
 **Multi-Tenant Architecture:**
 
-- Subdomain routing: `{partner-slug}.portal.kre8ivtech.com`
-- Custom domain mapping: `portal.{partnerdomain}.com`
-- Wildcard SSL for subdomains
-- Let's Encrypt auto-provisioning for custom domains
-- DNS CNAME/TXT verification
+- Organization-based data isolation via Row-Level Security (RLS)
+- Hierarchical organization structure (partners can have client orgs)
+- All users access through single portal URL
+- Branding customization per organization
 
 ---
 
@@ -342,7 +340,6 @@ The Kre8ivTech Client Portal is a multi-tenant SaaS platform designed to central
 - Auto-suggest during ticket creation
 - PDF export
 - White-label per partner
-- Custom domain support: `help.{partnerdomain}.com`
 
 ---
 
@@ -437,13 +434,6 @@ _Agent Side:_
 - Portal name/title
 - Support contact info
 - Terms/privacy URLs
-
-**Domain Configuration:**
-
-- Subdomain auto-provisioning
-- Custom domain verification
-- SSL auto-management
-- Redirect rules
 
 ---
 
@@ -843,7 +833,6 @@ Auto-create project (if configured)
 - [ ] Multi-tenancy & tenant management
 - [ ] Role system (Admin, Staff, Partner, Client)
 - [ ] Mobile-first responsive UI
-- [ ] Subdomain routing
 
 **Tickets:**
 
@@ -887,7 +876,6 @@ Auto-create project (if configured)
 **Branding:**
 
 - [ ] Basic branding (logo, colors)
-- [ ] Subdomain per partner
 
 ---
 
@@ -922,7 +910,6 @@ Auto-create project (if configured)
 
 **Advanced Features:**
 
-- [ ] Custom domain support
 - [ ] Advanced branding
 - [ ] SLA tracking
 - [ ] Partner volume tracking
@@ -999,15 +986,14 @@ Auto-create project (if configured)
 | Scope creep             | Timeline delay       | Strict phase boundaries, MVP focus   |
 | Multi-tenant complexity | Development time     | Start with proven patterns           |
 | Real-time performance   | User experience      | Proper WebSocket architecture        |
-| Custom domain SSL       | Operational overhead | Automate with Let's Encrypt/Caddy    |
 | Partner adoption        | Business impact      | Early partner feedback, beta program |
 
 ### 10.3 Dependencies
 
-- AWS S3 account for file storage
+- Supabase account for database, auth, and storage
 - Stripe account for payments
-- SendGrid/Postmark for email
-- Cloudflare for DNS/CDN
+- Resend account for email
+- Vercel account for hosting
 - Domain for portal (portal.kre8ivtech.com)
 
 ---

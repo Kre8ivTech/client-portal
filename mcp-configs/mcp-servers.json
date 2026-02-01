@@ -8,6 +8,24 @@
       },
       "description": "GitHub operations - PRs, issues, repos"
     },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@executeautomation/playwright-mcp-server"],
+      "description": "Browser automation and E2E testing"
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost:54322/postgres"],
+      "description": "PostgreSQL database queries (update connection string)"
+    },
+    "stripe": {
+      "command": "npx",
+      "args": ["-y", "@stripe/mcp-server"],
+      "env": {
+        "STRIPE_API_KEY": "YOUR_STRIPE_SECRET_KEY_HERE"
+      },
+      "description": "Stripe payment integration"
+    },
     "firecrawl": {
       "command": "npx",
       "args": ["-y", "firecrawl-mcp"],
@@ -86,6 +104,14 @@
     "usage": "Copy the servers you need to your ~/.claude.json mcpServers section",
     "env_vars": "Replace YOUR_*_HERE placeholders with actual values",
     "disabling": "Use disabledMcpServers array in project config to disable per-project",
-    "context_warning": "Keep under 10 MCPs enabled to preserve context window"
+    "context_warning": "Keep under 10 MCPs enabled to preserve context window",
+    "recommended_for_kt_portal": [
+      "github - Already configured, for repo management",
+      "playwright - For E2E test automation",
+      "postgres - For direct database queries (update connection string to local Supabase: postgresql://postgres:postgres@localhost:54322/postgres)",
+      "stripe - For payment testing (add your test secret key)",
+      "supabase - For Supabase-specific operations (update project ref)",
+      "vercel - For deployment management"
+    ]
   }
 }

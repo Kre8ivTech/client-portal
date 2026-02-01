@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     // Build the base query
     let dbQuery = supabase
       .from("organizations")
-      .select("id, name, slug, type, status, parent_org_id, custom_domain, branding_config, settings, created_at, updated_at", { count: "exact" });
+      .select("id, name, slug, type, status, parent_org_id, branding_config, settings, created_at, updated_at", { count: "exact" });
 
     // Apply role-based filtering
     if (role === "super_admin" || role === "staff") {
@@ -197,7 +197,6 @@ export async function POST(request: NextRequest) {
         type: input.type,
         status: input.status,
         parent_org_id: input.parent_org_id,
-        custom_domain: input.custom_domain,
         branding_config: input.branding_config,
         settings: input.settings,
       })

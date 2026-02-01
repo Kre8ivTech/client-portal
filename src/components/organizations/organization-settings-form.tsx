@@ -36,11 +36,15 @@ type Organization = {
 interface OrganizationSettingsFormProps {
   organization: Organization;
   canEdit: boolean;
+  userRole?: string; // Add user role to check visibility
 }
 
-export function OrganizationSettingsForm({ organization, canEdit }: OrganizationSettingsFormProps) {
+export function OrganizationSettingsForm({ organization, canEdit, userRole = "client" }: OrganizationSettingsFormProps) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Only show branding to admin/staff/partners, not clients
+  const canSeeBranding = ["super_admin", "staff", "partner", "partner_staff"].includes(userRole);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -223,8 +227,8 @@ export function OrganizationSettingsForm({ organization, canEdit }: Organization
             </div>
           </div>
 
-          {/* Branding - Only show for partners */}
-          {organization.type === "partner" && (
+          {/* Branding - Only show for partners AND only to admin/staff/partner roles (not clients) */}
+          {organization.type === "partner" && canSeeBranding && (
             <>
               <Separator />
               <div>

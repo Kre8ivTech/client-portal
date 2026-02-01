@@ -40,6 +40,8 @@ export default async function SettingsPage() {
   const role = profile?.role ?? "client";
   const isStaffOrAdmin = role === "staff" || role === "super_admin";
   const isSuperAdmin = role === "super_admin";
+  const isPartner = role === "partner" || role === "partner_staff";
+  const canSeeBranding = isStaffOrAdmin || isPartner; // Admin, staff, and partners can see branding
   const portalBranding = isSuperAdmin ? await getPortalBranding() : null;
 
   return (
@@ -63,8 +65,8 @@ export default async function SettingsPage() {
         {/* Calendar & Office Hours - Staff/Admin only */}
         {isStaffOrAdmin && <CalendarOfficeHours profileId={user.id} />}
 
-        {/* Organization branding - staff/admin only (super_admin uses Portal Branding above) */}
-        {isStaffOrAdmin && !isSuperAdmin && (
+        {/* Organization branding - admin/staff/partners only (NOT clients) */}
+        {canSeeBranding && !isSuperAdmin && (
           <Card className="border-border shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
@@ -101,40 +103,6 @@ export default async function SettingsPage() {
             </CardContent>
           </Card>
         )}
-
-        {/* Domain & Network Section */}
-        <Card className="border-slate-200 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold flex items-center gap-2">
-              <Globe className="text-primary w-5 h-5" />
-              Domain & URL
-            </CardTitle>
-            <CardDescription>Setup custom domains and subdomains for your white-labeled portal.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
-              <div className="flex justify-between items-center">
-                <div className="space-y-0.5">
-                  <p className="text-sm font-semibold text-slate-800">Current Portal URL</p>
-                  <code className="text-xs text-primary font-mono bg-primary/5 px-2 py-1 rounded">
-                  {process.env.NEXT_PUBLIC_APP_URL
-                    ? process.env.NEXT_PUBLIC_APP_URL
-                    : "[set NEXT_PUBLIC_APP_URL]"}
-                </code>
-                </div>
-                <div className="px-2 py-1 bg-green-50 text-green-700 text-[10px] font-bold uppercase rounded border border-green-100">Active</div>
-              </div>
-            </div>
-            <div className="space-y-2 pt-4">
-              <Label className="text-slate-700">Custom Domain</Label>
-              <div className="flex gap-2">
-                <Input placeholder="portal.yourdomain.com" className="bg-white border-slate-200" />
-                <Button variant="outline">Connect</Button>
-              </div>
-              <p className="text-[10px] text-slate-500">Requires CNAME record pointing to our edge network infrastructure.</p>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Security / System Section */}
         <Card className="border-slate-200 shadow-sm opacity-60 grayscale-[0.5]">

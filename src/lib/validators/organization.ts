@@ -50,7 +50,6 @@ export const createOrganizationSchema = z.object({
   type: organizationTypeSchema,
   status: organizationStatusSchema.default('active'),
   parent_org_id: z.string().uuid().optional().nullable(),
-  custom_domain: z.string().max(255).optional().nullable(),
   branding_config: brandingConfigSchema,
   settings: organizationSettingsSchema,
 })
@@ -70,7 +69,6 @@ export const updateOrganizationSchema = z.object({
   type: organizationTypeSchema.optional(),
   status: organizationStatusSchema.optional(),
   parent_org_id: z.string().uuid().optional().nullable(),
-  custom_domain: z.string().max(255).optional().nullable(),
   branding_config: brandingConfigSchema,
   settings: organizationSettingsSchema,
 })

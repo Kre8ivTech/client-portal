@@ -1,4 +1,6 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+'use client'
+
+import { createClient } from "@/lib/supabase/client";
 import {
   Card,
   CardContent,
@@ -7,26 +9,37 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Image from "next/image";
-import { User, Bell, Shield, Camera } from "lucide-react";
+import { User, Bell, Shield, Camera, Mail } from "lucide-react";
 import { ProfileForm } from "@/components/profile/profile-form";
+import { PasswordChangeForm } from "@/components/profile/password-change-form";
+import { EmailChangeForm } from "@/components/profile/email-change-form";
+import { useState, useEffect } from "react";
 
-export default async function ProfilePage() {
-  const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+export default function ProfilePage() {
+  const [activeSection, setActiveSection] = useState<'personal' | 'notifications' | 'security'>('personal')
+  const [profile, setProfile] = useState<any>(null)
+  const [user, setUser] = useState<any>(null)
+  const supabase = createClient()
 
-  const [
-    { data: userData },
-    { data: profileData },
-  ] = await Promise.all([
-    supabase.from("users").select("id, email, role").eq("id", user.id).single(),
-    supabase.from("user_profiles").select("id, name, avatar_url, organization_name, organization_slug").eq("id", user.id).single(),
-  ]);
-  const userRow = userData as { id: string; email: string; role: string } | null;
-  const profileRow = profileData as { id: string; name: string | null; avatar_url: string | null; organization_name: string | null; organization_slug: string | null } | null;
-  const profile =
-    userRow && profileRow
-      ? {
+  useEffect(() => {
+    async function loadProfile() {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (!authUser) return
+      setUser(authUser)
+
+      const [
+        { data: userData },
+        { data: profileData },
+      ] = await Promise.all([
+        (supabase as any).from("users").select("id, email, role").eq("id", authUser.id).single(),
+        (supabase as any).from("user_profiles").select("id, name, avatar_url, organization_name, organization_slug").eq("id", authUser.id).single(),
+      ])
+      
+      const userRow = userData as { id: string; email: string; role: string } | null
+      const profileRow = profileData as { id: string; name: string | null; avatar_url: string | null; organization_name: string | null; organization_slug: string | null } | null
+      
+      if (userRow && profileRow) {
+        setProfile({
           id: userRow.id,
           email: userRow.email,
           role: userRow.role,
@@ -34,8 +47,13 @@ export default async function ProfilePage() {
           avatar_url: profileRow.avatar_url,
           organization_name: profileRow.organization_name,
           organization_slug: profileRow.organization_slug,
-        }
-      : null;
+        })
+      }
+    }
+    loadProfile()
+  }, [supabase])
+
+  if (!user) return null
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -51,14 +69,17 @@ export default async function ProfilePage() {
       <div className="grid gap-8 md:grid-cols-[240px_1fr]">
         {/* Navigation Sidebar (Local to page) */}
         <aside className="space-y-1">
-          <SectionNav icon={<User size={18} />} label="Personal Info" active />
-          <SectionNav icon={<Bell size={18} />} label="Notifications" />
-          <SectionNav icon={<Shield size={18} />} label="Security" />
+          <SectionNav icon={<User size={18} />} label="Personal Info" active={activeSection === 'personal'} onClick={() => setActiveSection('personal')} />
+          <SectionNav icon={<Bell size={18} />} label="Notifications" active={activeSection === 'notifications'} onClick={() => setActiveSection('notifications')} />
+          <SectionNav icon={<Shield size={18} />} label="Security" active={activeSection === 'security'} onClick={() => setActiveSection('security')} />
         </aside>
 
         <div className="space-y-8">
-          {/* Avatar Section */}
-          <Card className="border-slate-200 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+          {/* Personal Info Section */}
+          {activeSection === 'personal' && (
+            <>
+              {/* Avatar Section */}
+              <Card className="border-slate-200 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
                 <User className="text-primary w-5 h-5" />
@@ -108,37 +129,102 @@ export default async function ProfilePage() {
               />
             </CardContent>
           </Card>
+            </>
+          )}
 
-          {/* Notifications Card */}
-          <Card className="border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <Bell className="text-primary w-5 h-5" />
-                Notification Preferences
-              </CardTitle>
-              <CardDescription>
-                Choose how and when you want to receive updates.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <NotificationToggle
-                  title="Ticket Updates"
-                  description="Receive email notifications when a ticket is updated or commented on."
-                  defaultChecked
-                />
-                <NotificationToggle
-                  title="Invoice Alerts"
-                  description="Get notified when a new invoice is generated or a payment is due."
-                  defaultChecked
-                />
-                <NotificationToggle
-                  title="Real-time Chat"
-                  description="Enable browser notifications for new live chat messages."
-                />
-              </div>
-            </CardContent>
-          </Card>
+          {/* Notifications Section */}
+          {activeSection === 'notifications' && (
+            <Card className="border-slate-200 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                  <Bell className="text-primary w-5 h-5" />
+                  Notification Preferences
+                </CardTitle>
+                <CardDescription>
+                  Choose how and when you want to receive updates.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <NotificationToggle
+                    title="Ticket Updates"
+                    description="Receive email notifications when a ticket is updated or commented on."
+                    defaultChecked
+                  />
+                  <NotificationToggle
+                    title="Invoice Alerts"
+                    description="Get notified when a new invoice is generated or a payment is due."
+                    defaultChecked
+                  />
+                  <NotificationToggle
+                    title="Real-time Chat"
+                    description="Enable browser notifications for new live chat messages."
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Security Section */}
+          {activeSection === 'security' && (
+            <>
+              {/* Change Email */}
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Mail className="text-primary w-5 h-5" />
+                    Change Email Address
+                  </CardTitle>
+                  <CardDescription>
+                    Update your email address. You'll need to verify the new email.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <EmailChangeForm currentEmail={user?.email || ''} />
+                </CardContent>
+              </Card>
+
+              {/* Change Password */}
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Shield className="text-primary w-5 h-5" />
+                    Change Password
+                  </CardTitle>
+                  <CardDescription>
+                    Update your password to keep your account secure.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PasswordChangeForm />
+                </CardContent>
+              </Card>
+
+              {/* 2FA Placeholder */}
+              <Card className="border-slate-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                    <Shield className="text-primary w-5 h-5" />
+                    Two-Factor Authentication
+                  </CardTitle>
+                  <CardDescription>
+                    Add an extra layer of security to your account
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between py-3">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-800">Status: Disabled</h4>
+                      <p className="text-xs text-slate-500">Enable 2FA for enhanced security</p>
+                    </div>
+                    <button className="text-sm text-primary hover:underline font-medium" disabled>
+                      Coming Soon
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -161,13 +247,16 @@ function SectionNav({
   icon,
   label,
   active = false,
+  onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   active?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
+      onClick={onClick}
       className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
         active
           ? "bg-primary text-white shadow-md shadow-primary/10"

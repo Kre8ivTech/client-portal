@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { getPortalBranding } from "@/lib/actions/portal-branding";
+import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,6 +28,7 @@ export default async function RootLayout({
           }}
         />
         <Providers>{children}</Providers>
+        <Toaster />
       </body>
     </html>
   );

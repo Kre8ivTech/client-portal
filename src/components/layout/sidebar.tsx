@@ -58,12 +58,17 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: "Account",
     items: [
       { href: "/dashboard/invoices", icon: FileText, label: "Invoices" },
-      { href: "/dashboard/settings", icon: Settings, label: "Settings" },
-      { href: "/dashboard/settings#white-label", icon: Palette, label: "White Label" },
       { href: "/dashboard/vault", icon: Lock, label: "Secure Vault" },
       { href: "/dashboard/billing", icon: CreditCard, label: "Billing & Plans" },
-      { href: "/dashboard/settings#security", icon: Shield, label: "Security" },
       { href: "/dashboard/profile", icon: User, label: "Profile" },
+    ],
+  },
+  {
+    label: "Settings",
+    items: [
+      { href: "/dashboard/settings", icon: Settings, label: "General" },
+      { href: "/dashboard/settings#white-label", icon: Palette, label: "White Label" },
+      { href: "/dashboard/settings#security", icon: Shield, label: "Security" },
       { href: "/dashboard/settings#notifications", icon: Bell, label: "Notifications" },
     ],
   },

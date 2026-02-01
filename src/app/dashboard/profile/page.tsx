@@ -6,12 +6,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { User, Bell, Shield, Camera } from "lucide-react";
-import { updateProfile } from "@/lib/actions/profile";
+import { ProfileForm } from "@/components/profile/profile-form";
 
 export default async function ProfilePage() {
   const supabase = (await createServerSupabaseClient()) as any
@@ -80,49 +77,21 @@ export default async function ProfilePage() {
                     {profile?.name || "Complete your profile"}
                   </h3>
                   <p className="text-sm text-slate-500">{user?.email}</p>
-                  <div className="mt-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary capitalize border border-primary/20">
-                    {profile?.role}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Role
+                    </span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                      {formatRole(profile?.role)}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <form
-                action={async (formData) => {
-                  await updateProfile(formData);
-                }}
-                className="space-y-6"
-              >
-                <div className="grid gap-6 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-slate-700">
-                      Full Name
-                    </Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      defaultValue={profile?.name ?? ""}
-                      className="bg-white border-slate-200"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-slate-700">
-                      Email Address
-                    </Label>
-                    <Input
-                      id="email"
-                      defaultValue={user?.email ?? ""}
-                      disabled
-                      className="bg-slate-50 border-slate-200 cursor-not-allowed"
-                    />
-                  </div>
-                </div>
-                <div className="mt-8 flex justify-end">
-                  <Button type="submit" className="px-8 shadow-md">
-                    Save Changes
-                  </Button>
-                </div>
-              </form>
+              <ProfileForm
+                defaultName={profile?.name ?? ""}
+                userEmail={user?.email ?? ""}
+              />
             </CardContent>
           </Card>
 
@@ -160,6 +129,18 @@ export default async function ProfilePage() {
       </div>
     </div>
   );
+}
+
+function formatRole(role: string | null | undefined): string {
+  if (!role) return "—";
+  const labels: Record<string, string> = {
+    super_admin: "Super Admin",
+    staff: "Staff",
+    partner: "Partner",
+    partner_staff: "Partner Staff",
+    client: "Client",
+  };
+  return labels[role] ?? role.replace(/_/g, " ");
 }
 
 function SectionNav({

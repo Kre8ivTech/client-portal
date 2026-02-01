@@ -21,13 +21,14 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  type UserRow = { id: string; organization_id: string | null; email: string; role: string };
+  type UserRow = { id: string; organization_id: string | null; email: string; role: string; is_account_manager: boolean };
   type ProfileRow = { id: string; name: string | null; avatar_url: string | null; organization_name: string | null; organization_slug: string | null };
   type DashboardProfile = {
     id: string;
     organization_id: string | null;
     email: string;
     role: "super_admin" | "staff" | "partner" | "partner_staff" | "client";
+    is_account_manager: boolean;
     name: string | null;
     avatar_url: string | null;
     organization_name: string | null;
@@ -39,7 +40,7 @@ export default async function DashboardLayout({
     { data: profileData, error: profileError },
     branding,
   ] = await Promise.all([
-    supabase.from("users").select("id, organization_id, email, role").eq("id", user.id).single(),
+    supabase.from("users").select("id, organization_id, email, role, is_account_manager").eq("id", user.id).single(),
     supabase.from("user_profiles").select("id, name, avatar_url, organization_name, organization_slug").eq("id", user.id).single(),
     getPortalBranding(),
   ]);
@@ -65,7 +66,7 @@ export default async function DashboardLayout({
         { onConflict: "user_id" },
       );
     const [userRes, profileRes] = await Promise.all([
-      supabase.from("users").select("id, organization_id, email, role").eq("id", user.id).single(),
+      supabase.from("users").select("id, organization_id, email, role, is_account_manager").eq("id", user.id).single(),
       supabase.from("user_profiles").select("id, name, avatar_url, organization_name, organization_slug").eq("id", user.id).single(),
     ]);
     userRow = userRes.data as UserRow | null;
@@ -79,6 +80,7 @@ export default async function DashboardLayout({
           organization_id: userRow.organization_id ?? null,
           email: userRow.email,
           role: (userRow.role as DashboardProfile["role"]) ?? "client",
+          is_account_manager: userRow.is_account_manager ?? false,
           name: profileRow.name ?? null,
           avatar_url: profileRow.avatar_url ?? null,
           organization_name: profileRow.organization_name ?? null,

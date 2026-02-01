@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -505,6 +525,127 @@ export type Database = {
           },
         ]
       }
+      invoice_line_items: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string
+          id: string
+          invoice_id: string
+          item_type: string | null
+          quantity: number
+          sort_order: number
+          time_entry_id: string | null
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description: string
+          id?: string
+          invoice_id: string
+          item_type?: string | null
+          quantity?: number
+          sort_order?: number
+          time_entry_id?: string | null
+          unit_price: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string
+          id?: string
+          invoice_id?: string
+          item_type?: string | null
+          quantity?: number
+          sort_order?: number
+          time_entry_id?: string | null
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          invoice_id: string
+          notes: string | null
+          payment_date: string
+          payment_method: string | null
+          payment_reference: string | null
+          recorded_by: string | null
+          stripe_charge_id: string | null
+          stripe_payment_intent_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          invoice_id: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+          payment_reference?: string | null
+          recorded_by?: string | null
+          stripe_charge_id?: string | null
+          stripe_payment_intent_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+          payment_reference?: string | null
+          recorded_by?: string | null
+          stripe_charge_id?: string | null
+          stripe_payment_intent_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_payments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_payments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_templates: {
         Row: {
           accent_color: string | null
@@ -578,105 +719,119 @@ export type Database = {
       }
       invoices: {
         Row: {
-          id: string
-          organization_id: string
-          plan_assignment_id: string | null
-          invoice_number: string
-          status: Database["public"]["Enums"]["invoice_status"]
-          issue_date: string
-          due_date: string
-          sent_at: string | null
-          paid_at: string | null
-          period_start: string | null
-          period_end: string | null
-          subtotal: number
-          tax_rate: number | null
-          tax_amount: number
-          discount_amount: number
-          discount_description: string | null
-          total: number
           amount_paid: number
           balance_due: number
+          created_at: string
+          created_by: string
           currency: string
-          payment_terms_days: number | null
+          discount_amount: number
+          discount_description: string | null
+          due_date: string
+          id: string
+          internal_notes: string | null
+          invoice_number: string
+          issue_date: string
+          metadata: Json | null
+          notes: string | null
+          organization_id: string
+          paid_at: string | null
           payment_method: string | null
           payment_reference: string | null
+          payment_terms_days: number | null
+          period_end: string | null
+          period_start: string | null
+          plan_assignment_id: string | null
+          sent_at: string | null
+          status: Database["public"]["Enums"]["invoice_status"]
+          subtotal: number
+          tax_amount: number
+          tax_rate: number | null
           template_id: string | null
-          notes: string | null
-          internal_notes: string | null
-          metadata: Json | null
-          created_by: string
-          updated_by: string | null
-          created_at: string
+          total: number
           updated_at: string
+          updated_by: string | null
         }
         Insert: {
-          id?: string
-          organization_id: string
-          plan_assignment_id?: string | null
-          invoice_number: string
-          status?: Database["public"]["Enums"]["invoice_status"]
-          issue_date?: string
-          due_date: string
-          sent_at?: string | null
-          paid_at?: string | null
-          period_start?: string | null
-          period_end?: string | null
-          subtotal?: number
-          tax_rate?: number | null
-          tax_amount?: number
-          discount_amount?: number
-          discount_description?: string | null
-          total?: number
           amount_paid?: number
           balance_due?: number
+          created_at?: string
+          created_by: string
           currency?: string
-          payment_terms_days?: number | null
+          discount_amount?: number
+          discount_description?: string | null
+          due_date: string
+          id?: string
+          internal_notes?: string | null
+          invoice_number: string
+          issue_date?: string
+          metadata?: Json | null
+          notes?: string | null
+          organization_id: string
+          paid_at?: string | null
           payment_method?: string | null
           payment_reference?: string | null
+          payment_terms_days?: number | null
+          period_end?: string | null
+          period_start?: string | null
+          plan_assignment_id?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number | null
           template_id?: string | null
-          notes?: string | null
-          internal_notes?: string | null
-          metadata?: Json | null
-          created_by: string
-          updated_by?: string | null
-          created_at?: string
+          total?: number
           updated_at?: string
+          updated_by?: string | null
         }
         Update: {
-          id?: string
-          organization_id?: string
-          plan_assignment_id?: string | null
-          invoice_number?: string
-          status?: Database["public"]["Enums"]["invoice_status"]
-          issue_date?: string
-          due_date?: string
-          sent_at?: string | null
-          paid_at?: string | null
-          period_start?: string | null
-          period_end?: string | null
-          subtotal?: number
-          tax_rate?: number | null
-          tax_amount?: number
-          discount_amount?: number
-          discount_description?: string | null
-          total?: number
           amount_paid?: number
           balance_due?: number
+          created_at?: string
+          created_by?: string
           currency?: string
-          payment_terms_days?: number | null
+          discount_amount?: number
+          discount_description?: string | null
+          due_date?: string
+          id?: string
+          internal_notes?: string | null
+          invoice_number?: string
+          issue_date?: string
+          metadata?: Json | null
+          notes?: string | null
+          organization_id?: string
+          paid_at?: string | null
           payment_method?: string | null
           payment_reference?: string | null
+          payment_terms_days?: number | null
+          period_end?: string | null
+          period_start?: string | null
+          plan_assignment_id?: string | null
+          sent_at?: string | null
+          status?: Database["public"]["Enums"]["invoice_status"]
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number | null
           template_id?: string | null
-          notes?: string | null
-          internal_notes?: string | null
-          metadata?: Json | null
-          created_by?: string
-          updated_by?: string | null
-          created_at?: string
+          total?: number
           updated_at?: string
+          updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_organization_id_fkey"
             columns: ["organization_id"]
@@ -699,129 +854,15 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "invoices_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "invoices_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "user_profiles"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "invoices_updated_by_fkey"
             columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      invoice_line_items: {
-        Row: {
-          id: string
-          invoice_id: string
-          description: string
-          quantity: number
-          unit_price: number
-          amount: number
-          item_type: string | null
-          time_entry_id: string | null
-          sort_order: number
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          invoice_id: string
-          description: string
-          quantity?: number
-          unit_price: number
-          amount: number
-          item_type?: string | null
-          time_entry_id?: string | null
-          sort_order?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          invoice_id?: string
-          description?: string
-          quantity?: number
-          unit_price?: number
-          amount?: number
-          item_type?: string | null
-          time_entry_id?: string | null
-          sort_order?: number
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoice_line_items_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoice_line_items_time_entry_id_fkey"
-            columns: ["time_entry_id"]
-            isOneToOne: false
-            referencedRelation: "time_entries"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      invoice_payments: {
-        Row: {
-          id: string
-          invoice_id: string
-          amount: number
-          payment_method: string | null
-          payment_reference: string | null
-          payment_date: string
-          stripe_payment_intent_id: string | null
-          stripe_charge_id: string | null
-          notes: string | null
-          recorded_by: string | null
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          invoice_id: string
-          amount: number
-          payment_method?: string | null
-          payment_reference?: string | null
-          payment_date?: string
-          stripe_payment_intent_id?: string | null
-          stripe_charge_id?: string | null
-          notes?: string | null
-          recorded_by?: string | null
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          invoice_id?: string
-          amount?: number
-          payment_method?: string | null
-          payment_reference?: string | null
-          payment_date?: string
-          stripe_payment_intent_id?: string | null
-          stripe_charge_id?: string | null
-          notes?: string | null
-          recorded_by?: string | null
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "invoice_payments_invoice_id_fkey"
-            columns: ["invoice_id"]
-            isOneToOne: false
-            referencedRelation: "invoices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoice_payments_recorded_by_fkey"
-            columns: ["recorded_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -1041,6 +1082,88 @@ export type Database = {
           {
             foreignKeyName: "messages_sender_id_fkey"
             columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      oauth_integrations: {
+        Row: {
+          access_token: string | null
+          caldav_url: string | null
+          caldav_username: string | null
+          created_at: string | null
+          id: string
+          last_error: string | null
+          last_sync_at: string | null
+          organization_id: string | null
+          provider: string
+          provider_email: string | null
+          provider_user_id: string | null
+          refresh_token: string | null
+          scopes: string[] | null
+          status: string | null
+          token_expires_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          caldav_url?: string | null
+          caldav_username?: string | null
+          created_at?: string | null
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          organization_id?: string | null
+          provider: string
+          provider_email?: string | null
+          provider_user_id?: string | null
+          refresh_token?: string | null
+          scopes?: string[] | null
+          status?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          caldav_url?: string | null
+          caldav_username?: string | null
+          created_at?: string | null
+          id?: string
+          last_error?: string | null
+          last_sync_at?: string | null
+          organization_id?: string | null
+          provider?: string
+          provider_email?: string | null
+          provider_user_id?: string | null
+          refresh_token?: string | null
+          scopes?: string[] | null
+          status?: string | null
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "oauth_integrations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oauth_integrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "oauth_integrations_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -1774,6 +1897,264 @@ export type Database = {
           },
         ]
       }
+      service_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          converted_invoice_id: string | null
+          converted_ticket_id: string | null
+          created_at: string | null
+          details: Json | null
+          id: string
+          internal_notes: string | null
+          organization_id: string
+          priority: string | null
+          rejection_reason: string | null
+          requested_by: string
+          requested_start_date: string | null
+          service_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          converted_invoice_id?: string | null
+          converted_ticket_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          internal_notes?: string | null
+          organization_id: string
+          priority?: string | null
+          rejection_reason?: string | null
+          requested_by: string
+          requested_start_date?: string | null
+          service_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          converted_invoice_id?: string | null
+          converted_ticket_id?: string | null
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          internal_notes?: string | null
+          organization_id?: string
+          priority?: string | null
+          rejection_reason?: string | null
+          requested_by?: string
+          requested_start_date?: string | null
+          service_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_converted_ticket_id_fkey"
+            columns: ["converted_ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_requests_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          base_rate: number | null
+          category: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          display_order: number | null
+          estimated_hours: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          organization_id: string
+          rate_type: string | null
+          requires_approval: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          base_rate?: number | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          estimated_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          organization_id: string
+          rate_type?: string | null
+          requires_approval?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          base_rate?: number | null
+          category?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          display_order?: number | null
+          estimated_hours?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          organization_id?: string
+          rate_type?: string | null
+          requires_approval?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "services_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "services_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_assignments: {
+        Row: {
+          assignable_id: string
+          assignable_type: string
+          assigned_at: string | null
+          assigned_by: string | null
+          created_at: string | null
+          id: string
+          organization_id: string
+          role: string | null
+          staff_user_id: string
+          unassigned_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          assignable_id: string
+          assignable_type: string
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          organization_id: string
+          role?: string | null
+          staff_user_id: string
+          unassigned_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          assignable_id?: string
+          assignable_type?: string
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          id?: string
+          organization_id?: string
+          role?: string | null
+          staff_user_id?: string
+          unassigned_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_assignments_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_assignments_staff_user_id_fkey"
+            columns: ["staff_user_id"]
+            isOneToOne: false
+            referencedRelation: "user_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_assignments_staff_user_id_fkey"
+            columns: ["staff_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_calendar_integrations: {
         Row: {
           calendar_name: string | null
@@ -2207,6 +2588,7 @@ export type Database = {
       generate_invoice_number: { Args: { org_id: string }; Returns: string }
       get_user_organization_id: { Args: never; Returns: string }
       get_user_organization_type: { Args: never; Returns: string }
+      get_user_role: { Args: never; Returns: string }
       is_account_manager: { Args: never; Returns: boolean }
       is_admin_or_staff: { Args: never; Returns: boolean }
       is_kre8ivtech_user: { Args: never; Returns: boolean }
@@ -2360,6 +2742,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       coverage_type: ["support", "dev", "both"],
@@ -2387,3 +2772,4 @@ export const Constants = {
     },
   },
 } as const
+

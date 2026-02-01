@@ -54,12 +54,18 @@ export default function LoginPage() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("code")) {
+      window.location.href = `/auth/callback${window.location.search}`;
+    }
+  }, []);
+
   // Show message when redirected with auth_callback_failed (e.g. callback URL not in Supabase Redirect URLs)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("error") === "auth_callback_failed") {
       setMessage({
+        type: "error",
+        text: "Authentication failed. Please ensure the callback URL is configured correctly.",
       });
       window.history.replaceState({}, "", window.location.pathname);
     }

@@ -576,6 +576,258 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          id: string
+          organization_id: string
+          plan_assignment_id: string | null
+          invoice_number: string
+          status: Database["public"]["Enums"]["invoice_status"]
+          issue_date: string
+          due_date: string
+          sent_at: string | null
+          paid_at: string | null
+          period_start: string | null
+          period_end: string | null
+          subtotal: number
+          tax_rate: number | null
+          tax_amount: number
+          discount_amount: number
+          discount_description: string | null
+          total: number
+          amount_paid: number
+          balance_due: number
+          currency: string
+          payment_terms_days: number | null
+          payment_method: string | null
+          payment_reference: string | null
+          template_id: string | null
+          notes: string | null
+          internal_notes: string | null
+          metadata: Json | null
+          created_by: string
+          updated_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          organization_id: string
+          plan_assignment_id?: string | null
+          invoice_number: string
+          status?: Database["public"]["Enums"]["invoice_status"]
+          issue_date?: string
+          due_date: string
+          sent_at?: string | null
+          paid_at?: string | null
+          period_start?: string | null
+          period_end?: string | null
+          subtotal?: number
+          tax_rate?: number | null
+          tax_amount?: number
+          discount_amount?: number
+          discount_description?: string | null
+          total?: number
+          amount_paid?: number
+          balance_due?: number
+          currency?: string
+          payment_terms_days?: number | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          template_id?: string | null
+          notes?: string | null
+          internal_notes?: string | null
+          metadata?: Json | null
+          created_by: string
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          organization_id?: string
+          plan_assignment_id?: string | null
+          invoice_number?: string
+          status?: Database["public"]["Enums"]["invoice_status"]
+          issue_date?: string
+          due_date?: string
+          sent_at?: string | null
+          paid_at?: string | null
+          period_start?: string | null
+          period_end?: string | null
+          subtotal?: number
+          tax_rate?: number | null
+          tax_amount?: number
+          discount_amount?: number
+          discount_description?: string | null
+          total?: number
+          amount_paid?: number
+          balance_due?: number
+          currency?: string
+          payment_terms_days?: number | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          template_id?: string | null
+          notes?: string | null
+          internal_notes?: string | null
+          metadata?: Json | null
+          created_by?: string
+          updated_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_plan_assignment_id_fkey"
+            columns: ["plan_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "plan_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "invoice_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_line_items: {
+        Row: {
+          id: string
+          invoice_id: string
+          description: string
+          quantity: number
+          unit_price: number
+          amount: number
+          item_type: string | null
+          time_entry_id: string | null
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          invoice_id: string
+          description: string
+          quantity?: number
+          unit_price: number
+          amount: number
+          item_type?: string | null
+          time_entry_id?: string | null
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          invoice_id?: string
+          description?: string
+          quantity?: number
+          unit_price?: number
+          amount?: number
+          item_type?: string | null
+          time_entry_id?: string | null
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_time_entry_id_fkey"
+            columns: ["time_entry_id"]
+            isOneToOne: false
+            referencedRelation: "time_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_payments: {
+        Row: {
+          id: string
+          invoice_id: string
+          amount: number
+          payment_method: string | null
+          payment_reference: string | null
+          payment_date: string
+          stripe_payment_intent_id: string | null
+          stripe_charge_id: string | null
+          notes: string | null
+          recorded_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          invoice_id: string
+          amount: number
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_date?: string
+          stripe_payment_intent_id?: string | null
+          stripe_charge_id?: string | null
+          notes?: string | null
+          recorded_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          invoice_id?: string
+          amount?: number
+          payment_method?: string | null
+          payment_reference?: string | null
+          payment_date?: string
+          stripe_payment_intent_id?: string | null
+          stripe_charge_id?: string | null
+          notes?: string | null
+          recorded_by?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_payments_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_payments_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kb_articles: {
         Row: {
           access_level: string | null
@@ -1813,6 +2065,7 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          is_account_manager: boolean
           organization_id: string | null
           role: string
           status: string | null
@@ -1822,6 +2075,7 @@ export type Database = {
           created_at?: string | null
           email: string
           id: string
+          is_account_manager?: boolean
           organization_id?: string | null
           role?: string
           status?: string | null
@@ -1831,6 +2085,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          is_account_manager?: boolean
           organization_id?: string | null
           role?: string
           status?: string | null
@@ -1924,6 +2179,7 @@ export type Database = {
           created_at: string | null
           email: string | null
           id: string | null
+          is_account_manager: boolean | null
           last_seen_at: string | null
           name: string | null
           notification_preferences: Json | null
@@ -1947,8 +2203,11 @@ export type Database = {
       }
     }
     Functions: {
+      can_view_invoices: { Args: never; Returns: boolean }
+      generate_invoice_number: { Args: { org_id: string }; Returns: string }
       get_user_organization_id: { Args: never; Returns: string }
       get_user_organization_type: { Args: never; Returns: string }
+      is_account_manager: { Args: never; Returns: boolean }
       is_admin_or_staff: { Args: never; Returns: boolean }
       is_kre8ivtech_user: { Args: never; Returns: boolean }
       is_partner_client: { Args: { client_org_id: string }; Returns: boolean }
@@ -1959,6 +2218,16 @@ export type Database = {
       coverage_type: "support" | "dev" | "both"
       dispute_status: "pending" | "under_review" | "resolved" | "rejected"
       dispute_type: "time_logged" | "invoice_amount" | "coverage" | "other"
+      invoice_status:
+        | "draft"
+        | "pending"
+        | "sent"
+        | "viewed"
+        | "partial"
+        | "paid"
+        | "overdue"
+        | "cancelled"
+        | "refunded"
       plan_status:
         | "pending"
         | "active"
@@ -2096,6 +2365,17 @@ export const Constants = {
       coverage_type: ["support", "dev", "both"],
       dispute_status: ["pending", "under_review", "resolved", "rejected"],
       dispute_type: ["time_logged", "invoice_amount", "coverage", "other"],
+      invoice_status: [
+        "draft",
+        "pending",
+        "sent",
+        "viewed",
+        "partial",
+        "paid",
+        "overdue",
+        "cancelled",
+        "refunded",
+      ],
       plan_status: [
         "pending",
         "active",

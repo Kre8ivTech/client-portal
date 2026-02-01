@@ -86,7 +86,7 @@ export function MessageThread({ conversation, messages, userId, onSendMessage }:
       <CardHeader className="p-4 border-b flex flex-row items-center justify-between space-y-0">
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10 border shadow-sm">
-            <AvatarImage src={otherParticipant?.avatar_url} />
+            <AvatarImage src={otherParticipant?.avatar_url || undefined} />
             <AvatarFallback className="bg-blue-600 text-white font-bold">
               {title.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)}
             </AvatarFallback>
@@ -214,7 +214,7 @@ export function MessageThread({ conversation, messages, userId, onSendMessage }:
           <div className="p-4 space-y-6">
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
               <Avatar className="h-20 w-20 border-4 border-slate-50 shadow-md">
-                <AvatarImage src={otherParticipant?.avatar_url} />
+                <AvatarImage src={otherParticipant?.avatar_url || undefined} />
                 <AvatarFallback className="text-2xl bg-slate-100 text-slate-400">
                   <User size={40} />
                 </AvatarFallback>
@@ -242,7 +242,7 @@ export function MessageThread({ conversation, messages, userId, onSendMessage }:
                   <div className="shrink-0">
                     {!isMe && showAvatar ? (
                       <Avatar className="h-8 w-8 border shadow-sm">
-                        <AvatarImage src={otherParticipant?.avatar_url} />
+                        <AvatarImage src={otherParticipant?.avatar_url || undefined} />
                         <AvatarFallback className="text-[10px] bg-blue-500 text-white">
                           {title[0]}
                         </AvatarFallback>
@@ -264,7 +264,7 @@ export function MessageThread({ conversation, messages, userId, onSendMessage }:
                       {msg.content}
                     </div>
                     <span className="text-[10px] text-slate-400 px-1 font-medium">
-                      {formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
+                      {msg.created_at && formatDistanceToNow(new Date(msg.created_at), { addSuffix: true })}
                     </span>
                   </div>
                 </div>

@@ -20,7 +20,8 @@ interface ServiceRequestCardProps {
 }
 
 export function ServiceRequestCard({ request }: ServiceRequestCardProps) {
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | null) => {
+    if (!status) return 'bg-yellow-100 text-yellow-700 border-yellow-200'
     const colors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
       approved: 'bg-green-100 text-green-700 border-green-200',

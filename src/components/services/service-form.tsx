@@ -36,7 +36,7 @@ export function ServiceForm({ initialData }: ServiceFormProps) {
     watch,
     formState: { errors },
   } = useForm<ServiceInput>({
-    resolver: zodResolver(serviceSchema),
+    resolver: zodResolver(serviceSchema) as any,
     defaultValues: initialData || {
       requires_approval: true,
       is_active: true,

@@ -42,7 +42,7 @@ export function ServiceRequestForm({ services }: ServiceRequestFormProps) {
     watch,
     formState: { errors },
   } = useForm<ServiceRequestInput>({
-    resolver: zodResolver(serviceRequestSchema),
+    resolver: zodResolver(serviceRequestSchema) as any,
     defaultValues: {
       priority: 'medium',
     },
@@ -83,9 +83,10 @@ export function ServiceRequestForm({ services }: ServiceRequestFormProps) {
     }
   }
 
-  const formatRate = (rate: number | null, rateType: string) => {
+  const formatRate = (rate: number | null, rateType: string | null) => {
     if (!rate) return 'Contact for quote'
     const formatted = `$${(rate / 100).toFixed(2)}`
+    if (!rateType) return formatted
     const labels: Record<string, string> = {
       hourly: 'per hour',
       fixed: 'fixed price',

@@ -64,7 +64,7 @@ export function useStaffAssignments(
       organizationId: string
       role?: 'primary' | 'backup' | 'observer' | 'reviewer'
     }) => {
-      const { data: result, error } = await supabase
+      const { data: result, error } = await (supabase as any)
         .from('staff_assignments')
         .insert({
           assignable_type: assignableType,
@@ -89,7 +89,7 @@ export function useStaffAssignments(
   // Unassign staff member (soft delete by setting unassigned_at)
   const unassignStaff = useMutation({
     mutationFn: async (assignmentId: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('staff_assignments')
         .update({ unassigned_at: new Date().toISOString() })
         .eq('id', assignmentId)
@@ -109,7 +109,7 @@ export function useStaffAssignments(
       assignmentId: string
       role: 'primary' | 'backup' | 'observer' | 'reviewer'
     }) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('staff_assignments')
         .update({ role: data.role })
         .eq('id', data.assignmentId)

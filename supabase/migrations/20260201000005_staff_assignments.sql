@@ -3,7 +3,7 @@
 -- Supports multi-tenant isolation and flexible role-based assignments
 
 CREATE TABLE IF NOT EXISTS public.staff_assignments (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
 
   -- Polymorphic reference to assignable resources

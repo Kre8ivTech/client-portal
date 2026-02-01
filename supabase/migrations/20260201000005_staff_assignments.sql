@@ -2,6 +2,9 @@
 -- Manages assignment of staff members to various resources (tickets, conversations, service requests)
 -- Supports multi-tenant isolation and flexible role-based assignments
 
+-- Enable UUID extension if not already enabled
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE IF NOT EXISTS public.staff_assignments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,

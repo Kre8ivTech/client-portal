@@ -9,14 +9,13 @@ import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 
 interface ArticlePageProps {
-  params: {
-    slug: string
-  }
+  params: Promise<{ slug: string }>
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
+  const { slug } = await params
   const supabase = (await createServerSupabaseClient()) as any
-  
+
   const { data: article } = await supabase
     .from('kb_articles')
     .select(`
@@ -30,7 +29,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         avatar_url
       )
     `)
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .single()
 
   if (!article) {

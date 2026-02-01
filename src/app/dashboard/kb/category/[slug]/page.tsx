@@ -7,19 +7,18 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 interface CategoryPageProps {
-  params: {
-    slug: string
-  }
+  params: Promise<{ slug: string }>
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
+  const { slug } = await params
   const supabase = (await createServerSupabaseClient()) as any
-  
+
   // Fetch category
   const { data: category } = await supabase
     .from('kb_categories')
     .select('*')
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .single()
 
   if (!category) {

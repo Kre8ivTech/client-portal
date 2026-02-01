@@ -124,7 +124,7 @@ export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
                     {comment.author?.name || 'Unknown User'}
                   </span>
                   <span className="text-[10px] text-slate-400">
-                    {format(new Date(comment.created_at), 'MMM d, h:mm a')}
+                    {comment.created_at ? format(new Date(comment.created_at), 'MMM d, h:mm a') : '—'}
                   </span>
                 </div>
                 <div className={`p-3 rounded-2xl text-sm ${

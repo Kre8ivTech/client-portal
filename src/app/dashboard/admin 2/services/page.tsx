@@ -22,15 +22,15 @@ export default async function AdminServicesPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile || !['super_admin', 'staff'].includes(profile.role)) {
+  if (!profile || !['super_admin', 'staff'].includes((profile as any).role)) {
     return <div>Forbidden - Admin access required</div>
   }
 
   // Fetch services
-  const { data: services } = await supabase
+  const { data: services } = await (supabase as any)
     .from('services')
     .select('*, created_by_user:users!created_by(id, profiles(name))')
-    .eq('organization_id', profile.organization_id)
+    .eq('organization_id', (profile as any).organization_id)
     .order('display_order', { ascending: true })
     .order('created_at', { ascending: false })
 

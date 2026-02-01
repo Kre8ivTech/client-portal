@@ -62,7 +62,7 @@ export async function createEnvelope(
     envelopeDefinition.documents = [doc];
 
     // Add signers
-    const recipientSigners = signers.map((signer) => {
+    const recipientSigners = signers.map((signer: any) => {
       const recipient = new docusign.Signer();
       recipient.email = signer.email;
       recipient.name = signer.name;
@@ -247,7 +247,7 @@ export async function listEnvelopeDocuments(
 
     return {
       envelopeId: result.envelopeId || envelopeId,
-      envelopeDocuments: (result.envelopeDocuments || []).map((doc) => ({
+      envelopeDocuments: (result.envelopeDocuments || []).map((doc: any) => ({
         documentId: doc.documentId || '',
         documentIdGuid: doc.documentIdGuid || '',
         name: doc.name || '',

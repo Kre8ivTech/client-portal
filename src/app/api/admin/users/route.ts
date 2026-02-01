@@ -95,7 +95,7 @@ export async function GET(request: Request) {
     }
 
     // Get profile data for these users
-    const userIds = usersData?.map(u => u.id) || [];
+    const userIds = usersData?.map((u: any) => u.id) || [];
     
     let profilesData: any[] = [];
     if (userIds.length > 0) {
@@ -108,9 +108,9 @@ export async function GET(request: Request) {
     }
 
     // Merge users with their profiles
-    const users = usersData?.map(user => ({
+    const users = usersData?.map((user: any) => ({
       ...user,
-      user_profiles: profilesData.filter(p => p.id === user.id)
+      user_profiles: profilesData.filter((p: any) => p.id === user.id)
     })) || [];
 
     const error = null;

@@ -90,7 +90,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get existing contract
-    const { data: existingContract, error: fetchError } = await supabase
+    const { data: existingContract, error: fetchError } = await (supabase as any)
       .from('contracts')
       .select('*')
       .eq('id', id)
@@ -128,7 +128,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Re-render template if metadata changed and template exists
     let content_html = existingContract.content_html
     if (input.metadata && existingContract.template_id) {
-      const { data: template } = await supabase
+      const { data: template } = await (supabase as any)
         .from('contract_templates')
         .select('content')
         .eq('id', existingContract.template_id)
@@ -156,7 +156,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       updateData.content_html = content_html
     }
 
-    const { data: contract, error: updateError } = await supabase
+    const { data: contract, error: updateError } = await (supabase as any)
       .from('contracts')
       .update(updateData)
       .eq('id', id)
@@ -219,7 +219,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get existing contract
-    const { data: existingContract, error: fetchError } = await supabase
+    const { data: existingContract, error: fetchError } = await (supabase as any)
       .from('contracts')
       .select('*')
       .eq('id', id)
@@ -242,7 +242,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Cancel the contract
-    const { data: contract, error: updateError } = await supabase
+    const { data: contract, error: updateError } = await (supabase as any)
       .from('contracts')
       .update({
         status: 'cancelled',

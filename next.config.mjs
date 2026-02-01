@@ -6,6 +6,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: path.join(__dirname),
+  serverExternalPackages: ['docusign-esign'],
+  turbopack: {},
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals.push({
+        'docusign-esign': 'commonjs docusign-esign',
+      });
+    }
+    return config;
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co', pathname: '/storage/v1/**' },

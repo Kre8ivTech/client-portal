@@ -27,7 +27,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get user info
-    const { data: userRow } = await supabase
+    const { data: userRow } = await (supabase as any)
       .from('users')
       .select('organization_id, role, full_name, email')
       .eq('id', user.id)
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const input = result.data
 
     // Get existing contract
-    const { data: contract, error: fetchError } = await supabase
+    const { data: contract, error: fetchError } = await (supabase as any)
       .from('contracts')
       .select('*')
       .eq('id', id)
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Update contract with envelope info and status
-    const { data: updatedContract, error: updateError } = await supabase
+    const { data: updatedContract, error: updateError } = await (supabase as any)
       .from('contracts')
       .update({
         envelope_id: envelopeId,
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       organization_id: userRow.organization_id,
     }))
 
-    const { error: signersError } = await supabase
+    const { error: signersError } = await (supabase as any)
       .from('contract_signers')
       .insert(signersData)
 

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user info
-    const { data: userRow } = await supabase
+    const { data: userRow } = await (supabase as any)
       .from('users')
       .select('organization_id, role')
       .eq('id', user.id)
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user info
-    const { data: userRow } = await supabase
+    const { data: userRow } = await (supabase as any)
       .from('users')
       .select('organization_id, role')
       .eq('id', user.id)
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
     const input = result.data
 
     // Verify client belongs to same organization
-    const { data: clientUser, error: clientError } = await supabase
+    const { data: clientUser, error: clientError } = await (supabase as any)
       .from('users')
       .select('organization_id')
       .eq('id', input.client_id)
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
     let content_data = input.metadata || {}
 
     if (input.template_id) {
-      const { data: template, error: templateError } = await supabase
+      const { data: template, error: templateError } = await (supabase as any)
         .from('contract_templates')
         .select('*')
         .eq('id', input.template_id)
@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the contract
-    const { data: contract, error: createError } = await supabase
+    const { data: contract, error: createError } = await (supabase as any)
       .from('contracts')
       .insert({
         title: input.title,

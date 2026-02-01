@@ -188,7 +188,7 @@ async function processDocuSignEvent(event: DocuSignWebhookEvent): Promise<void> 
   console.log(`[DocuSign Webhook] Processing event for contract ${contractId}`);
 
   // Fetch contract to get organization_id
-  const { data: contract, error: contractError } = await supabaseAdmin
+  const { data: contract, error: contractError } = await (supabaseAdmin as any)
     .from('contracts')
     .select('id, organization_id, docusign_envelope_id')
     .eq('id', contractId)
@@ -246,7 +246,7 @@ async function handleEnvelopeCompleted(
     console.log(`[DocuSign Webhook] Uploaded signed document to S3: ${documentUrl}`);
 
     // Update contract
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await (supabaseAdmin as any)
       .from('contracts')
       .update({
         status: 'signed',
@@ -263,7 +263,7 @@ async function handleEnvelopeCompleted(
     }
 
     // Update all signers to signed
-    const { error: signersError } = await supabaseAdmin
+    const { error: signersError } = await (supabaseAdmin as any)
       .from('contract_signers')
       .update({
         status: 'signed',
@@ -305,7 +305,7 @@ async function handleEnvelopeDeclined(
     );
 
     // Update contract status
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await (supabaseAdmin as any)
       .from('contracts')
       .update({
         status: 'cancelled',
@@ -321,7 +321,7 @@ async function handleEnvelopeDeclined(
 
     // Update signer who declined
     if (declinedRecipient?.email) {
-      const { error: signerError } = await supabaseAdmin
+      const { error: signerError } = await (supabaseAdmin as any)
         .from('contract_signers')
         .update({
           status: 'declined',
@@ -359,7 +359,7 @@ async function handleEnvelopeVoided(
 
   try {
     // Update contract status
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await (supabaseAdmin as any)
       .from('contracts')
       .update({
         status: 'cancelled',
@@ -408,7 +408,7 @@ async function handleRecipientSigned(
     }
 
     // Update specific signer status
-    const { error: signerError } = await supabaseAdmin
+    const { error: signerError } = await (supabaseAdmin as any)
       .from('contract_signers')
       .update({
         status: 'signed',
@@ -446,7 +446,7 @@ async function createAuditLog(
   details: Record<string, any>
 ): Promise<void> {
   try {
-    const { error } = await supabaseAdmin
+    const { error } = await (supabaseAdmin as any)
       .from('contract_audit_log')
       .insert({
         contract_id: contractId,

@@ -21,7 +21,7 @@ export default async function NewServicePage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile || !['super_admin', 'staff'].includes(profile.role)) {
+  if (!profile || !['super_admin', 'staff'].includes((profile as any).role)) {
     return <div>Forbidden - Admin access required</div>
   }
 

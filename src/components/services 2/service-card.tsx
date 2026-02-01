@@ -75,7 +75,8 @@ export function ServiceCard({ service }: ServiceCardProps) {
     return `$${(rate / 100).toFixed(2)}`
   }
 
-  const getRateTypeLabel = (type: string) => {
+  const getRateTypeLabel = (type: string | null) => {
+    if (!type) return ''
     const labels: Record<string, string> = {
       hourly: 'per hour',
       fixed: 'fixed price',

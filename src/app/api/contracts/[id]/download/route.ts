@@ -50,7 +50,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if contract has a file stored
-    if (!contract.s3_key) {
+    if (!(contract as any)?.s3_key) {
       return NextResponse.json(
         { error: 'Contract file not available' },
         { status: 404 }
@@ -58,8 +58,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check permissions - user must belong to same org or be admin
-    const isAdmin = userRow.role === 'super_admin' || userRow.role === 'staff'
-    const isSameOrg = userRow.organization_id === contract.organization_id
+    const isAdmin = (userRow as any).role === 'super_admin' || (userRow as any).role === 'staff'
+    const isSameOrg = (userRow as any).organization_id === (contract as any).organization_id
 
     if (!isAdmin && !isSameOrg) {
       return NextResponse.json(
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     let presignedUrl: string
 
     try {
-      presignedUrl = await generatePresignedUrl(contract.s3_key, 3600)
+      presignedUrl = await generatePresignedUrl((contract as any).s3_key, 3600)
     } catch (s3Error) {
       console.error('S3 error:', s3Error)
       return NextResponse.json(
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       data: {
         url: presignedUrl,
         expires_in: 3600,
-        filename: `${contract.title}.pdf`,
+        filename: `${(contract as any).title}.pdf`,
       },
     })
   } catch (err) {

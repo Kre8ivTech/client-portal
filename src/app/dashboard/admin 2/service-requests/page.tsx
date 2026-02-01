@@ -19,19 +19,19 @@ export default async function AdminServiceRequestsPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile || !['super_admin', 'staff', 'partner'].includes(profile.role)) {
+  if (!profile || !['super_admin', 'staff', 'partner'].includes((profile as any).role)) {
     return <div>Forbidden - Admin access required</div>
   }
 
   // Fetch all service requests for the organization
-  const { data: serviceRequests } = await supabase
+  const { data: serviceRequests } = await (supabase as any)
     .from('service_requests')
     .select(`
       *,
       service:services(id, name, description, category, base_rate, rate_type),
       requester:users!requested_by(id, email, profiles(name, avatar_url))
     `)
-    .eq('organization_id', profile.organization_id)
+    .eq('organization_id', (profile as any).organization_id)
     .order('created_at', { ascending: false })
 
   return (

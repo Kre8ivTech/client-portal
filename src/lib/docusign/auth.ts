@@ -104,7 +104,7 @@ export async function getAccessToken(): Promise<string> {
 /**
  * Gets an authenticated API client instance
  */
-export async function getApiClient(): Promise<docusign.ApiClient> {
+export async function getApiClient(): Promise<any> {
   const accessToken = await getAccessToken();
   
   const apiClient = new docusign.ApiClient();

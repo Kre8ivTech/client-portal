@@ -14,17 +14,29 @@ export default async function TicketPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  // Fetch ticket with creator profile join
-  const { data: ticket, error } = await supabase
+  // Fetch ticket (cast through unknown due to generated types)
+  const { data: ticketData, error } = await (supabase
     .from('tickets')
-    .select('*, creator:profiles!created_by(name)')
+    .select('*')
     .eq('id', id)
-    .single()
+    .single() as unknown as Promise<{ data: Record<string, unknown> | null; error: Error | null }>)
 
-  if (error || !ticket) {
+  if (error || !ticketData) {
     return notFound()
   }
 
-  type TicketWithCreator = typeof ticket & { creator: { name: string | null } | null }
-  return <TicketDetail ticket={ticket as TicketWithCreator} userId={user.id} />
+  // Fetch creator profile separately (profiles.user_id = tickets.created_by)
+  let creatorName: string | null = null
+  if (ticketData.created_by) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name')
+      .eq('user_id', ticketData.created_by as string)
+      .single()
+    creatorName = (profile as { name: string | null } | null)?.name || null
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ticketWithCreator = { ...ticketData, creator: { name: creatorName } } as any
+  return <TicketDetail ticket={ticketWithCreator} userId={user.id} />
 }

@@ -32,32 +32,68 @@ export async function createTimeEntry(formData: FormData) {
   const hoursStr = formData.get("hours") as string;
   const entryDate = formData.get("entry_date") as string;
   const ticketId = (formData.get("ticket_id") as string) || null;
+  const planAssignmentId = (formData.get("plan_assignment_id") as string) || null;
+  const workType = (formData.get("work_type") as string) || "support";
   const billable = formData.get("billable") === "true" || formData.get("billable") === "on";
 
   const hours = parseFloat(hoursStr);
   if (isNaN(hours) || hours <= 0 || hours > 24)
     throw new Error("Hours must be between 0 and 24");
 
-  const { error } = await (supabase as any).from("time_entries").insert({
+  // Validate work_type
+  if (workType !== "support" && workType !== "dev") {
+    throw new Error("Work type must be 'support' or 'dev'");
+  }
+
+  // If plan_assignment_id is provided, verify it exists and belongs to the org
+  if (planAssignmentId) {
+    const { data: assignment, error: assignmentError } = await (supabase as any)
+      .from("plan_assignments")
+      .select("id, organization_id, status")
+      .eq("id", planAssignmentId)
+      .single();
+
+    if (assignmentError || !assignment) {
+      throw new Error("Plan assignment not found");
+    }
+
+    const assignmentStatus = (assignment as { status: string }).status;
+    if (assignmentStatus !== "active" && assignmentStatus !== "grace_period") {
+      throw new Error("Cannot log time to an inactive plan assignment");
+    }
+  }
+
+  const { data: timeEntry, error } = await (supabase as any).from("time_entries").insert({
     organization_id: profile.organization_id,
     user_id: user.id,
     ticket_id: ticketId || null,
+    plan_assignment_id: planAssignmentId || null,
+    work_type: workType,
     description,
     hours,
     entry_date: entryDate || new Date().toISOString().slice(0, 10),
     billable,
-  });
+  }).select().single();
 
   if (error) throw new Error(error.message);
 
   await writeAuditLog({
     action: "time_entry.create",
     entity_type: "time_entry",
-    details: { description, hours, ticket_id: ticketId, billable },
+    entity_id: timeEntry?.id,
+    details: {
+      description,
+      hours,
+      ticket_id: ticketId,
+      plan_assignment_id: planAssignmentId,
+      work_type: workType,
+      billable,
+    },
   });
 
   revalidatePath("/dashboard/time");
-  return { success: true };
+  revalidatePath("/dashboard/billing");
+  return { success: true, data: timeEntry };
 }
 
 export async function deleteTimeEntry(id: string) {

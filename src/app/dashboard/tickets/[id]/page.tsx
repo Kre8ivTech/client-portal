@@ -14,14 +14,14 @@ export default async function TicketPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  // Fetch ticket with creator profile join (via users table)
-  const { data: ticket, error } = await supabase
+  // Fetch ticket (cast through unknown due to generated types)
+  const { data: ticketData, error } = await (supabase
     .from('tickets')
-    .select('*, creator:users!created_by(id, profiles(name))')
+    .select('*')
     .eq('id', id)
-    .single()
+    .single() as unknown as Promise<{ data: Record<string, unknown> | null; error: Error | null }>)
 
-  if (error || !ticket) {
+  if (error || !ticketData) {
     return notFound()
   }
 

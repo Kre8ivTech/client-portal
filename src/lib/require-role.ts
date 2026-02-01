@@ -10,6 +10,13 @@ export type UserProfile = {
   is_account_manager: boolean;
 };
 
+type UserRow = {
+  id: string;
+  organization_id: string | null;
+  role: string;
+  is_account_manager: boolean;
+};
+
 /**
  * Ensures the current user is authenticated and has one of the allowed roles.
  * Redirects to /login if not authenticated, or /dashboard if role is not allowed.
@@ -23,12 +30,13 @@ export async function requireRole(allowedRoles: DashboardRole[]) {
 
   if (!user) redirect("/login");
 
-  const { data: userRow } = await supabase
+  const { data } = await supabase
     .from("users")
     .select("id, organization_id, role, is_account_manager")
     .eq("id", user.id)
     .single();
 
+  const userRow = data as UserRow | null;
   const role = (userRow?.role ?? "client") as DashboardRole;
   const isAccountManager = userRow?.is_account_manager ?? false;
 

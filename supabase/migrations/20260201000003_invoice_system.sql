@@ -299,10 +299,13 @@ CREATE POLICY "Users can view payments for accessible invoices"
       AND (
         is_account_manager()
         OR (i.organization_id = get_user_organization_id() AND can_view_invoices())
-        OR EXISTS (
-          SELECT 1 FROM public.organizations o
-          WHERE o.id = i.organization_id
-          AND o.parent_org_id = get_user_organization_id()
+        OR (
+          can_view_invoices()
+          AND EXISTS (
+            SELECT 1 FROM public.organizations o
+            WHERE o.id = i.organization_id
+            AND o.parent_org_id = get_user_organization_id()
+          )
         )
       )
     )

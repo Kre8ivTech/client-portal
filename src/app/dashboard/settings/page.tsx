@@ -63,8 +63,8 @@ export default async function SettingsPage() {
         {/* Calendar & Office Hours - Staff/Admin only */}
         {isStaffOrAdmin && <CalendarOfficeHours profileId={user.id} />}
 
-        {/* Organization branding - non-admin only (admin uses Portal Branding above) */}
-        {!isSuperAdmin && (
+        {/* Organization branding - staff/admin only (super_admin uses Portal Branding above) */}
+        {isStaffOrAdmin && !isSuperAdmin && (
           <Card className="border-border shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">

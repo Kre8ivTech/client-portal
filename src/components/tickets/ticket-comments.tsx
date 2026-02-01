@@ -30,17 +30,20 @@ export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
   const supabase = createClient() as any
   const queryClient = useQueryClient()
 
-  const { data: comments, isLoading } = useQuery({
+  const { data: comments, isLoading, error: queryError } = useQuery({
     queryKey: ['ticket-comments', ticketId],
     queryFn: async () => {
       // Joined profiles to get author details
       const { data, error } = await supabase
         .from('ticket_comments')
-        .select('*, author:profiles(name, avatar_url)')
+        .select('*, author:profiles!author_id(name, avatar_url)')
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true })
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching ticket comments:', error)
+        throw error
+      }
       return data as Comment[]
     }
   })
@@ -103,6 +106,14 @@ export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
           <div className="flex justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
           </div>
+        ) : queryError ? (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error Loading Comments</AlertTitle>
+            <AlertDescription>
+              {queryError instanceof Error ? queryError.message : 'Failed to load comments. Please refresh the page.'}
+            </AlertDescription>
+          </Alert>
         ) : comments?.length === 0 ? (
           <p className="text-center text-slate-500 py-8 italic">No comments yet. Start the conversation!</p>
         ) : (

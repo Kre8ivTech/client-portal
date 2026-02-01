@@ -8,12 +8,32 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Send, Paperclip, MoreVertical, Phone, Video, Info, User } from 'lucide-react'
+import { Send, Paperclip, MoreVertical, Phone, Video, Info, User, UserPlus, X } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { cn } from '@/lib/cn'
+import type { Database } from '@/types/database'
+import { useStaffAssignments, useAvailableStaff } from '@/hooks/use-staff-assignments'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+
+type Conversation = Database['public']['Tables']['conversations']['Row']
+type Message = Database['public']['Tables']['messages']['Row']
 
 interface MessageThreadProps {
-  conversation: any
-  messages: any[]
+  conversation: Conversation | undefined
+  messages: Message[]
   userId: string
   onSendMessage: (content: string) => void
 }
@@ -21,6 +41,17 @@ interface MessageThreadProps {
 export function MessageThread({ conversation, messages, userId, onSendMessage }: MessageThreadProps) {
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Staff assignments
+  const {
+    assignments,
+    isLoading: isLoadingAssignments,
+    assignStaff,
+    unassignStaff,
+    isAssigning,
+  } = useStaffAssignments('conversation', conversation?.id || '')
+
+  const { data: availableStaff } = useAvailableStaff(conversation?.organization_id || '')
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -34,13 +65,20 @@ export function MessageThread({ conversation, messages, userId, onSendMessage }:
     setInput('')
   }
 
-  const otherParticipant = conversation?.type === 'direct' 
-    ? conversation.profiles?.find((p: any) => p.id !== userId)
+  // Note: profiles join via participant_ids doesn't work in current schema
+  // participant_ids is a UUID array, not a FK relationship
+  // TODO: Fix conversation query to properly join participant profiles
+  const conversationWithProfiles = conversation as Conversation & {
+    profiles?: Array<{ id: string; name: string | null; avatar_url: string | null }>
+  }
+
+  const otherParticipant = conversationWithProfiles?.type === 'direct'
+    ? conversationWithProfiles.profiles?.find((p) => p.id !== userId)
     : null
 
-  const title = conversation?.type === 'direct' 
+  const title = conversationWithProfiles?.type === 'direct'
     ? otherParticipant?.name || 'User'
-    : conversation?.title || 'Group Conversation'
+    : conversationWithProfiles?.title || 'Group Conversation'
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -61,14 +99,109 @@ export function MessageThread({ conversation, messages, userId, onSendMessage }:
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {/* Assigned Staff Avatars */}
+          {assignments && assignments.length > 0 && (
+            <div className="flex items-center -space-x-2 mr-2">
+              {assignments.slice(0, 3).map((assignment) => (
+                <TooltipProvider key={assignment.id}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="relative group cursor-pointer">
+                        <Avatar className="h-8 w-8 border-2 border-white shadow-sm">
+                          <AvatarImage src={assignment.staff?.profiles?.avatar_url || undefined} />
+                          <AvatarFallback className="bg-blue-500 text-white text-xs">
+                            {assignment.staff?.profiles?.name?.charAt(0) || assignment.staff?.email?.charAt(0) || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <button
+                          onClick={() => unassignStaff(assignment.id)}
+                          className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-semibold">{assignment.staff?.profiles?.name || assignment.staff?.email}</p>
+                      <p className="text-xs text-slate-400 capitalize">{assignment.role || 'assigned'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ))}
+              {assignments.length > 3 && (
+                <div className="h-8 w-8 border-2 border-white shadow-sm rounded-full bg-slate-200 text-slate-600 text-xs font-bold flex items-center justify-center">
+                  +{assignments.length - 3}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Assign Staff Button */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-slate-400 hover:text-slate-900"
+                disabled={isAssigning}
+              >
+                <UserPlus className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Assign Staff</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {availableStaff && availableStaff.length > 0 ? (
+                availableStaff
+                  .filter((staff) =>
+                    !assignments?.some((a) => a.staff_user_id === staff.id)
+                  )
+                  .map((staff) => (
+                    <DropdownMenuItem
+                      key={staff.id}
+                      onClick={() =>
+                        assignStaff({
+                          staffUserId: staff.id,
+                          organizationId: conversation?.organization_id || '',
+                          role: 'primary',
+                        })
+                      }
+                      className="cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={staff.profiles?.avatar_url || undefined} />
+                          <AvatarFallback className="text-xs bg-blue-500 text-white">
+                            {staff.profiles?.name?.charAt(0) || staff.email?.charAt(0) || '?'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">
+                            {staff.profiles?.name || staff.email}
+                          </span>
+                          <span className="text-xs text-slate-400 capitalize">
+                            {staff.role?.replace('_', ' ')}
+                          </span>
+                        </div>
+                      </div>
+                    </DropdownMenuItem>
+                  ))
+              ) : (
+                <DropdownMenuItem disabled>No staff available</DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Separator orientation="vertical" className="h-4" />
+
           <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-900">
             <Phone className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-900">
             <Video className="h-4 w-4" />
           </Button>
-          <Separator orientation="vertical" className="h-4 mx-1" />
+          <Separator orientation="vertical" className="h-4" />
           <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-900">
             <Info className="h-4 w-4" />
           </Button>
@@ -168,8 +301,4 @@ export function MessageThread({ conversation, messages, userId, onSendMessage }:
       </CardFooter>
     </div>
   )
-}
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ')
 }

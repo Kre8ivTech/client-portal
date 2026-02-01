@@ -14,10 +14,10 @@ export default async function TicketPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  // Fetch ticket with creator profile join
+  // Fetch ticket with creator profile join (via users table)
   const { data: ticket, error } = await supabase
     .from('tickets')
-    .select('*, creator:profiles!created_by(name)')
+    .select('*, creator:users!created_by(id, profiles(name))')
     .eq('id', id)
     .single()
 
@@ -25,6 +25,23 @@ export default async function TicketPage({
     return notFound()
   }
 
+  // Flatten the nested creator data structure (creator.profiles.name → creator.name)
+  type QueryResult = typeof ticket & {
+    creator: {
+      id: string
+      profiles: {
+        name: string | null
+      } | null
+    } | null
+  }
+
+  const ticketWithCreator = {
+    ...ticket,
+    creator: (ticket as QueryResult).creator?.profiles
+      ? { name: (ticket as QueryResult).creator.profiles.name }
+      : null
+  }
+
   type TicketWithCreator = typeof ticket & { creator: { name: string | null } | null }
-  return <TicketDetail ticket={ticket as TicketWithCreator} userId={user.id} />
+  return <TicketDetail ticket={ticketWithCreator as TicketWithCreator} userId={user.id} />
 }

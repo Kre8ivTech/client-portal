@@ -6,15 +6,19 @@ import { ConversationList } from '@/components/messaging/conversation-list'
 import { MessageThread } from '@/components/messaging/message-thread'
 import { Card } from '@/components/ui/card'
 import { Loader2, MessageSquare } from 'lucide-react'
+import type { Database } from '@/types/database'
+
+type Conversation = Database['public']['Tables']['conversations']['Row']
+type Message = Database['public']['Tables']['messages']['Row']
 
 export default function MessagesPage() {
-  const [conversations, setConversations] = useState<any[]>([])
+  const [conversations, setConversations] = useState<Conversation[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [messages, setMessages] = useState<any[]>([])
+  const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [sendError, setSendError] = useState<string | null>(null)
-  const supabase = createClient() as any
+  const supabase = createClient()
 
   const refreshConversations = useCallback(async () => {
     const { data } = await supabase
@@ -88,13 +92,13 @@ export default function MessagesPage() {
 
     const channel = supabase
       .channel(`room:${activeId}`)
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
         table: 'messages',
         filter: `conversation_id=eq.${activeId}`
-      }, (payload: any) => {
-        setMessages(prev => [...prev, payload.new])
+      }, (payload) => {
+        setMessages(prev => [...prev, payload.new as Message])
       })
       .subscribe()
 

@@ -7,12 +7,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   serverExternalPackages: ['docusign-esign'],
-  turbopack: {},
+
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals.push({
         'docusign-esign': 'commonjs docusign-esign',
       });
+      
+      // Handle the 'ApiClient' and model internal imports in docusign-esign
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'ApiClient': path.resolve(__dirname, 'node_modules/docusign-esign/src/ApiClient.js'),
+        'model': path.resolve(__dirname, 'node_modules/docusign-esign/src/model'),
+      };
     }
     return config;
   },

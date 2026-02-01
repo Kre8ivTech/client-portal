@@ -3,7 +3,8 @@
  * Handles envelope creation, status checking, and document management
  */
 
-import docusign from 'docusign-esign';
+// Bypass static analysis for problematic AMD module
+const docusign = typeof window === 'undefined' ? eval('require("docusign-esign")') : null;
 import { getApiClient, getAccountId } from './auth';
 import type {
   CreateEnvelopeRequest,

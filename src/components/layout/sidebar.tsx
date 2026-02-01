@@ -30,6 +30,7 @@ import {
   History,
   UserCog,
   Plug,
+  Layers,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -89,6 +90,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/clients", icon: Users, label: "Clients" },
       { href: "/dashboard/users", icon: UserCog, label: "User Management" },
       { href: "/dashboard/tenants", icon: Building2, label: "Tenants" },
+      { href: "/dashboard/plans", icon: Layers, label: "Plans" },
       { href: "/dashboard/financials", icon: DollarSign, label: "Financials" },
       { href: "/dashboard/reports", icon: LineChart, label: "Reports" },
       { href: "/dashboard/time", icon: Clock, label: "Time Tracking" },
@@ -119,6 +121,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"]): string[] {
   const whiteLabel = "/dashboard/settings#white-label";
   const adminStaff = [
     "/dashboard/users",
+    "/dashboard/plans",
     "/dashboard/financials",
     "/dashboard/reports",
     "/dashboard/time",
@@ -154,6 +157,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"]): string[] {
         ...accountBase,
         whiteLabel,
         "/dashboard/clients",
+        "/dashboard/plans",
         "/dashboard/reports",
       ];
     case "partner_staff":

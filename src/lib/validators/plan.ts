@@ -70,6 +70,8 @@ export const updateInvoiceTemplateSchema = createInvoiceTemplateSchema.partial()
 // PLAN SCHEMAS
 // =============================================================================
 
+export const billingIntervalSchema = z.enum(['monthly', 'yearly', 'one_time'])
+
 export const createPlanSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().max(5000).optional(),
@@ -95,6 +97,7 @@ export const createPlanSchema = z.object({
   currency: z.string().length(3).default('USD'),
 
   // Billing configuration
+  billing_interval: billingIntervalSchema.default('monthly'),
   payment_terms_days: z.number().int().min(1).max(365).default(30),
   auto_send_invoices: z.boolean().default(false),
   invoice_template_id: z.string().uuid().optional(),
@@ -111,6 +114,12 @@ export const createPlanSchema = z.object({
 
   // Plan metadata
   is_template: z.boolean().default(true),
+
+  // Features for display
+  features: z.array(z.string().max(200)).max(20).default([]),
+
+  // Stripe sync option
+  sync_to_stripe: z.boolean().default(true),
 })
 
 export const updatePlanSchema = createPlanSchema.partial()
@@ -290,6 +299,7 @@ export type PlanStatus = z.infer<typeof planStatusSchema>
 export type CoverageType = z.infer<typeof coverageTypeSchema>
 export type DisputeStatus = z.infer<typeof disputeStatusSchema>
 export type DisputeType = z.infer<typeof disputeTypeSchema>
+export type BillingInterval = z.infer<typeof billingIntervalSchema>
 
 export type CreateInvoiceTemplateInput = z.infer<
   typeof createInvoiceTemplateSchema

@@ -55,12 +55,12 @@ export function CalendarOfficeHours({ profileId }: CalendarOfficeHoursProps) {
         supabase
           .from('staff_calendar_integrations')
           .select('*')
-          .eq('profile_id', profileId)
+          .eq('user_id', profileId)
           .order('provider'),
         supabase
           .from('office_hours')
           .select('*')
-          .eq('profile_id', profileId)
+          .eq('user_id', profileId)
           .order('day_of_week')
           .order('start_time'),
       ])
@@ -74,19 +74,16 @@ export function CalendarOfficeHours({ profileId }: CalendarOfficeHoursProps) {
   const handleConnectCalendar = async () => {
     if (!connectProvider) return
     setSaving(true)
-    const { error } = await (supabase as any).from('staff_calendar_integrations').insert({
-      profile_id: profileId,
-      provider: connectProvider as 'google' | 'microsoft' | 'outlook' | 'ical',
-      sync_enabled: true,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC',
-    })
+    const { error } = await (supabase as any)
+      .from('staff_calendar_integrations')
+      .insert({ user_id: profileId, provider: connectProvider as 'google' | 'microsoft' | 'outlook' | 'ical', sync_enabled: true, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC' })
     setSaving(false)
     if (!error) {
       setConnectProvider(null)
       const { data } = await supabase
         .from('staff_calendar_integrations')
         .select('*')
-        .eq('profile_id', profileId)
+        .eq('user_id', profileId)
         .order('provider')
       if (data) setIntegrations(data as CalendarIntegration[])
     }
@@ -103,12 +100,7 @@ export function CalendarOfficeHours({ profileId }: CalendarOfficeHoursProps) {
     setSaving(true)
     const { data } = await (supabase as any)
       .from('office_hours')
-      .insert({
-        profile_id: profileId,
-        day_of_week,
-        start_time,
-        end_time,
-      })
+      .insert({ user_id: profileId, day_of_week, start_time, end_time })
       .select()
       .single()
     setSaving(false)

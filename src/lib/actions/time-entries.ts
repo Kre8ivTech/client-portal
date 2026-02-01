@@ -13,7 +13,7 @@ export async function createTimeEntry(formData: FormData) {
   if (!user) throw new Error("Unauthorized");
 
   const { data: profileData } = await supabase
-    .from("profiles")
+    .from("users")
     .select("organization_id, role")
     .eq("id", user.id)
     .single();
@@ -40,7 +40,7 @@ export async function createTimeEntry(formData: FormData) {
 
   const { error } = await (supabase as any).from("time_entries").insert({
     organization_id: profile.organization_id,
-    profile_id: user.id,
+    user_id: user.id,
     ticket_id: ticketId || null,
     description,
     hours,
@@ -72,7 +72,7 @@ export async function deleteTimeEntry(id: string) {
     .from("time_entries")
     .delete()
     .eq("id", id)
-    .eq("profile_id", user.id);
+    .eq("user_id", user.id);
 
   if (error) throw new Error(error.message);
 

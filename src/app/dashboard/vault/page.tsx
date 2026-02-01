@@ -12,7 +12,7 @@ export default async function VaultPage() {
   if (!user) redirect("/login");
 
   const { data: profileData } = await supabase
-    .from("profiles")
+    .from("users")
     .select("organization_id")
     .eq("id", user.id)
     .single();

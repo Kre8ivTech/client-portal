@@ -46,7 +46,7 @@ export default async function FormDetailPage({
 
   const { data: submissions } = await supabase
     .from("form_submissions")
-    .select("id, responses, status, submitted_at, profile_id")
+    .select("id, responses, status, submitted_at, user_id")
     .eq("form_id", id)
     .order("submitted_at", { ascending: false })
     .limit(50);
@@ -112,7 +112,7 @@ export default async function FormDetailPage({
                       {new Date(s.submitted_at).toLocaleString()}
                     </TableCell>
                     <TableCell className="font-mono text-xs">
-                      {s.profile_id ? `${s.profile_id.slice(0, 8)}…` : "—"}
+                      {s.user_id ? `${s.user_id.slice(0, 8)}…` : "—"}
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{s.status}</Badge>

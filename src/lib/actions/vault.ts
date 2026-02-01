@@ -15,7 +15,7 @@ export async function createVaultItem(formData: FormData) {
 
   // Get current user profile to find organization_id
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("organization_id")
     .eq("id", user.id)
     .single();
@@ -65,7 +65,7 @@ export async function getDecryptedPassword(itemId: string) {
   if (!user) throw new Error("Unauthorized");
 
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("organization_id")
     .eq("id", user.id)
     .single();
@@ -100,7 +100,7 @@ export async function deleteVaultItem(itemId: string) {
   if (!user) throw new Error("Unauthorized");
 
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("organization_id")
     .eq("id", user.id)
     .single();

@@ -12,7 +12,7 @@ export async function submitBillingDispute(formData: FormData) {
   if (!user) return { success: false, error: 'Unauthorized' }
 
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('users')
     .select('organization_id')
     .eq('id', user.id)
     .single()

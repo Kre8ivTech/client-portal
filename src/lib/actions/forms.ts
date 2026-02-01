@@ -15,7 +15,7 @@ export async function createForm(formData: FormData) {
   if (!user) throw new Error("Unauthorized");
 
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("organization_id, role")
     .eq("id", user.id)
     .single();
@@ -62,7 +62,7 @@ export async function updateFormFields(formId: string, fields: FormFieldDef[]) {
   if (!user) throw new Error("Unauthorized");
 
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("role")
     .eq("id", user.id)
     .single();
@@ -99,7 +99,7 @@ export async function updateFormStatus(formId: string, status: "draft" | "active
   if (!user) throw new Error("Unauthorized");
 
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("role")
     .eq("id", user.id)
     .single();

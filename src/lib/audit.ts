@@ -23,14 +23,14 @@ export async function writeAuditLog(payload: AuditPayload) {
     if (!user) return;
 
     const { data: profile } = await supabase
-      .from("profiles")
+      .from("users")
       .select("organization_id")
       .eq("id", user.id)
       .single();
 
     await (supabase as any).from("audit_logs").insert({
       organization_id: (profile as { organization_id?: string } | null)?.organization_id ?? null,
-      profile_id: user.id,
+      user_id: user.id,
       action: payload.action,
       entity_type: payload.entity_type ?? null,
       entity_id: payload.entity_id ?? null,

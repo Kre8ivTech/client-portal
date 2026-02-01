@@ -28,7 +28,7 @@ export default async function AuditLogPage() {
 
   const { data: logs } = await supabase
     .from("audit_logs")
-    .select("id, action, entity_type, entity_id, profile_id, details, created_at")
+    .select("id, action, entity_type, entity_id, user_id, details, created_at")
     .gte("created_at", thirtyDaysAgo.toISOString())
     .order("created_at", { ascending: false })
     .limit(200);
@@ -83,7 +83,7 @@ export default async function AuditLogPage() {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-sm font-mono">
-                      {log.profile_id ? `${log.profile_id.slice(0, 8)}…` : "—"}
+                      {log.user_id ? `${log.user_id.slice(0, 8)}…` : "—"}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate font-mono text-xs text-muted-foreground">
                       {typeof log.details === "object" && log.details !== null

@@ -16,18 +16,18 @@ export async function requireRole(allowedRoles: DashboardRole[]) {
 
   if (!user) redirect("/login");
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, organization_id, name, role")
+  const { data: userRow } = await supabase
+    .from("users")
+    .select("id, organization_id, role")
     .eq("id", user.id)
     .single();
 
-  type ProfileRow = { id: string; organization_id: string | null; name: string | null; role: string };
-  const role = (profile as ProfileRow | null)?.role ?? "client";
+  type UserRow = { id: string; organization_id: string | null; role: string };
+  const role = (userRow as UserRow | null)?.role ?? "client";
 
   if (!allowedRoles.includes(role as DashboardRole)) {
     redirect("/dashboard");
   }
 
-  return { user, profile, role: role as DashboardRole };
+  return { user, profile: userRow, role: role as DashboardRole };
 }

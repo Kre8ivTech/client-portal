@@ -26,8 +26,7 @@ export async function updateProfile(formData: FormData) {
     updates.avatar_url = avatarUrl;
   }
 
-  // @ts-expect-error - profiles update type may not be inferred until types are regenerated
-  const { error } = await supabase.from("profiles").update(updates).eq("id", user.id);
+  const { error } = await (supabase as any).from("profiles").update(updates).eq("user_id", user.id);
 
   if (error) {
     throw new Error(error.message);

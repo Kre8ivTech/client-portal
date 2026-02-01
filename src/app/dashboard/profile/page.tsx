@@ -11,15 +11,31 @@ import { User, Bell, Shield, Camera } from "lucide-react";
 import { ProfileForm } from "@/components/profile/profile-form";
 
 export default async function ProfilePage() {
-  const supabase = (await createServerSupabaseClient()) as any
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  const supabase = await createServerSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
+  const [
+    { data: userData },
+    { data: profileData },
+  ] = await Promise.all([
+    supabase.from("users").select("id, email, role").eq("id", user.id).single(),
+    supabase.from("user_profiles").select("id, name, avatar_url, organization_name, organization_slug").eq("id", user.id).single(),
+  ]);
+  const userRow = userData as { id: string; email: string; role: string } | null;
+  const profileRow = profileData as { id: string; name: string | null; avatar_url: string | null; organization_name: string | null; organization_slug: string | null } | null;
+  const profile =
+    userRow && profileRow
+      ? {
+          id: userRow.id,
+          email: userRow.email,
+          role: userRow.role,
+          name: profileRow.name,
+          avatar_url: profileRow.avatar_url,
+          organization_name: profileRow.organization_name,
+          organization_slug: profileRow.organization_slug,
+        }
+      : null;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

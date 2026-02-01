@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("organization_id, role")
     .eq("id", user.id)
     .single();

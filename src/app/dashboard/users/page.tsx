@@ -23,10 +23,30 @@ export default async function UserManagementPage() {
   await requireRole(["super_admin", "staff"]);
 
   const supabase = await createServerSupabaseClient();
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, name, email, role, avatar_url, created_at, organizations(name, slug)")
-    .order("name", { ascending: true, nullsFirst: false });
+  type UserRow = { id: string; email: string; role: string; created_at: string };
+  type ProfileDisplayRow = { id: string; name: string | null; avatar_url: string | null; organization_name: string | null; organization_slug: string | null };
+  const [
+    { data: usersData },
+    { data: profilesData },
+  ] = await Promise.all([
+    supabase.from("users").select("id, email, role, created_at").order("email", { ascending: true }),
+    supabase.from("user_profiles").select("id, name, avatar_url, organization_name, organization_slug"),
+  ]);
+  const usersList = (usersData ?? []) as UserRow[];
+  const profilesList = (profilesData ?? []) as ProfileDisplayRow[];
+  const profiles = usersList.map((u) => {
+    const p = profilesList.find((x) => x.id === u.id);
+    return {
+      id: u.id,
+      email: u.email,
+      role: u.role,
+      created_at: u.created_at,
+      name: p?.name ?? null,
+      avatar_url: p?.avatar_url ?? null,
+      organization_name: p?.organization_name ?? null,
+      organization_slug: p?.organization_slug ?? null,
+    };
+  });
 
   type ProfileRow = {
     id: string;
@@ -35,7 +55,8 @@ export default async function UserManagementPage() {
     role: string;
     avatar_url: string | null;
     created_at: string;
-    organizations: { name?: string; slug?: string } | null;
+    organization_name: string | null;
+    organization_slug: string | null;
   };
 
   return (
@@ -94,7 +115,7 @@ export default async function UserManagementPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      {p.organizations?.name ?? p.organizations?.slug ?? "—"}
+                      {p.organization_name ?? p.organization_slug ?? "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {new Date(p.created_at).toLocaleDateString()}

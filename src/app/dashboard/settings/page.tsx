@@ -16,15 +16,27 @@ export default async function SettingsPage() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: profileRow } = await supabase
-    .from("profiles")
-    .select("*, organizations(*)")
-    .eq("id", user.id)
-    .single();
-
-  type ProfileWithOrg = { role: string; organizations?: { name?: string; slug?: string } | null };
-  const profile = profileRow as ProfileWithOrg | null;
-  const organization = profile?.organizations ?? null;
+  const [
+    { data: userData },
+    { data: profileData },
+  ] = await Promise.all([
+    supabase.from("users").select("id, role").eq("id", user.id).single(),
+    supabase.from("user_profiles").select("id, name, avatar_url, organization_name, organization_slug").eq("id", user.id).single(),
+  ]);
+  const userRow = userData as { id: string; role: string } | null;
+  const profileRow = profileData as { id: string; name: string | null; avatar_url: string | null; organization_name: string | null; organization_slug: string | null } | null;
+  const profile =
+    userRow && profileRow
+      ? {
+          id: userRow.id,
+          role: userRow.role,
+          name: profileRow.name,
+          avatar_url: profileRow.avatar_url,
+          organization_name: profileRow.organization_name,
+          organization_slug: profileRow.organization_slug,
+        }
+      : null;
+  const organization = profile ? { name: profile.organization_name, slug: profile.organization_slug } : null;
   const role = profile?.role ?? "client";
   const isStaffOrAdmin = role === "staff" || role === "super_admin";
   const isSuperAdmin = role === "super_admin";

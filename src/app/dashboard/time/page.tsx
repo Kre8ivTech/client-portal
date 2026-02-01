@@ -39,7 +39,7 @@ export default async function TimeTrackingPage() {
     ? await supabase
         .from("time_entries")
         .select("id, description, hours, entry_date, billable, ticket_id, created_at")
-        .eq("profile_id", user.id)
+        .eq("user_id", user.id)
         .order("entry_date", { ascending: false })
         .limit(100)
     : { data: [] };

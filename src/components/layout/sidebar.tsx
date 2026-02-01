@@ -32,9 +32,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { Database } from "@/types/database";
-
-type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+// Merged shape: users (id, organization_id, email, role) + user_profiles (name, avatar_url, organization_name, organization_slug)
+type Profile = {
+  id: string;
+  organization_id: string | null;
+  email: string;
+  role: "super_admin" | "staff" | "partner" | "partner_staff" | "client";
+  name: string | null;
+  avatar_url: string | null;
+  organization_name: string | null;
+  organization_slug: string | null;
+} | null;
 
 type NavItem = { href: string; icon: LucideIcon; label: string };
 
@@ -88,7 +96,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
 ];
 
 // Role visibility: client = Support + Account; partner = + White Label + Clients + Reports; staff = + Capacity + User Mgmt + Financials + Reports + Time + Forms; super_admin = full + Tenants + Audit.
-function getHrefsForRole(role: Profile["role"]): string[] {
+function getHrefsForRole(role: NonNullable<Profile>["role"]): string[] {
   const supportClient = [
     "/dashboard/tickets",
     "/dashboard/service",

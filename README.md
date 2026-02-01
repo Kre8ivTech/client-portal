@@ -145,6 +145,44 @@ supabase migration new <name>
 supabase db push            # Push migrations to remote
 ```
 
+### Test Accounts
+
+For local development and testing, seed the database with test users:
+
+```bash
+npm run seed
+```
+
+Or run the SQL script directly:
+
+```bash
+psql "$DATABASE_URL" -f supabase/seed_test_users.sql
+```
+
+**Password for all test accounts:** `TestPassword123!`
+
+| Email | Role | Organization | Description |
+|-------|------|--------------|-------------|
+| `super-admin@test.example.com` | super_admin | Kre8ivTech | Full system access |
+| `staff@test.example.com` | staff | Kre8ivTech | Internal staff member |
+| `partner@test.example.com` | partner | Test Partner | White-label partner admin |
+| `partner-staff@test.example.com` | partner_staff | Test Partner | Partner staff member |
+| `client@test.example.com` | client | Test Client Org | End client user |
+
+**Organization Hierarchy:**
+
+```
+Kre8ivTech (type: kre8ivtech)
+  - super_admin, staff roles
+
+Test Partner (type: partner)
+  - partner, partner_staff roles
+  └── Test Client Org (type: client, child of Test Partner)
+        - client role
+```
+
+Note: Test accounts are for local/staging environments only. Never seed test users in production.
+
 ---
 
 ## Project Summary

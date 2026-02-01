@@ -47,41 +47,73 @@ export async function GET(request: Request) {
     const limit = parseInt(url.searchParams.get("limit") || "20");
     const offset = (page - 1) * limit;
 
-    // Build query
+    // Build query - query user_profiles view directly which includes everything
     let query = (supabase as any)
-      .from("users")
+      .from("user_profiles")
       .select(`
         id,
-        email,
-        role,
-        organization_id,
-        created_at,
-        user_profiles!inner (
-          name,
-          avatar_url,
-          organization_name,
-          organization_slug
-        )
+        name,
+        avatar_url,
+        organization_name,
+        organization_slug
       `, { count: 'exact' });
+
+    // Now we need to join with users table to get email, role, organization_id, created_at
+    // Actually, let's do two separate queries and merge them
+    
+    // First get users with filtering
+    let usersQuery = (supabase as any)
+      .from("users")
+      .select("id, email, role, organization_id, created_at", { count: 'exact' });
 
     // Filter by organization for non-super_admin users
     if (profile.role !== "super_admin" && profile.organization_id) {
-      query = query.eq("organization_id", profile.organization_id);
+      usersQuery = usersQuery.eq("organization_id", profile.organization_id);
     }
 
-    // Apply filters
-    if (search) {
-      query = query.or(`email.ilike.%${search}%,user_profiles.name.ilike.%${search}%`);
-    }
-
+    // Apply role filter
     if (role && role !== "all") {
-      query = query.eq("role", role);
+      usersQuery = usersQuery.eq("role", role);
+    }
+
+    // Apply search filter on email
+    if (search) {
+      usersQuery = usersQuery.ilike("email", `%${search}%`);
     }
 
     // Apply pagination
-    query = query.range(offset, offset + limit - 1).order("created_at", { ascending: false });
+    usersQuery = usersQuery.range(offset, offset + limit - 1).order("created_at", { ascending: false });
 
-    const { data: users, error, count } = await query;
+    const { data: usersData, error: usersError, count } = await usersQuery;
+
+    if (usersError) {
+      console.error("Error fetching users:", usersError);
+      return NextResponse.json(
+        { error: "Failed to fetch users" },
+        { status: 500 }
+      );
+    }
+
+    // Get profile data for these users
+    const userIds = usersData?.map(u => u.id) || [];
+    
+    let profilesData: any[] = [];
+    if (userIds.length > 0) {
+      const { data: profiles } = await (supabase as any)
+        .from("user_profiles")
+        .select("id, name, avatar_url, organization_name, organization_slug")
+        .in("id", userIds);
+      
+      profilesData = profiles || [];
+    }
+
+    // Merge users with their profiles
+    const users = usersData?.map(user => ({
+      ...user,
+      user_profiles: profilesData.filter(p => p.id === user.id)
+    })) || [];
+
+    const error = null;
 
     if (error) {
       console.error("Error fetching users:", error);

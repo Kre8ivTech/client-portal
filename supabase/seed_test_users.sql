@@ -67,8 +67,8 @@ BEGIN
   -- super_admin
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'super-admin@test.example.com') THEN
     uid := gen_random_uuid();
-    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_user_meta_data, created_at, updated_at)
-    VALUES (uid, instance_uuid, 'authenticated', 'authenticated', 'super-admin@test.example.com', pwd_hash, now(), '{"name":"Test Super Admin"}'::jsonb, now(), now());
+    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, confirmation_token, recovery_token, raw_user_meta_data, created_at, updated_at)
+    VALUES (uid, instance_uuid, 'authenticated', 'authenticated', 'super-admin@test.example.com', pwd_hash, now(), '', '', '{"name":"Test Super Admin"}'::jsonb, now(), now());
   END IF;
   UPDATE public.users SET organization_id = kre8ivtech_id, role = 'super_admin' WHERE email = 'super-admin@test.example.com';
   UPDATE public.profiles SET name = 'Test Super Admin' WHERE user_id = (SELECT id FROM public.users WHERE email = 'super-admin@test.example.com' LIMIT 1);
@@ -76,8 +76,8 @@ BEGIN
   -- staff
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'staff@test.example.com') THEN
     uid := gen_random_uuid();
-    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_user_meta_data, created_at, updated_at)
-    VALUES (uid, instance_uuid, 'authenticated', 'authenticated', 'staff@test.example.com', pwd_hash, now(), '{"name":"Test Staff"}'::jsonb, now(), now());
+    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, confirmation_token, recovery_token, raw_user_meta_data, created_at, updated_at)
+    VALUES (uid, instance_uuid, 'authenticated', 'authenticated', 'staff@test.example.com', pwd_hash, now(), '', '', '{"name":"Test Staff"}'::jsonb, now(), now());
   END IF;
   UPDATE public.users SET organization_id = kre8ivtech_id, role = 'staff' WHERE email = 'staff@test.example.com';
   UPDATE public.profiles SET name = 'Test Staff' WHERE user_id = (SELECT id FROM public.users WHERE email = 'staff@test.example.com' LIMIT 1);
@@ -85,8 +85,8 @@ BEGIN
   -- partner
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'partner@test.example.com') THEN
     uid := gen_random_uuid();
-    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_user_meta_data, created_at, updated_at)
-    VALUES (uid, instance_uuid, 'authenticated', 'authenticated', 'partner@test.example.com', pwd_hash, now(), '{"name":"Test Partner"}'::jsonb, now(), now());
+    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, confirmation_token, recovery_token, raw_user_meta_data, created_at, updated_at)
+    VALUES (uid, instance_uuid, 'authenticated', 'authenticated', 'partner@test.example.com', pwd_hash, now(), '', '', '{"name":"Test Partner"}'::jsonb, now(), now());
   END IF;
   UPDATE public.users SET organization_id = partner_id, role = 'partner' WHERE email = 'partner@test.example.com';
   UPDATE public.profiles SET name = 'Test Partner' WHERE user_id = (SELECT id FROM public.users WHERE email = 'partner@test.example.com' LIMIT 1);
@@ -94,8 +94,8 @@ BEGIN
   -- partner_staff
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'partner-staff@test.example.com') THEN
     uid := gen_random_uuid();
-    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_user_meta_data, created_at, updated_at)
-    VALUES (uid, instance_uuid, 'authenticated', 'authenticated', 'partner-staff@test.example.com', pwd_hash, now(), '{"name":"Test Partner Staff"}'::jsonb, now(), now());
+    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, confirmation_token, recovery_token, raw_user_meta_data, created_at, updated_at)
+    VALUES (uid, instance_uuid, 'authenticated', 'authenticated', 'partner-staff@test.example.com', pwd_hash, now(), '', '', '{"name":"Test Partner Staff"}'::jsonb, now(), now());
   END IF;
   UPDATE public.users SET organization_id = partner_id, role = 'partner_staff' WHERE email = 'partner-staff@test.example.com';
   UPDATE public.profiles SET name = 'Test Partner Staff' WHERE user_id = (SELECT id FROM public.users WHERE email = 'partner-staff@test.example.com' LIMIT 1);
@@ -103,8 +103,8 @@ BEGIN
   -- client
   IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'client@test.example.com') THEN
     uid := gen_random_uuid();
-    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_user_meta_data, created_at, updated_at)
-    VALUES (uid, instance_uuid, 'authenticated', 'authenticated', 'client@test.example.com', pwd_hash, now(), '{"name":"Test Client"}'::jsonb, now(), now());
+    INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, confirmation_token, recovery_token, raw_user_meta_data, created_at, updated_at)
+    VALUES (uid, instance_uuid, 'authenticated', 'authenticated', 'client@test.example.com', pwd_hash, now(), '', '', '{"name":"Test Client"}'::jsonb, now(), now());
   END IF;
   UPDATE public.users SET organization_id = client_id, role = 'client' WHERE email = 'client@test.example.com';
   UPDATE public.profiles SET name = 'Test Client' WHERE user_id = (SELECT id FROM public.users WHERE email = 'client@test.example.com' LIMIT 1);

@@ -33,10 +33,11 @@ export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
   const { data: comments, isLoading, error: queryError } = useQuery({
     queryKey: ['ticket-comments', ticketId],
     queryFn: async () => {
-      // Joined profiles to get author details
+      // Join with user_profiles view to get author details
+      // ticket_comments.author_id -> users.id, then users joins profiles
       const { data, error } = await supabase
         .from('ticket_comments')
-        .select('*, author:profiles!author_id(name, avatar_url)')
+        .select('*, author:user_profiles!author_id(name, avatar_url)')
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true })
 

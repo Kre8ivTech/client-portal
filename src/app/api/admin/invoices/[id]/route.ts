@@ -4,9 +4,10 @@ import { invoiceSchema, invoiceStatusUpdateSchema, calculateInvoiceTotals } from
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createServerSupabaseClient()
 
     // Check auth
@@ -52,7 +53,7 @@ export async function PATCH(
           internal_notes: statusUpdateResult.data.internal_notes,
           updated_by: user.id,
         })
-        .eq('id', params.id)
+        .eq('id', id)
         .eq('organization_id', profile.organization_id)
 
       if (error) {
@@ -97,13 +98,13 @@ export async function PATCH(
         discount_amount: data.discount_amount,
         discount_description: data.discount_description,
         total: totals.total,
-        balance_due: totals.balance_due - (await getCurrentAmountPaid(supabase, params.id)),
+        balance_due: totals.balance_due - (await getCurrentAmountPaid(supabase, id)),
         payment_terms_days: data.payment_terms_days,
         notes: data.notes,
         internal_notes: data.internal_notes,
         updated_by: user.id,
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('organization_id', profile.organization_id)
       .select()
       .single()
@@ -114,11 +115,11 @@ export async function PATCH(
     }
 
     // Delete existing line items
-    await supabase.from('invoice_line_items').delete().eq('invoice_id', params.id)
+    await supabase.from('invoice_line_items').delete().eq('invoice_id', id)
 
     // Create new line items
     const lineItemsToInsert = data.line_items.map((item) => ({
-      invoice_id: params.id,
+      invoice_id: id,
       description: item.description,
       quantity: item.quantity,
       unit_price: item.unit_price,
@@ -143,9 +144,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createServerSupabaseClient()
 
     // Check auth
@@ -181,7 +183,7 @@ export async function DELETE(
     const { data: invoice } = await supabase
       .from('invoices')
       .select('status')
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('organization_id', profile.organization_id)
       .single()
 
@@ -201,7 +203,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('invoices')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
       .eq('organization_id', profile.organization_id)
 
     if (error) {

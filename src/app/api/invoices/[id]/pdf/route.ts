@@ -9,9 +9,10 @@ export const runtime = 'nodejs' // Required for PDF generation
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createServerSupabaseClient()
 
     // Check auth
@@ -32,7 +33,7 @@ export async function GET(
         organization:organizations(name, metadata),
         line_items:invoice_line_items(*)
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (invoiceError || !invoice) {

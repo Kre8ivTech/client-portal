@@ -4,9 +4,10 @@ import { serviceRequestApprovalSchema } from '@/lib/validators/service'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createServerSupabaseClient()
 
     // Check auth
@@ -48,7 +49,7 @@ export async function PATCH(
     const { data: existingRequest, error: fetchError } = await supabase
       .from('service_requests')
       .select('id, organization_id, status')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (fetchError || !existingRequest) {
@@ -94,7 +95,7 @@ export async function PATCH(
     const { data: updatedRequest, error: updateError } = await supabase
       .from('service_requests')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select(`
         *,
         service:services(id, name, description, category, base_rate, rate_type),

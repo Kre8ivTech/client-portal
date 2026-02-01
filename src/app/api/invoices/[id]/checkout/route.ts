@@ -4,9 +4,10 @@ import { stripe } from '@/lib/stripe'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createServerSupabaseClient()
 
     // Check auth
@@ -23,7 +24,7 @@ export async function POST(
     const { data: invoice, error: invoiceError } = await supabase
       .from('invoices')
       .select('*, organization:organizations(id, name)')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (invoiceError || !invoice) {

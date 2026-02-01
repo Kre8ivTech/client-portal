@@ -34,12 +34,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-// Merged shape: users (id, organization_id, email, role) + user_profiles (name, avatar_url, organization_name, organization_slug)
+// Merged shape: users (id, organization_id, email, role, is_account_manager) + user_profiles (name, avatar_url, organization_name, organization_slug)
 type Profile = {
   id: string;
   organization_id: string | null;
   email: string;
   role: "super_admin" | "staff" | "partner" | "partner_staff" | "client";
+  is_account_manager: boolean;
   name: string | null;
   avatar_url: string | null;
   organization_name: string | null;
@@ -99,7 +100,8 @@ const navGroups: { label: string; items: NavItem[] }[] = [
 ];
 
 // Role visibility: client = Support + Account; partner = + White Label + Clients + Reports; staff = + Capacity + User Mgmt + Financials + Reports + Time + Forms; super_admin = full + Tenants + Audit.
-function getHrefsForRole(role: NonNullable<Profile>["role"]): string[] {
+// Note: Staff without is_account_manager flag cannot see invoices.
+function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: boolean): string[] {
   const supportClient = [
     "/dashboard/tickets",
     "/dashboard/service",
@@ -116,6 +118,8 @@ function getHrefsForRole(role: NonNullable<Profile>["role"]): string[] {
     "/dashboard/profile",
     "/dashboard/settings#notifications",
   ];
+  // Account items without invoices (for non-account-manager staff)
+  const accountBaseNoInvoices = accountBase.filter(href => href !== "/dashboard/invoices");
   const whiteLabel = "/dashboard/settings#white-label";
   const adminStaff = [
     "/dashboard/users",
@@ -140,11 +144,12 @@ function getHrefsForRole(role: NonNullable<Profile>["role"]): string[] {
         "/dashboard/audit",
       ];
     case "staff":
+      // Staff with account manager flag sees invoices, otherwise they don't
       return [
         "/dashboard",
         ...supportClient,
         "/dashboard/capacity",
-        ...accountBase,
+        ...(isAccountManager ? accountBase : accountBaseNoInvoices),
         ...adminStaff,
       ];
     case "partner":
@@ -203,7 +208,8 @@ export function DashboardSidebar({
 
   // Admin links (e.g. Clients) require profile.role === "super_admin". Ensure profile is loaded (RLS: "Users can read their own profile").
   const role = profile?.role ?? "client";
-  const allowedHrefs = getHrefsForRole(role);
+  const isAccountManager = profile?.is_account_manager ?? false;
+  const allowedHrefs = getHrefsForRole(role, isAccountManager);
   const appName = branding?.app_name ?? "KT-Portal";
   const tagline = branding?.tagline ?? "Client Portal";
   const logoUrl = branding?.logo_url;

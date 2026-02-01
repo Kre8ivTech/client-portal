@@ -23,7 +23,7 @@ type ProfileInfo = {
 } | null;
 
 const segmentLabels: Record<string, string> = {
-  dashboard: "Overview",
+  dashboard: "Dashboard",
   tickets: "Tickets",
   vault: "Secure Vault",
   billing: "Billing & Plans",
@@ -35,6 +35,15 @@ const segmentLabels: Record<string, string> = {
   capacity: "Capacity",
   profile: "Profile",
   dispute: "Dispute",
+  service: "Service",
+  contracts: "Contracts",
+  users: "User Management",
+  tenants: "Tenants",
+  financials: "Financials",
+  reports: "Reports",
+  time: "Time Tracking",
+  forms: "Forms",
+  audit: "Audit Log",
 };
 
 function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {

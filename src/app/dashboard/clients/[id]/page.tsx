@@ -35,9 +35,12 @@ export default async function ClientOrgPage({
 
   if (!org) notFound()
 
-  const isOwnOrg = profile?.organization_id === org.id
-  const isChildOrg = org.parent_org_id === profile?.organization_id
-  const canView = isOwnOrg || isChildOrg
+  type ProfileRow = { organization_id: string | null; role: string }
+  const prof = profile as ProfileRow | null
+  const isOwnOrg = prof?.organization_id === org.id
+  const isChildOrg = org.parent_org_id === prof?.organization_id
+  const isSuperAdmin = prof?.role === "super_admin"
+  const canView = isOwnOrg || isChildOrg || isSuperAdmin
 
   if (!canView) notFound()
 

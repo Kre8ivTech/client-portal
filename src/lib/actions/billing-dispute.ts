@@ -2,6 +2,7 @@
 
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { writeAuditLog } from '@/lib/audit'
 
 type DisputeType = 'time_logged' | 'invoice_amount' | 'coverage' | 'other'
 
@@ -48,6 +49,12 @@ export async function submitBillingDispute(formData: FormData) {
   if (error) {
     return { success: false, error: error.message }
   }
+
+  await writeAuditLog({
+    action: 'billing_dispute.submit',
+    entity_type: 'billing_dispute',
+    details: { dispute_type: type },
+  })
 
   revalidatePath('/dashboard/billing')
   revalidatePath('/dashboard/billing/dispute')

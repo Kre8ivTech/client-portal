@@ -11,9 +11,23 @@ import {
   Settings,
   LogOut,
   Shield,
+  User,
+  Bell,
+  Wrench,
   MessageSquare,
   BookOpen,
   BarChart3,
+  Lock,
+  CreditCard,
+  Palette,
+  Building2,
+  DollarSign,
+  ClipboardList,
+  LineChart,
+  Clock,
+  FileEdit,
+  History,
+  UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -27,12 +41,14 @@ type NavItem = { href: string; icon: LucideIcon; label: string };
 const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Main",
-    items: [{ href: "/dashboard", icon: Home, label: "Overview" }],
+    items: [{ href: "/dashboard", icon: Home, label: "Dashboard" }],
   },
   {
     label: "Support",
     items: [
       { href: "/dashboard/tickets", icon: Ticket, label: "Tickets" },
+      { href: "/dashboard/service", icon: Wrench, label: "Service" },
+      { href: "/dashboard/contracts", icon: ClipboardList, label: "Contracts" },
       { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
       { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },
       { href: "/dashboard/kb", icon: BookOpen, label: "Knowledge Base" },
@@ -41,61 +57,103 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Account",
     items: [
-      { href: "/dashboard/vault", icon: Shield, label: "Secure Vault" },
-      { href: "/dashboard/billing", icon: FileText, label: "Billing & Plans" },
       { href: "/dashboard/invoices", icon: FileText, label: "Invoices" },
       { href: "/dashboard/settings", icon: Settings, label: "Settings" },
+      { href: "/dashboard/settings#white-label", icon: Palette, label: "White Label" },
+      { href: "/dashboard/vault", icon: Lock, label: "Secure Vault" },
+      { href: "/dashboard/billing", icon: CreditCard, label: "Billing & Plans" },
+      { href: "/dashboard/settings#security", icon: Shield, label: "Security" },
+      { href: "/dashboard/profile", icon: User, label: "Profile" },
+      { href: "/dashboard/settings#notifications", icon: Bell, label: "Notifications" },
     ],
   },
   {
     label: "Admin",
-    items: [{ href: "/dashboard/clients", icon: Users, label: "Clients" }],
+    items: [
+      { href: "/dashboard/clients", icon: Users, label: "Clients" },
+      { href: "/dashboard/users", icon: UserCog, label: "User Management" },
+      { href: "/dashboard/tenants", icon: Building2, label: "Tenants" },
+      { href: "/dashboard/financials", icon: DollarSign, label: "Financials" },
+      { href: "/dashboard/reports", icon: LineChart, label: "Reports" },
+      { href: "/dashboard/time", icon: Clock, label: "Time Tracking" },
+      { href: "/dashboard/forms", icon: FileEdit, label: "Forms" },
+      { href: "/dashboard/audit", icon: History, label: "Audit Log" },
+    ],
   },
 ];
 
+// Role visibility: client = Support + Account; partner = + White Label + Clients + Reports; staff = + Capacity + User Mgmt + Financials + Reports + Time + Forms; super_admin = full + Tenants + Audit.
 function getHrefsForRole(role: Profile["role"]): string[] {
+  const supportClient = [
+    "/dashboard/tickets",
+    "/dashboard/service",
+    "/dashboard/contracts",
+    "/dashboard/messages",
+    "/dashboard/kb",
+  ];
+  const accountBase = [
+    "/dashboard/invoices",
+    "/dashboard/settings",
+    "/dashboard/vault",
+    "/dashboard/billing",
+    "/dashboard/settings#security",
+    "/dashboard/profile",
+    "/dashboard/settings#notifications",
+  ];
+  const whiteLabel = "/dashboard/settings#white-label";
+  const adminStaff = [
+    "/dashboard/users",
+    "/dashboard/financials",
+    "/dashboard/reports",
+    "/dashboard/time",
+    "/dashboard/forms",
+  ];
+
   switch (role) {
     case "super_admin":
       return [
         "/dashboard",
-        "/dashboard/tickets",
+        ...supportClient,
         "/dashboard/capacity",
-        "/dashboard/vault",
-        "/dashboard/billing",
-        "/dashboard/messages",
-        "/dashboard/kb",
-        "/dashboard/invoices",
+        ...accountBase,
+        whiteLabel,
         "/dashboard/clients",
-        "/dashboard/settings",
+        ...adminStaff,
+        "/dashboard/tenants",
+        "/dashboard/audit",
       ];
     case "staff":
       return [
         "/dashboard",
-        "/dashboard/tickets",
+        ...supportClient,
         "/dashboard/capacity",
-        "/dashboard/vault",
-        "/dashboard/billing",
-        "/dashboard/messages",
-        "/dashboard/kb",
-        "/dashboard/invoices",
-        "/dashboard/settings",
+        ...accountBase,
+        ...adminStaff,
       ];
     case "partner":
       return [
         "/dashboard",
-        "/dashboard/tickets",
-        "/dashboard/invoices",
+        ...supportClient,
+        ...accountBase,
+        whiteLabel,
         "/dashboard/clients",
-        "/dashboard/settings",
+        "/dashboard/reports",
       ];
     case "partner_staff":
-      return ["/dashboard", "/dashboard/tickets"];
+      return [
+        "/dashboard",
+        ...supportClient,
+        "/dashboard/invoices",
+        "/dashboard/settings",
+        "/dashboard/profile",
+        "/dashboard/settings#security",
+        "/dashboard/settings#notifications",
+      ];
     case "client":
       return [
         "/dashboard",
-        "/dashboard/tickets",
-        "/dashboard/invoices",
-        "/dashboard/settings",
+        ...supportClient,
+        ...accountBase,
       ];
     default:
       return [];
@@ -116,7 +174,9 @@ export function DashboardSidebar({
   branding?: SidebarBranding | null;
 }) {
   const pathname = usePathname();
-  const allowedHrefs = getHrefsForRole(profile?.role || "client");
+  // Admin links (e.g. Clients) require profile.role === "super_admin". Ensure profile is loaded (RLS: "Users can read their own profile").
+  const role = profile?.role ?? "client";
+  const allowedHrefs = getHrefsForRole(role);
   const appName = branding?.app_name ?? "KT-Portal";
   const tagline = branding?.tagline ?? "Client Portal";
   const logoUrl = branding?.logo_url;
@@ -155,7 +215,7 @@ export function DashboardSidebar({
           if (items.length === 0) return null;
 
           const isAdminGroup = group.label === "Admin";
-          const showAdminBadge = isAdminGroup && profile?.role === "super_admin";
+          const showAdminBadge = isAdminGroup && role === "super_admin";
 
           return (
             <div key={group.label}>
@@ -169,9 +229,11 @@ export function DashboardSidebar({
               </p>
               <ul className="space-y-0.5">
                 {items.map((item) => {
+                  const pathOnly = item.href.split("#")[0];
                   const isActive =
                     pathname === item.href ||
-                    (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                    pathname === pathOnly ||
+                    (item.href !== "/dashboard" && pathname.startsWith(pathOnly));
                   return (
                     <li key={item.href}>
                       <Link

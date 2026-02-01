@@ -21,7 +21,10 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  const [{ data: profile }, branding] = await Promise.all([
+  const [
+    { data: profile, error: profileError },
+    branding,
+  ] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, organization_id, name, avatar_url, email, role")
@@ -29,6 +32,13 @@ export default async function DashboardLayout({
       .single(),
     getPortalBranding(),
   ]);
+
+  if (profileError && process.env.NODE_ENV === "development") {
+    console.warn(
+      "[Dashboard] Profile fetch failed — sidebar may show limited nav. RLS or missing row?",
+      profileError.message,
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-background">

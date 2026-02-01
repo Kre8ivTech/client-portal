@@ -3,6 +3,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { encrypt, decrypt } from "@/lib/crypto";
 import { revalidatePath } from "next/cache";
+import { writeAuditLog } from "@/lib/audit";
 
 export async function createVaultItem(formData: FormData) {
   const supabase = (await createServerSupabaseClient()) as any;
@@ -44,6 +45,12 @@ export async function createVaultItem(formData: FormData) {
   });
 
   if (error) throw new Error(error.message);
+
+  await writeAuditLog({
+    action: "vault_item.create",
+    entity_type: "vault_item",
+    details: { label },
+  });
 
   revalidatePath("/dashboard/vault");
   return { success: true };

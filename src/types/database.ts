@@ -622,6 +622,161 @@ export type Database = {
           created_at?: string;
         };
       };
+      time_entries: {
+        Row: {
+          id: string;
+          organization_id: string;
+          profile_id: string;
+          ticket_id: string | null;
+          description: string;
+          hours: number;
+          entry_date: string;
+          billable: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id: string;
+          profile_id: string;
+          ticket_id?: string | null;
+          description: string;
+          hours: number;
+          entry_date?: string;
+          billable?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string;
+          profile_id?: string;
+          ticket_id?: string | null;
+          description?: string;
+          hours?: number;
+          entry_date?: string;
+          billable?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      forms: {
+        Row: {
+          id: string;
+          organization_id: string | null;
+          created_by: string;
+          name: string;
+          slug: string;
+          description: string | null;
+          fields: Json;
+          settings: Json;
+          status: "draft" | "active" | "archived";
+          version: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id?: string | null;
+          created_by: string;
+          name: string;
+          slug: string;
+          description?: string | null;
+          fields?: Json;
+          settings?: Json;
+          status?: "draft" | "active" | "archived";
+          version?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string | null;
+          created_by?: string;
+          name?: string;
+          slug?: string;
+          description?: string | null;
+          fields?: Json;
+          settings?: Json;
+          status?: "draft" | "active" | "archived";
+          version?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      form_submissions: {
+        Row: {
+          id: string;
+          form_id: string;
+          organization_id: string | null;
+          profile_id: string | null;
+          responses: Json;
+          attachments: Json;
+          status: "submitted" | "processing" | "completed" | "spam";
+          submitted_at: string;
+          processed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          form_id: string;
+          organization_id?: string | null;
+          profile_id?: string | null;
+          responses?: Json;
+          attachments?: Json;
+          status?: "submitted" | "processing" | "completed" | "spam";
+          submitted_at?: string;
+          processed_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          form_id?: string;
+          organization_id?: string | null;
+          profile_id?: string | null;
+          responses?: Json;
+          attachments?: Json;
+          status?: string;
+          submitted_at?: string;
+          processed_at?: string | null;
+        };
+      };
+      audit_logs: {
+        Row: {
+          id: string;
+          organization_id: string | null;
+          profile_id: string | null;
+          action: string;
+          entity_type: string | null;
+          entity_id: string | null;
+          old_values: Json | null;
+          new_values: Json | null;
+          details: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          organization_id?: string | null;
+          profile_id?: string | null;
+          action: string;
+          entity_type?: string | null;
+          entity_id?: string | null;
+          old_values?: Json | null;
+          new_values?: Json | null;
+          details?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          organization_id?: string | null;
+          profile_id?: string | null;
+          action?: string;
+          entity_type?: string | null;
+          entity_id?: string | null;
+          old_values?: Json | null;
+          new_values?: Json | null;
+          details?: Json;
+          created_at?: string;
+        };
+      };
       kb_categories: {
         Row: {
           id: string;

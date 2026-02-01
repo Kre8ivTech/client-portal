@@ -2,6 +2,7 @@
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { writeAuditLog } from "@/lib/audit";
 
 export async function updateProfile(formData: FormData) {
   const supabase = await createServerSupabaseClient();
@@ -31,6 +32,13 @@ export async function updateProfile(formData: FormData) {
   if (error) {
     throw new Error(error.message);
   }
+
+  await writeAuditLog({
+    action: "profile.update",
+    entity_type: "profile",
+    entity_id: user.id,
+    new_values: { name, avatar_url: avatarUrl !== undefined },
+  });
 
   revalidatePath("/dashboard/profile");
 }

@@ -38,11 +38,7 @@ interface User {
   }[];
 }
 
-interface UserTableProps {
-  onResetPassword: (userId: string, email: string) => void;
-}
-
-export function UserTable({ onResetPassword }: UserTableProps) {
+export function UserTable() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");

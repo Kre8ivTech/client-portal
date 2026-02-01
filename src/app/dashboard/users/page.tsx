@@ -32,7 +32,7 @@ export default async function UserManagementPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <UserTable onResetPassword={(userId, email) => {}} />
+          <UserTable />
         </CardContent>
       </Card>
     </div>

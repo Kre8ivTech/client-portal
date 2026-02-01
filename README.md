@@ -32,7 +32,9 @@ KT-Portal is a multi-tenant SaaS client portal for Kre8ivTech, LLC. It serves wh
 
 ```
 kt-portal/
-├── CLAUDE.md              # Project-level AI assistant config
+├── .github/
+│   └── copilot-instructions.md  # GitHub Copilot configuration
+├── CLAUDE.md              # Legacy AI assistant config (see .github/)
 ├── statusline.json        # Status line configuration
 ├── docs/
 │   ├── prd.md             # Product Requirements Document
@@ -42,7 +44,6 @@ kt-portal/
 │   ├── scratchpad.md      # Working notes
 │   ├── user-CLAUDE.md     # User-level config template
 │   └── sessions/          # Example session notes
-├── agents/                # AI Agent definitions
 ├── commands/              # Custom commands
 ├── contexts/              # Context files
 ├── hooks/                 # Git/workflow hooks
@@ -54,25 +55,19 @@ kt-portal/
 
 ---
 
-## Available Agents
+## AI Assistant Configuration
 
-Specialized AI agents for different development tasks. Located in `agents/` folder.
+The project includes comprehensive configuration for GitHub Copilot and other AI assistants:
 
-| Agent | Description | When to Use |
-|-------|-------------|-------------|
-| **orchestrator** | Senior technical lead who delegates tasks to subagents. Never implements directly. | Complex multi-step projects requiring coordination |
-| **architect** | Software architecture specialist for system design and scalability | Planning new features, refactoring large systems, architectural decisions |
-| **planner** | Expert planning specialist for features and refactoring | Feature implementation, architectural changes, complex refactoring |
-| **code-searcher** | Comprehensive codebase analysis and forensic examination | Finding functions, security analysis, pattern detection, code mapping |
-| **code-reviewer** | Code review for quality, security, and maintainability | After writing or modifying code (recommended for all changes) |
-| **security-reviewer** | Security vulnerability detection and remediation (OWASP Top 10) | Code handling user input, auth, API endpoints, sensitive data |
-| **build-error-resolver** | Build and TypeScript error resolution with minimal diffs | When build fails or type errors occur |
-| **tdd-guide** | Test-Driven Development specialist (Red-Green-Refactor) | Writing new features, fixing bugs, refactoring (80%+ coverage) |
-| **e2e-runner** | End-to-end testing with Playwright | Generating, maintaining, running E2E tests |
-| **doc-updater** | Documentation and codemap specialist | Updating codemaps, READMEs, guides |
-| **refactor-cleaner** | Dead code cleanup and consolidation | Removing unused code, duplicates, safe refactoring |
-| **memory-bank-synchronizer** | Syncs memory bank docs with codebase state | Ensuring docs match implementation reality |
-| **ux-design-expert** | UX/UI design guidance and Tailwind CSS | User experience optimization, design systems |
+- **[.github/copilot-instructions.md](./.github/copilot-instructions.md)** - Primary configuration with codebase patterns, architecture, and conventions
+- **CLAUDE.md** - Legacy configuration (maintained for compatibility)
+
+The Copilot instructions include:
+- Critical codebase-specific patterns (Supabase type workarounds, schema structure)
+- Multi-tenant architecture and RLS patterns
+- Role-based access control
+- Testing requirements and conventions
+- Common pitfalls and solutions
 
 ---
 
@@ -92,7 +87,7 @@ Specialized AI agents for different development tasks. Located in `agents/` fold
 
 1. **Understand the product** - Read [docs/prd.md](./docs/prd.md)
 2. **Understand the tech** - Read [docs/tech.md](./docs/tech.md)
-3. **Configure Claude** - Review [CLAUDE.md](./CLAUDE.md)
+3. **AI Assistant Config** - Review [.github/copilot-instructions.md](./.github/copilot-instructions.md)
 4. **Start working** - Update [docs/todo.md](./docs/todo.md)
 5. **Take notes** - Use [docs/scratchpad.md](./docs/scratchpad.md)
 

@@ -29,6 +29,7 @@ import {
   FileEdit,
   History,
   UserCog,
+  Plug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -79,6 +80,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/settings#white-label", icon: Palette, label: "White Label" },
       { href: "/dashboard/settings#security", icon: Shield, label: "Security" },
       { href: "/dashboard/settings#notifications", icon: Bell, label: "Notifications" },
+      { href: "/dashboard/integrations", icon: Plug, label: "Integrations" },
     ],
   },
   {
@@ -131,6 +133,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"]): string[] {
         "/dashboard/capacity",
         ...accountBase,
         whiteLabel,
+        "/dashboard/integrations",
         "/dashboard/clients",
         ...adminStaff,
         "/dashboard/tenants",

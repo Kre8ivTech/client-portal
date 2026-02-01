@@ -16,7 +16,6 @@ import { EmailChangeForm } from "@/components/profile/email-change-form";
 import { useState, useEffect } from "react";
 
 export default function ProfilePage() {
-  const [activeSection, setActiveSection] = useState<'personal' | 'notifications' | 'security'>('personal')
   const [profile, setProfile] = useState<any>(null)
   const [user, setUser] = useState<any>(null)
   const supabase = createClient()
@@ -66,166 +65,145 @@ export default function ProfilePage() {
         </p>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-[240px_1fr]">
-        {/* Navigation Sidebar (Local to page) */}
-        <aside className="space-y-1">
-          <SectionNav icon={<User size={18} />} label="Personal Info" active={activeSection === 'personal'} onClick={() => setActiveSection('personal')} />
-          <SectionNav icon={<Bell size={18} />} label="Notifications" active={activeSection === 'notifications'} onClick={() => setActiveSection('notifications')} />
-          <SectionNav icon={<Shield size={18} />} label="Security" active={activeSection === 'security'} onClick={() => setActiveSection('security')} />
-        </aside>
-
-        <div className="space-y-8">
-          {/* Personal Info Section */}
-          {activeSection === 'personal' && (
-            <>
-              {/* Avatar Section */}
-              <Card className="border-slate-200 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-              <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                <User className="text-primary w-5 h-5" />
-                Profile Details
-              </CardTitle>
-              <CardDescription>
-                Public information used across the portal.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row items-center gap-8 mb-8">
-                <div className="relative">
-                  <div className="relative h-28 w-28 rounded-full bg-slate-100 border-4 border-white shadow-xl flex items-center justify-center text-3xl font-bold text-slate-300 overflow-hidden">
-                    {profile?.avatar_url ? (
-                      <Image
-                        src={profile.avatar_url}
-                        alt="Avatar"
-                        fill
-                        className="rounded-full object-cover"
-                        sizes="112px"
-                      />
-                    ) : (
-                      user?.email?.charAt(0).toUpperCase()
-                    )}
-                  </div>
-                  <button className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full border-2 border-white shadow-lg hover:scale-110 transition-transform">
-                    <Camera size={16} />
-                  </button>
+      <div className="space-y-8">
+        {/* Personal Info Section */}
+        <Card className="border-slate-200 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <User className="text-primary w-5 h-5" />
+              Profile Details
+            </CardTitle>
+            <CardDescription>
+              Public information used across the portal.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="flex flex-col sm:flex-row items-center gap-8 mb-8">
+              <div className="relative">
+                <div className="relative h-28 w-28 rounded-full bg-slate-100 border-4 border-white shadow-xl flex items-center justify-center text-3xl font-bold text-slate-300 overflow-hidden">
+                  {profile?.avatar_url ? (
+                    <Image
+                      src={profile.avatar_url}
+                      alt="Avatar"
+                      fill
+                      className="rounded-full object-cover"
+                      sizes="112px"
+                    />
+                  ) : (
+                    user?.email?.charAt(0).toUpperCase()
+                  )}
                 </div>
-                <div className="text-center sm:text-left">
-                  <h3 className="text-xl font-bold text-slate-900">
-                    {profile?.name || "Complete your profile"}
-                  </h3>
-                  <p className="text-sm text-slate-500">{user?.email}</p>
-                  <p className="mt-3 text-sm text-slate-600">
-                    Your role:{" "}
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                      {formatRole(profile?.role)}
-                    </span>
-                  </p>
-                </div>
+                <button className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full border-2 border-white shadow-lg hover:scale-110 transition-transform">
+                  <Camera size={16} />
+                </button>
               </div>
+              <div className="text-center sm:text-left">
+                <h3 className="text-xl font-bold text-slate-900">
+                  {profile?.name || "Complete your profile"}
+                </h3>
+                <p className="text-sm text-slate-500">{user?.email}</p>
+                <p className="mt-3 text-sm text-slate-600">
+                  Your role:{" "}
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                    {formatRole(profile?.role)}
+                  </span>
+                </p>
+              </div>
+            </div>
 
-              <ProfileForm
-                defaultName={profile?.name ?? ""}
-                userEmail={user?.email ?? ""}
+            <ProfileForm
+              defaultName={profile?.name ?? ""}
+              userEmail={user?.email ?? ""}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Notifications Section */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Bell className="text-primary w-5 h-5" />
+              Notification Preferences
+            </CardTitle>
+            <CardDescription>
+              Choose how and when you want to receive updates.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <NotificationToggle
+                title="Ticket Updates"
+                description="Receive email notifications when a ticket is updated or commented on."
+                defaultChecked
               />
-            </CardContent>
-          </Card>
-            </>
-          )}
+              <NotificationToggle
+                title="Invoice Alerts"
+                description="Get notified when a new invoice is generated or a payment is due."
+                defaultChecked
+              />
+              <NotificationToggle
+                title="Real-time Chat"
+                description="Enable browser notifications for new live chat messages."
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-          {/* Notifications Section */}
-          {activeSection === 'notifications' && (
-            <Card className="border-slate-200 shadow-sm">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                  <Bell className="text-primary w-5 h-5" />
-                  Notification Preferences
-                </CardTitle>
-                <CardDescription>
-                  Choose how and when you want to receive updates.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <NotificationToggle
-                    title="Ticket Updates"
-                    description="Receive email notifications when a ticket is updated or commented on."
-                    defaultChecked
-                  />
-                  <NotificationToggle
-                    title="Invoice Alerts"
-                    description="Get notified when a new invoice is generated or a payment is due."
-                    defaultChecked
-                  />
-                  <NotificationToggle
-                    title="Real-time Chat"
-                    description="Enable browser notifications for new live chat messages."
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
+        {/* Security Section - Email */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Mail className="text-primary w-5 h-5" />
+              Change Email Address
+            </CardTitle>
+            <CardDescription>
+              Update your email address. You'll need to verify the new email.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EmailChangeForm currentEmail={user?.email || ''} />
+          </CardContent>
+        </Card>
 
-          {/* Security Section */}
-          {activeSection === 'security' && (
-            <>
-              {/* Change Email */}
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                    <Mail className="text-primary w-5 h-5" />
-                    Change Email Address
-                  </CardTitle>
-                  <CardDescription>
-                    Update your email address. You'll need to verify the new email.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <EmailChangeForm currentEmail={user?.email || ''} />
-                </CardContent>
-              </Card>
+        {/* Security Section - Password */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Shield className="text-primary w-5 h-5" />
+              Change Password
+            </CardTitle>
+            <CardDescription>
+              Update your password to keep your account secure.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PasswordChangeForm />
+          </CardContent>
+        </Card>
 
-              {/* Change Password */}
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                    <Shield className="text-primary w-5 h-5" />
-                    Change Password
-                  </CardTitle>
-                  <CardDescription>
-                    Update your password to keep your account secure.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <PasswordChangeForm />
-                </CardContent>
-              </Card>
-
-              {/* 2FA Placeholder */}
-              <Card className="border-slate-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                    <Shield className="text-primary w-5 h-5" />
-                    Two-Factor Authentication
-                  </CardTitle>
-                  <CardDescription>
-                    Add an extra layer of security to your account
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between py-3">
-                    <div>
-                      <h4 className="text-sm font-semibold text-slate-800">Status: Disabled</h4>
-                      <p className="text-xs text-slate-500">Enable 2FA for enhanced security</p>
-                    </div>
-                    <button className="text-sm text-primary hover:underline font-medium" disabled>
-                      Coming Soon
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </div>
+        {/* 2FA Placeholder */}
+        <Card className="border-slate-200 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <Shield className="text-primary w-5 h-5" />
+              Two-Factor Authentication
+            </CardTitle>
+            <CardDescription>
+              Add an extra layer of security to your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between py-3">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-800">Status: Disabled</h4>
+                <p className="text-xs text-slate-500">Enable 2FA for enhanced security</p>
+              </div>
+              <button className="text-sm text-primary hover:underline font-medium" disabled>
+                Coming Soon
+              </button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
@@ -241,32 +219,6 @@ function formatRole(role: string | null | undefined): string {
     client: "Client",
   };
   return labels[role] ?? role.replace(/_/g, " ");
-}
-
-function SectionNav({
-  icon,
-  label,
-  active = false,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  active?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
-        active
-          ? "bg-primary text-white shadow-md shadow-primary/10"
-          : "text-slate-600 hover:bg-slate-100"
-      }`}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
 }
 
 function NotificationToggle({

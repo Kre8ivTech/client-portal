@@ -28,11 +28,12 @@ export default async function NewContractPage() {
   }
 
   // Fetch clients (users in the same org or all if super_admin)
+  type ClientResult = { id: string; email: string; full_name: string | null; profiles: { name: string | null } | null }
   let clientsQuery = supabase.from('users').select('id, email, full_name, profiles(name)')
   if (p.role !== 'super_admin' && p.organization_id) {
     clientsQuery = clientsQuery.eq('organization_id', p.organization_id)
   }
-  const { data: clients } = await clientsQuery.order('email')
+  const { data: clients } = await clientsQuery.order('email') as { data: ClientResult[] | null }
 
   // Fetch templates
   let templatesQuery = supabase.from('contract_templates').select('*').eq('is_active', true)
@@ -89,11 +90,11 @@ export default async function NewContractPage() {
         </div>
 
         <div className="md:col-span-3">
-          <ContractForm 
-            clients={clients?.map(c => ({ 
-              id: c.id, 
-              name: (c as any).profiles?.name || c.full_name || c.email 
-            })) || []} 
+          <ContractForm
+            clients={clients?.map(c => ({
+              id: c.id,
+              name: c.profiles?.name || c.full_name || c.email
+            })) || []}
             templates={templates || []}
           />
         </div>

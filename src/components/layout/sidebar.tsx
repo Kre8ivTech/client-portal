@@ -30,6 +30,7 @@ import {
   UserCog,
   Plug,
   Layers,
+  FolderKanban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -88,6 +89,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: "Admin",
     items: [
       { href: "/dashboard/clients", icon: Users, label: "Clients" },
+      { href: "/dashboard/projects", icon: FolderKanban, label: "Projects" },
       { href: "/dashboard/users", icon: UserCog, label: "User Management" },
       { href: "/dashboard/tenants", icon: Building2, label: "Tenants" },
       { href: "/dashboard/plans", icon: Layers, label: "Plans" },
@@ -144,6 +146,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         whiteLabel,
         "/dashboard/integrations",
         "/dashboard/clients",
+        "/dashboard/projects",
         ...adminStaff,
         "/dashboard/admin/services",
         "/dashboard/admin/contracts",
@@ -158,6 +161,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         ...supportClient,
         "/dashboard/capacity",
         ...(isAccountManager ? accountBase : accountBaseNoInvoices),
+        "/dashboard/projects",
         ...adminStaff,
         "/dashboard/admin/services",
         "/dashboard/admin/contracts",
@@ -170,6 +174,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         ...accountBase,
         whiteLabel,
         "/dashboard/clients",
+        "/dashboard/projects",
         "/dashboard/plans",
         "/dashboard/reports",
       ];
@@ -177,6 +182,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
       return [
         "/dashboard",
         ...supportClient,
+        "/dashboard/projects",
         "/dashboard/invoices",
         "/dashboard/settings",
         "/dashboard/profile",
@@ -187,6 +193,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
       return [
         "/dashboard",
         ...supportClient,
+        "/dashboard/projects",
         ...accountBase,
       ];
     default:

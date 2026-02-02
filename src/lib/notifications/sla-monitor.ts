@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Database } from '@/types/database'
 import { sendNotifications, buildTicketNotificationPayloads } from './send'
 import { formatNotificationMessage } from './index'
+import { getSLASettings, getNotificationCooldownMs } from './settings'
 
 const supabaseAdmin = createClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,6 +32,12 @@ interface SLACheckResult {
  */
 export async function checkAndNotifySLA(): Promise<SLACheckResult> {
   try {
+    // Check if SLA monitoring is enabled
+    const settings = await getSLASettings()
+    if (!settings.enabled || !settings.cron_enabled) {
+      return { checked: 0, notified: 0, tickets: [] }
+    }
+
     // Get tickets needing SLA notifications
     const { data: tickets, error } = await supabaseAdmin.rpc(
       'get_tickets_needing_sla_notifications'
@@ -47,6 +54,7 @@ export async function checkAndNotifySLA(): Promise<SLACheckResult> {
 
     let notificationsSent = 0
     const results: SLACheckResult['tickets'] = []
+    const cooldownMs = await getNotificationCooldownMs()
 
     // Process each ticket
     for (const ticket of tickets) {
@@ -55,13 +63,13 @@ export async function checkAndNotifySLA(): Promise<SLACheckResult> {
       const notificationType =
         ticket.notification_level === 'breach' ? 'sla_breach' : 'sla_warning'
 
-      // Check if we've already sent this notification recently (last 4 hours)
+      // Check if we've already sent this notification recently (using configurable cooldown)
       const { data: recentNotification } = await supabaseAdmin
         .from('notification_log')
         .select('id')
         .eq('ticket_id', ticket.ticket_id)
         .eq('notification_type', notificationType)
-        .gte('created_at', new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString())
+        .gte('created_at', new Date(Date.now() - cooldownMs).toISOString())
         .limit(1)
 
       if (recentNotification && recentNotification.length > 0) {
@@ -119,6 +127,12 @@ export async function checkAndNotifySLA(): Promise<SLACheckResult> {
  */
 export async function checkTicketSLA(ticketId: string): Promise<boolean> {
   try {
+    // Check if SLA monitoring is enabled
+    const settings = await getSLASettings()
+    if (!settings.enabled) {
+      return false
+    }
+
     // Get the specific ticket with SLA info
     const { data: ticket, error } = await supabaseAdmin
       .from('tickets')
@@ -199,13 +213,14 @@ export async function checkTicketSLA(ticketId: string): Promise<boolean> {
       return false
     }
 
-    // Check if already notified recently (last 4 hours)
+    // Check if already notified recently (using configurable cooldown)
+    const cooldownMs = await getNotificationCooldownMs()
     const { data: recentNotification } = await supabaseAdmin
       .from('notification_log')
       .select('id')
       .eq('ticket_id', ticketId)
       .eq('notification_type', notificationType)
-      .gte('created_at', new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString())
+      .gte('created_at', new Date(Date.now() - cooldownMs).toISOString())
       .limit(1)
 
     if (recentNotification && recentNotification.length > 0) {

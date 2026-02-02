@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 
+type RouteParams = {
+  params: Promise<{ id: string }>
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     const supabase = await createServerSupabaseClient()
 
     const {
@@ -20,7 +25,7 @@ export async function GET(
     const { data: notification, error } = await supabase
       .from('notifications')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (error) {
@@ -40,9 +45,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     const supabase = await createServerSupabaseClient()
 
     const {
@@ -69,7 +75,7 @@ export async function PATCH(
     const { data: notification } = await supabase
       .from('notifications')
       .select('created_by')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (!notification) {
@@ -101,7 +107,7 @@ export async function PATCH(
     const { data: updated, error: updateError } = await supabase
       .from('notifications')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
 
@@ -118,9 +124,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params
     const supabase = await createServerSupabaseClient()
 
     const {
@@ -147,7 +154,7 @@ export async function DELETE(
     const { data: notification } = await supabase
       .from('notifications')
       .select('created_by')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (!notification) {
@@ -168,7 +175,7 @@ export async function DELETE(
     const { error: deleteError } = await supabase
       .from('notifications')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (deleteError) {
       return NextResponse.json({ error: deleteError.message }, { status: 500 })

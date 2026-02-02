@@ -8,7 +8,7 @@ type StaffAssignmentInsert = Database['public']['Tables']['staff_assignments']['
 interface StaffWithProfile {
   id: string
   email: string
-  organization_id: string
+  organization_id: string | null
   role: string
   profiles: {
     name: string | null
@@ -157,7 +157,11 @@ export function useAvailableStaff(organizationId: string) {
         .order('profiles(name)', { ascending: true })
 
       if (error) throw error
-      return data as StaffWithProfile[]
+      const normalized = (data ?? []).map((row: any) => ({
+        ...row,
+        profiles: Array.isArray(row.profiles) ? row.profiles[0] ?? null : row.profiles ?? null,
+      }))
+      return normalized as StaffWithProfile[]
     },
     enabled: !!organizationId,
   })

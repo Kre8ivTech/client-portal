@@ -73,7 +73,7 @@ export function MessageThread({ conversation, messages, userId, onSendMessage }:
   }
 
   const otherParticipant = conversationWithProfiles?.type === 'direct'
-    ? conversationWithProfiles.profiles?.find((p) => p.id !== userId)
+    ? conversationWithProfiles.profiles?.find((p: { id: string }) => p.id !== userId)
     : null
 
   const title = conversationWithProfiles?.type === 'direct'

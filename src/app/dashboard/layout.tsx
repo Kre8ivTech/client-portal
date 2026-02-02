@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { DashboardSidebar } from "@/components/layout/sidebar";
 import { DashboardTopbar } from "@/components/layout/dashboard-topbar";
 import { LiveChatWidget } from "@/components/messaging/live-chat-widget";
+import { SLAMonitorWrapper } from "@/components/tickets/sla-monitor-wrapper";
 import { getPortalBranding } from "@/lib/actions/portal-branding";
 
 export const dynamic = "force-dynamic";
@@ -104,6 +105,7 @@ export default async function DashboardLayout({
       </div>
 
       <LiveChatWidget />
+      <SLAMonitorWrapper />
     </div>
   );
 }

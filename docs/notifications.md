@@ -89,20 +89,38 @@ This creates:
 - `is_priority_client` flag on `organizations`
 - Enhanced SLA calculation functions
 
-### 3. Cron Job Setup
+### 3. SLA Monitoring Setup
 
-The SLA check runs automatically every 15 minutes via Vercel Cron:
+The system uses a hybrid approach for SLA monitoring:
+
+#### Daily Cron Job (Vercel)
+
+A daily cron job runs at 8 AM to check all tickets:
 
 ```json
 {
   "crons": [
     {
       "path": "/api/notifications/sla-check",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
 ```
+
+**Note:** Vercel Hobby accounts only support daily cron jobs. For more frequent checks, upgrade to Vercel Pro.
+
+#### Real-time Client-side Monitoring
+
+The system also includes client-side monitoring that:
+- Checks SLA status every 5 minutes when ticket pages are active
+- Automatically triggers server-side notifications for at-risk tickets
+- Works without cron jobs for immediate responsiveness
+
+This hybrid approach ensures:
+- Immediate notifications when users are actively viewing tickets
+- Daily comprehensive checks via cron for tickets not being actively viewed
+- No missed SLA breaches even on Hobby plan
 
 For security, set `CRON_SECRET` in your environment variables.
 
@@ -202,11 +220,21 @@ Ticket Event
 
 ### SLA Tracking
 
-The SLA check cron job:
+The SLA monitoring system uses two approaches:
+
+**Daily Cron Job:**
 1. Queries `get_tickets_needing_sla_notifications()` function
 2. Identifies tickets approaching or past deadlines
 3. Sends warning/breach notifications
-4. Prevents duplicate notifications within 1 hour
+4. Prevents duplicate notifications within 4 hours
+
+**Real-time Client-side Monitoring:**
+1. Runs in the browser when users visit ticket pages
+2. Checks every 5 minutes for at-risk tickets
+3. Triggers server-side notifications automatically
+4. Provides immediate alerts without waiting for cron
+
+This ensures critical SLA breaches are caught in real-time while maintaining comprehensive daily coverage.
 
 ## Features
 

@@ -178,7 +178,7 @@ main() {
   
   # If branch name provided as argument
   if [ $# -eq 1 ]; then
-    if [ "$1" == "--delete-merged" ]; then
+    if [ "$1" = "--delete-merged" ]; then
       delete_merged_branches
       exit 0
     else
@@ -193,12 +193,12 @@ main() {
     read -p "Select a branch to rebase (or 0 to exit): " choice
     
     # Validate input is numeric
-    if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
+    if ! [[ $choice =~ ^[0-9]+$ ]]; then
       print_color "$RED" "Invalid choice: please enter a number"
       continue
     fi
     
-    if [ "$choice" == "0" ]; then
+    if [ "$choice" = "0" ]; then
       print_color "$GREEN" "Goodbye!"
       exit 0
     elif [ "$choice" -ge 1 ] && [ "$choice" -le "${#PRIORITY_BRANCHES[@]}" ]; then

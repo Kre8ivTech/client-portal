@@ -1,22 +1,39 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Search, MessageSquare, Clock } from 'lucide-react'
+import { Search, MessageSquare, PenSquare } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+
+interface ConversationParticipant {
+  user_id: string
+  last_read_at: string | null
+  is_muted: boolean
+  user: {
+    id: string
+    email: string
+    role: string
+    profiles: {
+      name: string | null
+      avatar_url: string | null
+      presence_status: string | null
+    } | null
+  } | null
+}
 
 interface ConversationListProps {
   conversations: any[]
   activeId?: string
   onSelect: (id: string) => void
   userId: string
+  onNewConversation?: () => void
 }
 
-export function ConversationList({ conversations, activeId, onSelect, userId }: ConversationListProps) {
+export function ConversationList({ conversations, activeId, onSelect, userId, onNewConversation }: ConversationListProps) {
   const [search, setSearch] = useState('')
 
   const filteredConversations = conversations.filter(conv => {
@@ -29,14 +46,27 @@ export function ConversationList({ conversations, activeId, onSelect, userId }: 
       <div className="p-4 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-slate-900">Messages</h2>
-          <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100">
-            {conversations.length}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+              {conversations.length}
+            </Badge>
+            {onNewConversation && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                onClick={onNewConversation}
+                title="New conversation"
+              >
+                <PenSquare className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input 
-            placeholder="Search conversations..." 
+          <Input
+            placeholder="Search conversations..."
             className="pl-9 bg-white border-slate-200"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -106,18 +136,63 @@ export function ConversationList({ conversations, activeId, onSelect, userId }: 
   )
 }
 
+function getOtherParticipant(conv: any, userId: string) {
+  // Try new structure first (conversation_participants)
+  if (conv.conversation_participants) {
+    const other = conv.conversation_participants.find(
+      (p: ConversationParticipant) => p.user_id !== userId
+    )
+    if (other?.user) {
+      return {
+        id: other.user.id,
+        name: other.user.profiles?.name || other.user.email?.split('@')[0],
+        avatar_url: other.user.profiles?.avatar_url,
+        presence_status: other.user.profiles?.presence_status,
+      }
+    }
+  }
+
+  // Try transformed structure (participants)
+  if (conv.participants) {
+    const other = conv.participants.find((p: any) => p.id !== userId && p.userId !== userId)
+    if (other) {
+      return {
+        id: other.id || other.userId,
+        name: other.profiles?.name || other.name || other.email?.split('@')[0],
+        avatar_url: other.profiles?.avatar_url || other.avatar_url,
+        presence_status: other.profiles?.presence_status || other.presence_status,
+      }
+    }
+  }
+
+  // Fallback to old structure (profiles from participant_ids)
+  if (conv.profiles) {
+    const other = conv.profiles.find((p: any) => p.id !== userId)
+    if (other) {
+      return {
+        id: other.id,
+        name: other.name,
+        avatar_url: other.avatar_url,
+        presence_status: null,
+      }
+    }
+  }
+
+  return null
+}
+
 function getConversationTitle(conv: any, userId: string) {
   if (conv.type === 'direct') {
-    const otherParticipant = conv.profiles?.find((p: any) => p.id !== userId)
-    return otherParticipant?.name || 'User'
+    const other = getOtherParticipant(conv, userId)
+    return other?.name || 'User'
   }
   return conv.title || 'Group Conversation'
 }
 
 function getConversationAvatar(conv: any, userId: string) {
   if (conv.type === 'direct') {
-    const otherParticipant = conv.profiles?.find((p: any) => p.id !== userId)
-    return otherParticipant?.avatar_url
+    const other = getOtherParticipant(conv, userId)
+    return other?.avatar_url
   }
   return undefined
 }
@@ -128,7 +203,10 @@ function getConversationInitials(conv: any, userId: string) {
 }
 
 function isOnline(conv: any, userId: string) {
-  // Placeholder logic for presence
+  if (conv.type === 'direct') {
+    const other = getOtherParticipant(conv, userId)
+    return other?.presence_status === 'online'
+  }
   return false
 }
 

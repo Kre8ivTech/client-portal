@@ -65,20 +65,64 @@ export function MessageThread({ conversation, messages, userId, onSendMessage }:
     setInput('')
   }
 
-  // Note: profiles join via participant_ids doesn't work in current schema
-  // participant_ids is a UUID array, not a FK relationship
-  // TODO: Fix conversation query to properly join participant profiles
-  const conversationWithProfiles = conversation as Conversation & {
-    profiles?: Array<{ id: string; name: string | null; avatar_url: string | null }>
+  // Get other participant from conversation data (supports multiple data structures)
+  const getOtherParticipant = () => {
+    if (!conversation) return null
+
+    // Try new structure (conversation_participants)
+    const convAny = conversation as any
+    if (convAny.conversation_participants) {
+      const other = convAny.conversation_participants.find(
+        (p: any) => p.user_id !== userId
+      )
+      if (other?.user) {
+        return {
+          id: other.user.id,
+          name: other.user.profiles?.name || other.user.email?.split('@')[0],
+          avatar_url: other.user.profiles?.avatar_url,
+          presence_status: other.user.profiles?.presence_status,
+        }
+      }
+    }
+
+    // Try transformed structure (participants)
+    if (convAny.participants) {
+      const other = convAny.participants.find(
+        (p: any) => p.id !== userId && p.userId !== userId
+      )
+      if (other) {
+        return {
+          id: other.id || other.userId,
+          name: other.profiles?.name || other.name || other.email?.split('@')[0],
+          avatar_url: other.profiles?.avatar_url || other.avatar_url,
+          presence_status: other.profiles?.presence_status,
+        }
+      }
+    }
+
+    // Fallback to old structure (profiles)
+    if (convAny.profiles) {
+      const other = convAny.profiles.find((p: any) => p.id !== userId)
+      if (other) {
+        return {
+          id: other.id,
+          name: other.name,
+          avatar_url: other.avatar_url,
+          presence_status: null,
+        }
+      }
+    }
+
+    return null
   }
 
-  const otherParticipant = conversationWithProfiles?.type === 'direct'
-    ? conversationWithProfiles.profiles?.find((p) => p.id !== userId)
-    : null
+  const otherParticipant = conversation?.type === 'direct' ? getOtherParticipant() : null
 
-  const title = conversationWithProfiles?.type === 'direct'
+  const title = conversation?.type === 'direct'
     ? otherParticipant?.name || 'User'
-    : conversationWithProfiles?.title || 'Group Conversation'
+    : conversation?.title || 'Group Conversation'
+
+  const isOnline = otherParticipant?.presence_status === 'online'
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -94,8 +138,13 @@ export function MessageThread({ conversation, messages, userId, onSendMessage }:
           <div>
             <CardTitle className="text-base font-bold text-slate-900">{title}</CardTitle>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 bg-green-500 rounded-full" />
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Online</span>
+              <span className={cn(
+                "w-2 h-2 rounded-full",
+                isOnline ? "bg-green-500" : "bg-slate-300"
+              )} />
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                {isOnline ? 'Online' : 'Offline'}
+              </span>
             </div>
           </div>
         </div>

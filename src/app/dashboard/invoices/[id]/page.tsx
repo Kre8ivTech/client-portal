@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { PayInvoiceButton } from '@/components/invoices/PayInvoiceButton'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -6,8 +7,39 @@ import { Button } from '@/components/ui/button'
 import { Download, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { generatePageMetadata } from '@/lib/seo'
 
-export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+interface PageProps {
+  params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createServerSupabaseClient()
+
+  const { data: invoice } = await (supabase as any)
+    .from('invoices')
+    .select('invoice_number, status, total, currency')
+    .eq('id', id)
+    .single()
+
+  if (!invoice) {
+    return generatePageMetadata({ title: 'Invoice Not Found' })
+  }
+
+  const formattedTotal = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: invoice.currency || 'USD',
+  }).format((invoice.total || 0) / 100)
+
+  return generatePageMetadata({
+    title: `Invoice ${invoice.invoice_number}`,
+    description: `Invoice ${invoice.invoice_number} - ${formattedTotal} - Status: ${invoice.status}`,
+    noIndex: true,
+  })
+}
+
+export default async function InvoiceDetailPage({ params }: PageProps) {
   const { id } = await params
   const supabase = await createServerSupabaseClient()
 

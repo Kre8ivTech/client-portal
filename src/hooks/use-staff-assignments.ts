@@ -157,7 +157,7 @@ export function useAvailableStaff(organizationId: string) {
         .order('profiles(name)', { ascending: true })
 
       if (error) throw error
-      return data as StaffWithProfile[]
+      return data as unknown as StaffWithProfile[]
     },
     enabled: !!organizationId,
   })

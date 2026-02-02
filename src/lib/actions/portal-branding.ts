@@ -108,8 +108,10 @@ export async function updatePortalBranding(formData: FormData): Promise<{
     login_bg_image_url,
     login_bg_overlay_opacity,
   };
-  // @ts-expect-error - portal_branding table exists; Supabase client type may not list it until types are regenerated
-  const { error } = await supabase.from("portal_branding").update(payload).eq("id", PORTAL_BRANDING_ID);
+  const { error } = await (supabase as any)
+    .from("portal_branding")
+    .update(payload)
+    .eq("id", PORTAL_BRANDING_ID);
 
   if (error) {
     return { success: false, error: error.message };

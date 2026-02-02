@@ -27,7 +27,7 @@ export default async function ContractsFinancialPage() {
   // Fetch contracts
   const { data: contracts } = await supabase
     .from("contracts")
-    .select("id, title, status, total_value, start_date, end_date, created_at")
+    .select("id, title, status, signed_at, expires_at, created_at")
     .order("created_at", { ascending: false })
     .limit(20);
 
@@ -35,16 +35,15 @@ export default async function ContractsFinancialPage() {
     .from("contracts")
     .select("id", { count: "exact", head: true });
 
-  const { count: activeContracts } = await supabase
+  const { count: signedContracts } = await supabase
     .from("contracts")
     .select("id", { count: "exact", head: true })
-    .eq("status", "active");
+    .eq("status", "signed");
 
-  // Calculate total contract value
-  const totalValue = contracts?.reduce((sum, c) => sum + (c.total_value || 0), 0) || 0;
-  const activeValue = contracts
-    ?.filter((c) => c.status === "active")
-    .reduce((sum, c) => sum + (c.total_value || 0), 0) || 0;
+  const { count: pendingContracts } = await supabase
+    .from("contracts")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending_signature");
 
   return (
     <div className="space-y-6">
@@ -58,47 +57,47 @@ export default async function ContractsFinancialPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Contract Value</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Contracts</CardTitle>
+            <FileSignature className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${(totalValue / 100).toLocaleString()}</div>
+            <div className="text-2xl font-bold">{totalContracts ?? 0}</div>
             <p className="text-xs text-muted-foreground">All contracts</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Value</CardTitle>
-            <FileSignature className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Signed</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${(activeValue / 100).toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Active contracts</p>
+            <div className="text-2xl font-bold">{signedContracts ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Fully executed</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Contracts</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Signature</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalContracts ?? 0}</div>
-            <p className="text-xs text-muted-foreground">{activeContracts ?? 0} active</p>
+            <div className="text-2xl font-bold">{pendingContracts ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Awaiting signatures</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Contract Value</CardTitle>
+            <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${totalContracts ? ((totalValue / totalContracts) / 100).toLocaleString() : "0.00"}
+              {totalContracts ? Math.round(((signedContracts ?? 0) / totalContracts) * 100) : 0}%
             </div>
-            <p className="text-xs text-muted-foreground">Per contract</p>
+            <p className="text-xs text-muted-foreground">Signed rate</p>
           </CardContent>
         </Card>
       </div>
@@ -118,10 +117,10 @@ export default async function ContractsFinancialPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
-                  <TableHead>Value</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
+                  <TableHead>Signed Date</TableHead>
+                  <TableHead>Expires</TableHead>
+                  <TableHead>Created</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -136,14 +135,11 @@ export default async function ContractsFinancialPage() {
                       </Link>
                     </TableCell>
                     <TableCell>
-                      ${((contract.total_value || 0) / 100).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
                       <Badge
                         variant={
-                          contract.status === "active"
+                          contract.status === "signed"
                             ? "default"
-                            : contract.status === "completed"
+                            : contract.status === "pending_signature"
                               ? "secondary"
                               : "outline"
                         }
@@ -152,14 +148,17 @@ export default async function ContractsFinancialPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {contract.start_date
-                        ? new Date(contract.start_date).toLocaleDateString()
+                      {contract.signed_at
+                        ? new Date(contract.signed_at).toLocaleDateString()
                         : "—"}
                     </TableCell>
                     <TableCell>
-                      {contract.end_date
-                        ? new Date(contract.end_date).toLocaleDateString()
+                      {contract.expires_at
+                        ? new Date(contract.expires_at).toLocaleDateString()
                         : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(contract.created_at).toLocaleDateString()}
                     </TableCell>
                   </TableRow>
                 ))}

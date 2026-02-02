@@ -3,6 +3,8 @@ import { OrgNotificationSettings } from '@/components/settings/org-notification-
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
+type UserRole = 'super_admin' | 'staff' | 'partner' | 'partner_staff' | 'client'
+
 export default async function NotificationsSettingsPage() {
   const supabase = await createServerSupabaseClient()
   
@@ -19,7 +21,8 @@ export default async function NotificationsSettingsPage() {
       .eq('id', user.id)
       .single()
 
-    isStaff = userData?.role === 'staff' || userData?.role === 'super_admin'
+    const role = userData?.role as UserRole | null
+    isStaff = role === 'staff' || role === 'super_admin'
   }
 
   return (

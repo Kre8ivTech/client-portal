@@ -55,7 +55,7 @@ export async function PATCH(
     }
 
     // Check if user has permission to update
-    const { data: profile } = await supabase
+    const { data: profile } = await (supabase as any)
       .from('users')
       .select('role, is_account_manager')
       .eq('id', user.id)
@@ -66,7 +66,7 @@ export async function PATCH(
     }
 
     // Get the notification to check ownership
-    const { data: notification } = await supabase
+    const { data: notification } = await (supabase as any)
       .from('notifications')
       .select('created_by')
       .eq('id', params.id)
@@ -98,7 +98,7 @@ export async function PATCH(
     if (body.is_active !== undefined) updateData.is_active = body.is_active
 
     // Update notification
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await (supabase as any)
       .from('notifications')
       .update(updateData)
       .eq('id', params.id)
@@ -133,7 +133,7 @@ export async function DELETE(
     }
 
     // Check if user has permission to delete
-    const { data: profile } = await supabase
+    const { data: profile } = await (supabase as any)
       .from('users')
       .select('role, is_account_manager')
       .eq('id', user.id)
@@ -144,7 +144,7 @@ export async function DELETE(
     }
 
     // Get the notification to check ownership
-    const { data: notification } = await supabase
+    const { data: notification } = await (supabase as any)
       .from('notifications')
       .select('created_by')
       .eq('id', params.id)
@@ -165,7 +165,7 @@ export async function DELETE(
     }
 
     // Delete notification
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await (supabase as any)
       .from('notifications')
       .delete()
       .eq('id', params.id)

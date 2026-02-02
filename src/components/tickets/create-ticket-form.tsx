@@ -4,7 +4,6 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { createClient } from '@/lib/supabase/client'
 import { createTicketSchema, TICKET_CATEGORIES } from '@/lib/validators/ticket'
 import type { CreateTicketInput } from '@/lib/validators/ticket'
 import { Button } from '@/components/ui/button'
@@ -32,16 +31,10 @@ import Link from 'next/link'
 
 type FormValues = CreateTicketInput
 
-interface CreateTicketFormProps {
-  organizationId: string
-  userId: string
-}
-
-export function CreateTicketForm({ organizationId, userId }: CreateTicketFormProps) {
+export function CreateTicketForm() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isSuccess, setIsSuccess] = useState(false)
-  const supabase = createClient() as any
 
   const form = useForm<FormValues>({
     resolver: zodResolver(createTicketSchema),
@@ -60,29 +53,40 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
     setIsSuccess(false)
 
     try {
-      const { data, error: submitError } = await supabase
-        .from('tickets')
-        .insert({
-          organization_id: organizationId,
-          created_by: userId,
-          subject: values.subject,
-          description: values.description,
-          priority: values.priority,
-          category: values.category,
-          status: 'new',
-          tags: [],
-        })
-        .select()
-        .single()
+      const res = await fetch('/api/tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      })
 
-      if (submitError) throw submitError
+      const payload: unknown = await res.json().catch(() => null)
+      if (!res.ok) {
+        const message =
+          payload && typeof payload === 'object' && 'error' in payload && typeof (payload as any).error === 'string'
+            ? (payload as any).error
+            : 'Failed to create ticket. Please try again.'
+        throw new Error(message)
+      }
+
+      const ticketId =
+        payload &&
+        typeof payload === 'object' &&
+        'data' in payload &&
+        (payload as any).data &&
+        typeof (payload as any).data === 'object' &&
+        'id' in (payload as any).data &&
+        typeof (payload as any).data.id === 'string'
+          ? (payload as any).data.id
+          : null
+
+      if (!ticketId) throw new Error('Ticket was created, but no ticket id was returned.')
 
       setIsSuccess(true)
       form.reset()
       
       // Navigate to the new ticket after a brief delay
       setTimeout(() => {
-        router.push(`/dashboard/tickets/${data.id}`)
+        router.push(`/dashboard/tickets/${ticketId}`)
       }, 1500)
       
     } catch (err: unknown) {

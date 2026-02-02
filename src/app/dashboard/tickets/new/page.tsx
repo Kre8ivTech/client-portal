@@ -3,7 +3,7 @@ import { CreateTicketForm } from '@/components/tickets/create-ticket-form'
 import { redirect } from 'next/navigation'
 
 export default async function NewTicketPage() {
-  const supabase = (await createServerSupabaseClient()) as any
+  const supabase = await createServerSupabaseClient()
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -28,9 +28,6 @@ export default async function NewTicketPage() {
   }
 
   return (
-    <CreateTicketForm 
-      organizationId={organizationId} 
-      userId={user.id} 
-    />
+    <CreateTicketForm />
   )
 }

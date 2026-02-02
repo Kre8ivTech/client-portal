@@ -31,6 +31,7 @@ import {
   UserCog,
   Plug,
   Layers,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
       { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },
       { href: "/dashboard/kb", icon: BookOpen, label: "Knowledge Base" },
+      { href: "/dashboard/user-guide", icon: HelpCircle, label: "User Guide" },
     ],
   },
   {
@@ -113,6 +115,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     "/dashboard/messages",
     "/dashboard/kb",
   ];
+  const userGuide = "/dashboard/user-guide";
   const accountBase = [
     "/dashboard/invoices",
     "/dashboard/settings",
@@ -139,6 +142,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
       return [
         "/dashboard",
         ...supportClient,
+        userGuide,
         "/dashboard/capacity",
         ...accountBase,
         whiteLabel,
@@ -155,6 +159,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
       return [
         "/dashboard",
         ...supportClient,
+        userGuide,
         "/dashboard/capacity",
         ...(isAccountManager ? accountBase : accountBaseNoInvoices),
         ...adminStaff,

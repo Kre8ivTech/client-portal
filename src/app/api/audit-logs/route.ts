@@ -17,13 +17,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is super_admin
-    const { data: profile } = await supabase
-      .from("profiles")
+    const { data: userRecord } = await supabase
+      .from("users")
       .select("role")
       .eq("id", user.id)
       .single();
 
-    if (!profile || profile.role !== "super_admin") {
+    const role = (userRecord as { role?: string } | null)?.role;
+    if (role !== "super_admin") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

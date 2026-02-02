@@ -26,17 +26,32 @@ export default async function NewServiceRequestPage() {
   }
 
   const p = profile as { organization_id: string | null }
+  if (!p.organization_id) {
+    return <div>No organization associated with your account</div>
+  }
+
+  // Fetch parent org (if any) so clients can request parent-provided services
+  const { data: orgRow } = await (supabase as any)
+    .from('organizations')
+    .select('parent_org_id')
+    .eq('id', p.organization_id)
+    .single()
+
+  const parentOrgId = (orgRow as { parent_org_id: string | null } | null)?.parent_org_id ?? null
+  const serviceOrgIds = [p.organization_id, parentOrgId].filter(Boolean) as string[]
 
   // Fetch active services for this organization
   const servicesQuery = (supabase as any)
     .from('services')
     .select('*')
     .eq('is_active', true)
-  
-  if (p.organization_id) {
-    servicesQuery.eq('organization_id', p.organization_id)
+
+  if (serviceOrgIds.length === 1) {
+    servicesQuery.eq('organization_id', serviceOrgIds[0])
+  } else {
+    servicesQuery.in('organization_id', serviceOrgIds)
   }
-  
+
   const { data: services } = await servicesQuery
     .order('display_order', { ascending: true })
     .order('name', { ascending: true })

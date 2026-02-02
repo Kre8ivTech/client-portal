@@ -89,6 +89,22 @@ export async function POST(request: NextRequest) {
     }
 
     const p = profile as { organization_id: string | null }
+    if (!p.organization_id) {
+      return NextResponse.json(
+        { error: 'No organization associated with your account' },
+        { status: 400 }
+      )
+    }
+
+    // Allow requesting services offered by the user's org OR their parent org
+    const { data: orgRow } = await (supabase as any)
+      .from('organizations')
+      .select('parent_org_id')
+      .eq('id', p.organization_id)
+      .single()
+
+    const parentOrgId = (orgRow as { parent_org_id: string | null } | null)?.parent_org_id ?? null
+    const allowedServiceOrgIds = new Set([p.organization_id, parentOrgId].filter(Boolean) as string[])
 
     // Validate input
     const body = await request.json()
@@ -120,7 +136,7 @@ export async function POST(request: NextRequest) {
     }
 
     const serviceData = service as { id: string; is_active: boolean; organization_id: string | null }
-    if (serviceData.organization_id !== p.organization_id) {
+    if (!serviceData.organization_id || !allowedServiceOrgIds.has(serviceData.organization_id)) {
       return NextResponse.json({ error: 'Service not available for your organization' }, { status: 403 })
     }
 

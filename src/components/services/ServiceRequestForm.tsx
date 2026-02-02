@@ -83,9 +83,11 @@ export function ServiceRequestForm({ services }: ServiceRequestFormProps) {
     }
   }
 
-  const formatRate = (rate: number | null, rateType: string | null) => {
-    if (!rate) return 'Contact for quote'
-    const formatted = `$${(rate / 100).toFixed(2)}`
+  const formatRate = (rate: number | string | null, rateType: string | null) => {
+    if (rate === null || rate === undefined) return 'Contact for quote'
+    const numericRate = typeof rate === 'number' ? rate : Number.parseFloat(rate)
+    if (!Number.isFinite(numericRate)) return 'Contact for quote'
+    const formatted = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(numericRate)
     if (!rateType) return formatted
     const labels: Record<string, string> = {
       hourly: 'per hour',

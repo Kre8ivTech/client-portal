@@ -172,15 +172,16 @@ export function ServiceForm({ initialData }: ServiceFormProps) {
           </div>
 
           <div>
-            <Label htmlFor="base_rate">Base Rate (in cents) *</Label>
+            <Label htmlFor="base_rate">Base Rate (USD) *</Label>
             <Input
               id="base_rate"
               type="number"
+              step="0.01"
               {...register('base_rate', { valueAsNumber: true })}
-              placeholder="e.g., 15000 for $150.00"
+              placeholder="e.g., 150.00"
             />
             <p className="text-xs text-slate-500 mt-1">
-              Enter amount in cents (e.g., 15000 = $150.00)
+              Enter the amount in dollars (e.g., 150.00)
             </p>
             {errors.base_rate && (
               <p className="text-sm text-red-600 mt-1">{errors.base_rate.message}</p>

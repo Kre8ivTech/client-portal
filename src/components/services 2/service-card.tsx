@@ -70,9 +70,11 @@ export function ServiceCard({ service }: ServiceCardProps) {
     },
   })
 
-  const formatRate = (rate: number | null) => {
-    if (!rate) return 'Contact for quote'
-    return `$${(rate / 100).toFixed(2)}`
+  const formatRate = (rate: number | string | null) => {
+    if (rate === null || rate === undefined) return 'Contact for quote'
+    const numericRate = typeof rate === 'number' ? rate : Number.parseFloat(rate)
+    if (!Number.isFinite(numericRate)) return 'Contact for quote'
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(numericRate)
   }
 
   const getRateTypeLabel = (type: string | null) => {

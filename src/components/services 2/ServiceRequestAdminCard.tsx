@@ -104,9 +104,11 @@ export function ServiceRequestAdminCard({ request }: ServiceRequestAdminCardProp
     return colors[priority] || 'text-muted-foreground'
   }
 
-  const formatRate = (rate: number | null) => {
-    if (!rate) return 'Contact for quote'
-    return `$${(rate / 100).toFixed(2)}`
+  const formatRate = (rate: number | string | null) => {
+    if (rate === null || rate === undefined) return 'Contact for quote'
+    const numericRate = typeof rate === 'number' ? rate : Number.parseFloat(rate)
+    if (!Number.isFinite(numericRate)) return 'Contact for quote'
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(numericRate)
   }
 
   const formatDate = (date: string | null) => {
@@ -185,7 +187,7 @@ export function ServiceRequestAdminCard({ request }: ServiceRequestAdminCardProp
 
         <CardFooter className="border-t pt-4 flex items-center justify-between">
           <div className="flex items-center gap-4 text-sm">
-            {request.service?.base_rate && (
+            {request.service?.base_rate !== null && request.service?.base_rate !== undefined && (
               <div className="flex items-center gap-1.5">
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">{formatRate(request.service.base_rate)}</span>

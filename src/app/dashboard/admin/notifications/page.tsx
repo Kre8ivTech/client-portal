@@ -19,7 +19,7 @@ export default async function NotificationsManagementPage() {
   }
 
   // Get user profile with role
-  const { data: profile } = await supabase
+  const { data: profile } = await (supabase as any)
     .from('users')
     .select('role, is_account_manager, organization_id')
     .eq('id', user.id)

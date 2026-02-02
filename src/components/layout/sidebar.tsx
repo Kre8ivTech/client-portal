@@ -82,6 +82,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/settings/white-label", icon: Palette, label: "White Label" },
       { href: "/dashboard/settings/security", icon: Shield, label: "Security" },
       { href: "/dashboard/settings/notifications", icon: Bell, label: "Notifications" },
+      { href: "/dashboard/settings/file-storage", icon: HardDrive, label: "File Storage" },
       { href: "/dashboard/integrations", icon: Plug, label: "Integrations" },
     ],
   },
@@ -121,6 +122,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     "/dashboard/vault",
     "/dashboard/billing",
     "/dashboard/settings/security",
+    "/dashboard/settings/file-storage",
     "/dashboard/profile",
     "/dashboard/settings/notifications",
   ];
@@ -185,6 +187,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/projects",
         "/dashboard/invoices",
         "/dashboard/settings",
+        "/dashboard/settings/file-storage",
         "/dashboard/profile",
         "/dashboard/settings#security",
         "/dashboard/settings#notifications",

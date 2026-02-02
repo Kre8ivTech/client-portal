@@ -69,7 +69,7 @@ export default async function NewServiceRequestPage() {
         </Link>
         <h1 className="text-3xl font-bold tracking-tight">New Service Request</h1>
         <p className="text-muted-foreground mt-1">
-          Request a service from our catalog. Your request will be reviewed and we'll follow up.
+          Request a service from our catalog. Your request will be reviewed and we&apos;ll follow up.
         </p>
       </div>
 

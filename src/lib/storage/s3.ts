@@ -17,6 +17,49 @@ const s3Client = new S3Client({
 
 const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || "";
 
+function requireS3Configured() {
+  if (!BUCKET_NAME) {
+    throw new Error("AWS_S3_BUCKET_NAME environment variable is not set");
+  }
+
+  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+    throw new Error("AWS credentials are not configured");
+  }
+}
+
+export function sanitizeS3KeyPart(input: string): string {
+  // Keep it readable but safe for S3 keys.
+  // Replace path separators and control chars; trim whitespace.
+  return input
+    .replace(/[\/\\]/g, "_")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .trim()
+    .slice(0, 200);
+}
+
+export async function uploadObject(params: {
+  key: string;
+  body: Buffer;
+  contentType?: string;
+  metadata?: Record<string, string>;
+  bucketName?: string;
+}): Promise<{ bucket: string; key: string }> {
+  requireS3Configured();
+
+  const bucket = params.bucketName || BUCKET_NAME;
+
+  const command = new PutObjectCommand({
+    Bucket: bucket,
+    Key: params.key,
+    Body: params.body,
+    ContentType: params.contentType,
+    Metadata: params.metadata,
+  });
+
+  await s3Client.send(command);
+  return { bucket, key: params.key };
+}
+
 /**
  * Upload a signed contract to S3
  * @param contractId - Unique contract identifier
@@ -31,13 +74,7 @@ export async function uploadContract(
   fileBuffer: Buffer,
   filename: string
 ): Promise<string> {
-  if (!BUCKET_NAME) {
-    throw new Error("AWS_S3_BUCKET_NAME environment variable is not set");
-  }
-
-  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-    throw new Error("AWS credentials are not configured");
-  }
+  requireS3Configured();
 
   const objectKey = `contracts/${organizationId}/${contractId}/${filename}`;
 
@@ -74,13 +111,7 @@ export async function generatePresignedUrl(
   objectKey: string,
   expiresIn: number = 3600
 ): Promise<string> {
-  if (!BUCKET_NAME) {
-    throw new Error("AWS_S3_BUCKET_NAME environment variable is not set");
-  }
-
-  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-    throw new Error("AWS credentials are not configured");
-  }
+  requireS3Configured();
 
   try {
     const command = new GetObjectCommand({
@@ -103,13 +134,7 @@ export async function generatePresignedUrl(
  * @param objectKey - S3 object key to delete
  */
 export async function deleteContract(objectKey: string): Promise<void> {
-  if (!BUCKET_NAME) {
-    throw new Error("AWS_S3_BUCKET_NAME environment variable is not set");
-  }
-
-  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-    throw new Error("AWS credentials are not configured");
-  }
+  requireS3Configured();
 
   try {
     const command = new DeleteObjectCommand({
@@ -132,13 +157,7 @@ export async function deleteContract(objectKey: string): Promise<void> {
  * @returns Contract file buffer
  */
 export async function getContract(objectKey: string): Promise<Buffer> {
-  if (!BUCKET_NAME) {
-    throw new Error("AWS_S3_BUCKET_NAME environment variable is not set");
-  }
-
-  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-    throw new Error("AWS credentials are not configured");
-  }
+  requireS3Configured();
 
   try {
     const command = new GetObjectCommand({

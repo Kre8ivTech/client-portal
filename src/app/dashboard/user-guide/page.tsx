@@ -246,7 +246,7 @@ export default async function UserGuidePage() {
                   <Clock className="h-4 w-4 mt-0.5 text-primary" />
                   <div>
                     <strong>Time Tracking</strong>
-                    <p className="text-muted-foreground">Today's logged hours</p>
+                    <p className="text-muted-foreground">Today&apos;s logged hours</p>
                   </div>
                 </li>
               </ul>
@@ -317,7 +317,7 @@ export default async function UserGuidePage() {
                     <strong>Assign:</strong> Claim or assign to appropriate team member
                   </li>
                   <li>
-                    <strong>Update Status:</strong> Change from "New" to "In Progress"
+                    <strong>Update Status:</strong> Change from &quot;New&quot; to &quot;In Progress&quot;
                   </li>
                   <li>
                     <strong>Communicate:</strong> Add comments and updates for the client
@@ -326,7 +326,7 @@ export default async function UserGuidePage() {
                     <strong>Track Time:</strong> Log time spent working on the ticket
                   </li>
                   <li>
-                    <strong>Resolve:</strong> Mark as "Resolved" when complete
+                    <strong>Resolve:</strong> Mark as &quot;Resolved&quot; when complete
                   </li>
                   <li>
                     <strong>Close:</strong> Automatically closed after client confirmation
@@ -467,7 +467,7 @@ export default async function UserGuidePage() {
                 <h3 className="font-semibold mb-2">Creating Contracts</h3>
                 <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
                   <li>Navigate to Admin → Manage Contracts</li>
-                  <li>Click "New Contract" or use a template</li>
+                  <li>Click &quot;New Contract&quot; or use a template</li>
                   <li>Fill in client details and contract terms</li>
                   <li>Add deliverables and milestones</li>
                   <li>Review and preview the contract</li>
@@ -707,7 +707,7 @@ export default async function UserGuidePage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary">•</span>
-                    <span>View client's active tickets and requests</span>
+                    <span>View client&apos;s active tickets and requests</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary">•</span>
@@ -724,7 +724,7 @@ export default async function UserGuidePage() {
                 <h3 className="font-semibold mb-2">Adding New Clients</h3>
                 <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
                   <li>Navigate to Clients section</li>
-                  <li>Click "Add New Client"</li>
+                  <li>Click &quot;Add New Client&quot;</li>
                   <li>Enter organization details</li>
                   <li>Set up primary contact</li>
                   <li>Assign a plan (if applicable)</li>
@@ -900,7 +900,7 @@ export default async function UserGuidePage() {
                   <h3 className="font-semibold mb-2">Creating Invoices</h3>
                   <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
                     <li>Navigate to Admin → Manage Invoices</li>
-                    <li>Click "New Invoice"</li>
+                    <li>Click &quot;New Invoice&quot;</li>
                     <li>Select client/organization</li>
                     <li>Add line items with descriptions and amounts</li>
                     <li>Apply taxes and discounts if needed</li>
@@ -1211,7 +1211,7 @@ export default async function UserGuidePage() {
                 <h3 className="font-semibold mb-2">How to Log Time</h3>
                 <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
                   <li>Navigate to Time Tracking</li>
-                  <li>Click "Log Time" or use the quick entry widget</li>
+                  <li>Click &quot;Log Time&quot; or use the quick entry widget</li>
                   <li>Select the ticket, project, or task</li>
                   <li>Enter hours worked</li>
                   <li>Add a brief description of work done</li>
@@ -1229,7 +1229,7 @@ export default async function UserGuidePage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary">✓</span>
-                    <span>Be accurate - don't round up significantly</span>
+                    <span>Be accurate - don&apos;t round up significantly</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary">✓</span>
@@ -1477,7 +1477,7 @@ export default async function UserGuidePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <h3 className="font-semibold mb-2">What's Logged?</h3>
+                    <h3 className="font-semibold mb-2">What&apos;s Logged?</h3>
                     <p className="text-sm text-muted-foreground mb-3">
                       The audit log tracks all sensitive actions:
                     </p>

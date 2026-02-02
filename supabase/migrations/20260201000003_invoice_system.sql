@@ -205,6 +205,14 @@ ALTER TABLE public.invoice_payments ENABLE ROW LEVEL SECURITY;
 -- PART 7: RLS Policies for invoices table
 -- ============================================================================
 
+-- Drop existing policies to make idempotent
+DROP POLICY IF EXISTS "Admins and account managers can view all invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Users can view their org invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Partners can view client invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Account managers can create invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Account managers can update invoices" ON public.invoices;
+DROP POLICY IF EXISTS "Super admins can delete invoices" ON public.invoices;
+
 -- Super admins and account managers can view all invoices
 CREATE POLICY "Admins and account managers can view all invoices"
   ON public.invoices FOR SELECT
@@ -250,6 +258,12 @@ CREATE POLICY "Super admins can delete invoices"
 -- PART 8: RLS Policies for invoice_line_items table
 -- ============================================================================
 
+-- Drop existing policies
+DROP POLICY IF EXISTS "Users can view line items for accessible invoices" ON public.invoice_line_items;
+DROP POLICY IF EXISTS "Account managers can create line items" ON public.invoice_line_items;
+DROP POLICY IF EXISTS "Account managers can update line items" ON public.invoice_line_items;
+DROP POLICY IF EXISTS "Account managers can delete line items" ON public.invoice_line_items;
+
 -- Line items inherit access from their parent invoice
 CREATE POLICY "Users can view line items for accessible invoices"
   ON public.invoice_line_items FOR SELECT
@@ -289,6 +303,12 @@ CREATE POLICY "Account managers can delete line items"
 -- ============================================================================
 -- PART 9: RLS Policies for invoice_payments table
 -- ============================================================================
+
+-- Drop existing policies
+DROP POLICY IF EXISTS "Users can view payments for accessible invoices" ON public.invoice_payments;
+DROP POLICY IF EXISTS "Account managers can record payments" ON public.invoice_payments;
+DROP POLICY IF EXISTS "Account managers can update payments" ON public.invoice_payments;
+DROP POLICY IF EXISTS "Super admins can delete payments" ON public.invoice_payments;
 
 -- Users can view payments for invoices they can access
 CREATE POLICY "Users can view payments for accessible invoices"

@@ -64,7 +64,7 @@ export async function GET(
       React.createElement(InvoicePDF, {
         invoice: invoice,
         organization: invoice.organization
-      })
+      }) as any
     )
 
     // Return as stream

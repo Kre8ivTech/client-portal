@@ -103,6 +103,18 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/audit", icon: History, label: "Audit Log" },
     ],
   },
+  {
+    label: "Financial Management",
+    items: [
+      { href: "/dashboard/financials/invoicing", icon: FileText, label: "Invoicing & Revenue" },
+      { href: "/dashboard/financials/receivables", icon: DollarSign, label: "Accounts Receivable" },
+      { href: "/dashboard/financials/time-tracking", icon: Clock, label: "Time & Utilization" },
+      { href: "/dashboard/financials/subscriptions", icon: Layers, label: "Subscriptions" },
+      { href: "/dashboard/financials/cash-flow", icon: LineChart, label: "Cash & Runway" },
+      { href: "/dashboard/financials/budgeting", icon: BarChart3, label: "Budgets & Forecasts" },
+      { href: "/dashboard/financials/reports", icon: FileText, label: "Financial Reports" },
+    ],
+  },
 ];
 
 // Role visibility: client = Support + Account; partner = + White Label + Clients + Reports; staff = + Capacity + User Mgmt + Financials + Reports + Time + Forms; super_admin = full + Tenants + Audit.
@@ -131,6 +143,13 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     "/dashboard/users",
     "/dashboard/plans",
     "/dashboard/financials",
+    "/dashboard/financials/invoicing",
+    "/dashboard/financials/receivables",
+    "/dashboard/financials/time-tracking",
+    "/dashboard/financials/subscriptions",
+    "/dashboard/financials/cash-flow",
+    "/dashboard/financials/budgeting",
+    "/dashboard/financials/reports",
     "/dashboard/reports",
     "/dashboard/time",
     "/dashboard/forms",

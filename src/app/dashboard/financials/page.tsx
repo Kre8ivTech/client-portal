@@ -1,172 +1,170 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/require-role";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Link from "next/link";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { DollarSign, FileText, CreditCard } from "lucide-react";
+  DollarSign,
+  FileText,
+  Clock,
+  Receipt,
+  Repeat,
+  Users,
+  CreditCard,
+  TrendingUp,
+  FileSignature,
+  PieChart,
+  BarChart3,
+  Package,
+  Scale,
+  Landmark,
+  Target,
+  LineChart,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-type PaymentTermRow = {
-  id: string;
-  name: string;
-  days: number;
-  description: string | null;
-  is_default: boolean;
-  is_active: boolean;
-  organization_id: string | null;
+type FinancialModule = {
+  title: string;
+  description: string;
+  href: string;
+  icon: LucideIcon;
 };
+
+const financialModules: FinancialModule[] = [
+  {
+    title: "Invoicing & Revenue",
+    description: "Manage invoices, track revenue streams, and monitor payment status",
+    href: "/dashboard/financials/invoicing",
+    icon: FileText,
+  },
+  {
+    title: "Accounts Receivable",
+    description: "Track outstanding receivables, aging reports, and collections",
+    href: "/dashboard/financials/receivables",
+    icon: DollarSign,
+  },
+  {
+    title: "Time Tracking & Utilization",
+    description: "Monitor billable hours, staff utilization, and productivity metrics",
+    href: "/dashboard/financials/time-tracking",
+    icon: Clock,
+  },
+  {
+    title: "Expenses & Reimbursements",
+    description: "Track business expenses, manage reimbursements, and expense reports",
+    href: "/dashboard/financials/expenses",
+    icon: Receipt,
+  },
+  {
+    title: "Subscriptions & Recurring",
+    description: "Manage recurring revenue, subscriptions, and retainer agreements",
+    href: "/dashboard/financials/subscriptions",
+    icon: Repeat,
+  },
+  {
+    title: "Payroll & Labor Costs",
+    description: "Track payroll expenses, benefits, and total labor costs",
+    href: "/dashboard/financials/payroll",
+    icon: Users,
+  },
+  {
+    title: "Accounts Payable",
+    description: "Manage vendor bills, payment obligations, and payment schedules",
+    href: "/dashboard/financials/payables",
+    icon: CreditCard,
+  },
+  {
+    title: "Cash Position & Runway",
+    description: "Monitor cash flow, burn rate, and financial runway projections",
+    href: "/dashboard/financials/cash-flow",
+    icon: TrendingUp,
+  },
+  {
+    title: "Contracts & Agreements",
+    description: "Track client contracts, terms, and financial commitments",
+    href: "/dashboard/financials/contracts",
+    icon: FileSignature,
+  },
+  {
+    title: "Cost Structure & Categories",
+    description: "Analyze cost breakdown, expense categorization, and spend patterns",
+    href: "/dashboard/financials/cost-structure",
+    icon: PieChart,
+  },
+  {
+    title: "Unit Economics & Margins",
+    description: "Calculate customer lifetime value, unit economics, and profit margins",
+    href: "/dashboard/financials/unit-economics",
+    icon: BarChart3,
+  },
+  {
+    title: "Asset Tracking",
+    description: "Manage fixed assets, equipment, and depreciation schedules",
+    href: "/dashboard/financials/assets",
+    icon: Package,
+  },
+  {
+    title: "Taxes & Compliance",
+    description: "Track tax obligations, compliance requirements, and filing deadlines",
+    href: "/dashboard/financials/taxes",
+    icon: Scale,
+  },
+  {
+    title: "Debt & Obligations",
+    description: "Monitor long-term debt, leases, and financial obligations",
+    href: "/dashboard/financials/debt",
+    icon: Landmark,
+  },
+  {
+    title: "Budgeting & Forecasting",
+    description: "Create budgets, forecast revenue, and track variance analysis",
+    href: "/dashboard/financials/budgeting",
+    icon: Target,
+  },
+  {
+    title: "Financial Reports & Metrics",
+    description: "Access P&L statements, balance sheets, and key performance metrics",
+    href: "/dashboard/financials/reports",
+    icon: LineChart,
+  },
+];
 
 export default async function FinancialsPage() {
   await requireRole(["super_admin", "staff"]);
 
-  const supabase = await createServerSupabaseClient();
-  const { data: paymentTerms } = await (supabase as any)
-    .from("payment_terms")
-    .select("id, name, days, description, is_default, is_active, organization_id")
-    .order("name");
-
-  const { data: plans } = await supabase
-    .from("plans")
-    .select("id, name, monthly_fee, currency, payment_terms_days, is_active")
-    .eq("is_template", false)
-    .order("name");
-
-  const { count: activeAssignments } = await supabase
-    .from("plan_assignments")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "active");
-
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Financials</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Financial Management</h1>
         <p className="text-muted-foreground">
-          Revenue overview, payment terms, and financial reports (admin/staff).
+          Comprehensive financial oversight, reporting, and analysis tools for your organization.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Payment Terms</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{(paymentTerms ?? []).length}</div>
-            <p className="text-xs text-muted-foreground">Configured terms</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Plans</CardTitle>
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{(plans ?? []).length}</div>
-            <p className="text-xs text-muted-foreground">Plan definitions</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Subscriptions</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeAssignments ?? 0}</div>
-            <p className="text-xs text-muted-foreground">Plan assignments</p>
-          </CardContent>
-        </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {financialModules.map((module) => (
+          <Link key={module.href} href={module.href}>
+            <Card className="h-full transition-all hover:shadow-md hover:border-primary/50 cursor-pointer">
+              <CardHeader>
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                    <module.icon className="h-6 w-6 text-primary" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <CardTitle className="text-lg">{module.title}</CardTitle>
+                    <CardDescription className="text-sm leading-relaxed">
+                      {module.description}
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          </Link>
+        ))}
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Terms</CardTitle>
-          <CardDescription>
-            Admin-configurable payment terms. System defaults have no organization.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!paymentTerms?.length ? (
-            <div className="rounded-lg border-2 border-dashed border-muted bg-muted/30 p-6 text-center text-muted-foreground text-sm">
-              No payment terms configured. Add in Settings or via SQL.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Days</TableHead>
-                  <TableHead>Default</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(paymentTerms as PaymentTermRow[]).map((pt) => (
-                  <TableRow key={pt.id}>
-                    <TableCell className="font-medium">{pt.name}</TableCell>
-                    <TableCell>{pt.days}</TableCell>
-                    <TableCell>{pt.is_default ? <Badge variant="secondary">Default</Badge> : "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={pt.is_active ? "default" : "outline"}>{pt.is_active ? "Active" : "Inactive"}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Plans Overview</CardTitle>
-          <CardDescription>Plan definitions (non-templates). Stripe sync coming later.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!plans?.length ? (
-            <div className="rounded-lg border-2 border-dashed border-muted bg-muted/30 p-6 text-center text-muted-foreground text-sm">
-              No plans defined.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Monthly fee</TableHead>
-                  <TableHead>Payment terms (days)</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {plans.map((p: { id: string; name: string; monthly_fee: number; currency: string; payment_terms_days: number; is_active: boolean }) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell>
-                      {p.currency} {(p.monthly_fee / 100).toFixed(2)}
-                    </TableCell>
-                    <TableCell>{p.payment_terms_days}</TableCell>
-                    <TableCell>
-                      <Badge variant={p.is_active ? "default" : "outline"}>{p.is_active ? "Active" : "Inactive"}</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

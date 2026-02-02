@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import * as React from 'react'
 
-// Note: PDF generation requires @react-pdf/renderer package
-// Run: npm install @react-pdf/renderer
+// Note: PDF generation requires @react-pdf/renderer packageRun: npm install @react-pdf/renderer
 // This is a placeholder that will be implemented when the package is installed
 
 export const runtime = 'nodejs' // Required for PDF generation
@@ -56,12 +56,24 @@ export async function GET(
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 
-    // TODO: Generate PDF using @react-pdf/renderer
-    // For now, return a placeholder response
-    return NextResponse.json({
-      error: 'PDF generation not yet implemented',
-      message: 'Install @react-pdf/renderer and implement PDF template',
-    }, { status: 501 })
+    // Generate PDF
+    const { renderToStream } = await import('@react-pdf/renderer')
+    const { InvoicePDF } = await import('@/components/invoices/pdf-template')
+    
+    const stream = await renderToStream(
+      React.createElement(InvoicePDF, {
+        invoice: invoice,
+        organization: invoice.organization
+      })
+    )
+
+    // Return as stream
+    return new NextResponse(stream as unknown as ReadableStream, {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="invoice-${invoice.invoice_number}.pdf"`,
+      },
+    })
   } catch (err) {
     console.error('PDF generation error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

@@ -30,6 +30,17 @@ export default async function NewInvoicePage() {
     return <div>Forbidden - Account manager access required</div>
   }
 
+  // Fetch clients for the organization
+  const { data: clients } = await supabase
+    .from('users')
+    .select('id, full_name, email')
+    .eq('organization_id', p.organization_id)
+    .eq('role', 'client')
+    .order('full_name')
+
+  // We need the InvoiceForm component here
+  const { InvoiceForm } = await import('@/components/admin/invoices/invoice-form')
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
@@ -47,16 +58,10 @@ export default async function NewInvoicePage() {
         </p>
       </div>
 
-      {/* Placeholder - Invoice form would go here */}
-      <div className="border-2 border-dashed rounded-lg p-12 text-center">
-        <p className="text-muted-foreground">
-          Invoice creation form is under construction
-        </p>
-        <p className="text-sm text-muted-foreground mt-2">
-          This feature requires a complex form with line item management.
-          Coming soon!
-        </p>
-      </div>
+      <InvoiceForm 
+        organizationId={p.organization_id || ''} 
+        clients={clients || []} 
+      />
     </div>
   )
 }

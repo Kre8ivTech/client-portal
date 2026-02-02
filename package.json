@@ -33,6 +33,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@react-pdf/renderer": "^4.3.2",
     "@ruvector/agentic-synth": "^0.1.6",
     "@ruvector/gnn": "^0.1.22",
     "@ruvector/graph-node": "^0.1.26",

@@ -401,10 +401,22 @@ export async function cancelContract(
       }
     })
 
-    // TODO: Integrate with DocuSign API to void the envelope if it exists
-    // if (contract.docusign_envelope_id) {
-    //   await voidDocuSignEnvelope(contract.docusign_envelope_id, reason)
-    // }
+    // Integrate with DocuSign API to void the envelope if it exists
+    if (contract.docusign_envelope_id) {
+      try {
+        const { voidEnvelope } = await import('@/lib/docusign/envelopes')
+        await voidEnvelope(contract.docusign_envelope_id, reason)
+        
+        await supabase
+          .from('contracts')
+          .update({
+            docusign_status: 'voided'
+          })
+          .eq('id', contractId)
+      } catch (dsError) {
+        console.error('DocuSign void error:', dsError)
+      }
+    }
 
     revalidatePath('/dashboard/contracts')
     revalidatePath(`/dashboard/contracts/${contractId}`)

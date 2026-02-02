@@ -21,7 +21,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, RefreshCw, RotateCcw, Loader2, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Search, RefreshCw, RotateCcw, Loader2, MoreVertical, Pencil, Trash2, Shield } from "lucide-react";
+import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import {
   DropdownMenu,
@@ -264,6 +265,12 @@ export function UserTable() {
                           <DropdownMenuItem onClick={() => setEditingUser(user)}>
                             <Pencil className="mr-2 h-4 w-4" />
                             Edit User
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/dashboard/admin/user-permissions/${user.id}`}>
+                              <Shield className="mr-2 h-4 w-4" />
+                              Manage Permissions
+                            </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleResetPassword(user.id, user.email)}

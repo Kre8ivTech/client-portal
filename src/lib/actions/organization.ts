@@ -172,6 +172,7 @@ export async function updateOrganization(
 
     revalidatePath(`/dashboard/clients/${orgId}`);
     revalidatePath("/dashboard/clients");
+    revalidatePath("/dashboard/settings/white-label");
 
     return { success: true };
   } catch (err) {

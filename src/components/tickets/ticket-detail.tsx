@@ -11,6 +11,7 @@ import { format } from 'date-fns'
 import { Calendar, User, Tag, Clock, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { Database } from '@/types/database'
+import { TICKET_CATEGORIES } from '@/lib/validators/ticket'
 
 type Ticket = Database['public']['Tables']['tickets']['Row'] & {
   creator?: {
@@ -127,10 +128,10 @@ export function TicketDetail({ ticket: initialTicket, userId, userRole }: Ticket
               value={ticket.sla_due_at ? format(new Date(ticket.sla_due_at), 'MMM d, yyyy') : 'No deadline'} 
             />
             
-            <DetailItem 
-              icon={<Tag className="h-4 w-4 text-slate-400" />} 
-              label="Category" 
-              value={ticket.category || 'Uncategorized'} 
+            <DetailItem
+              icon={<Tag className="h-4 w-4 text-slate-400" />}
+              label="Category"
+              value={getCategoryLabel(ticket.category)}
             />
 
             {canAssign ? (
@@ -223,4 +224,10 @@ function PriorityBadge({ priority }: { priority: Ticket['priority'] }) {
       {priority}
     </Badge>
   )
+}
+
+function getCategoryLabel(category: string | null): string {
+  if (!category) return 'Uncategorized'
+  const found = TICKET_CATEGORIES.find((c) => c.value === category)
+  return found ? found.label : category.replace(/_/g, ' ')
 }

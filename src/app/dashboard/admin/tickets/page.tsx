@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { StaffTicketList } from '@/components/tickets/staff-ticket-list'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
+import { redirect } from 'next/navigation'
 
 export const metadata = {
   title: 'Ticket Management | Admin',
@@ -17,7 +18,7 @@ export default async function AdminTicketsPage() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return <div>Unauthorized</div>
+    redirect('/login')
   }
 
   const { data: profile } = await supabase
@@ -27,12 +28,12 @@ export default async function AdminTicketsPage() {
     .single()
 
   if (!profile) {
-    return <div>Profile not found</div>
+    redirect('/dashboard')
   }
 
   const p = profile as { organization_id: string | null; role: string }
   if (!['super_admin', 'staff', 'partner'].includes(p.role)) {
-    return <div>Forbidden - Admin access required</div>
+    redirect('/dashboard')
   }
 
   // Fetch all tickets with related user data

@@ -11,6 +11,11 @@ export default async function NotificationsSettingsPage() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
+  // NOTE: This page is intentionally accessible to all authenticated users.
+  // Unlike security or white-label settings which are role-restricted,
+  // notification preferences are user-specific settings that all users should be able to manage.
+  // When backend functionality is implemented, it should save preferences per-user.
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { contractUpdateSchema } from '@/lib/validators/contract'
 import { writeAuditLog } from '@/lib/audit'
+import { escapeHtml, sanitizeHtml } from '@/lib/security'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -139,8 +140,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         const mergedMetadata = { ...existingContract.metadata, ...input.metadata }
         Object.entries(mergedMetadata).forEach(([key, value]) => {
           const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g')
-          content_html = content_html!.replace(regex, String(value))
+          // Escape HTML entities to prevent XSS attacks
+          const escapedValue = escapeHtml(String(value))
+          content_html = content_html!.replace(regex, escapedValue)
         })
+        // Sanitize the entire HTML content after substitution
+        content_html = sanitizeHtml(content_html)
       }
     }
 

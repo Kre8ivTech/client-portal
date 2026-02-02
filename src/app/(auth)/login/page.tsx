@@ -119,15 +119,24 @@ export default function LoginPage() {
     }
   };
 
-  // Determine background styles
+  // Determine background styles - Note: URLs are validated server-side in portal branding
+  // but we still validate here for defense in depth
   const hasCustomBackground = loginBgColor || loginBgImageUrl;
   const backgroundStyle: React.CSSProperties = {};
   
   if (loginBgImageUrl) {
-    backgroundStyle.backgroundImage = `url(${loginBgImageUrl})`;
-    backgroundStyle.backgroundSize = 'cover';
-    backgroundStyle.backgroundPosition = 'center';
-    backgroundStyle.backgroundRepeat = 'no-repeat';
+    // URL is already validated by server, but we use it safely here
+    // by setting it via React style object which escapes values
+    try {
+      new URL(loginBgImageUrl); // Validate URL format
+      backgroundStyle.backgroundImage = `url(${loginBgImageUrl})`;
+      backgroundStyle.backgroundSize = 'cover';
+      backgroundStyle.backgroundPosition = 'center';
+      backgroundStyle.backgroundRepeat = 'no-repeat';
+    } catch {
+      // Invalid URL, skip background image
+      console.warn('Invalid background image URL');
+    }
   } else if (loginBgColor) {
     backgroundStyle.backgroundColor = loginBgColor;
   }

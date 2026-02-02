@@ -66,6 +66,15 @@ export default async function DashboardLayout({
       ])
     : [{ data: null }, { data: null }];
 
+  const normalizedPlanAssignments =
+    (planAssignments ?? []).map((pa: any) => ({
+      id: pa.id,
+      plans: Array.isArray(pa.plans) ? pa.plans[0] ?? null : pa.plans ?? null,
+      organizations: Array.isArray(pa.organizations)
+        ? pa.organizations[0] ?? null
+        : pa.organizations ?? null,
+    })) ?? [];
+
   // Backfill if auth user has no public.users/public.profiles row (e.g. trigger failed or pre-migration user)
   if ((userError?.code === "PGRST116" || !userRow) && user?.email) {
     await (supabase as any)
@@ -122,7 +131,7 @@ export default async function DashboardLayout({
           user={{ email: user.email }} 
           profile={profile}
           tickets={recentTickets ?? []}
-          planAssignments={planAssignments ?? []}
+          planAssignments={normalizedPlanAssignments}
         />
         <main className="p-6 flex-1 overflow-auto">{children}</main>
       </div>

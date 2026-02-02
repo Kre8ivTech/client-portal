@@ -157,7 +157,10 @@ export function useAvailableStaff(organizationId: string) {
         .order('profiles(name)', { ascending: true })
 
       if (error) throw error
-      return data as StaffWithProfile[]
+      return (data ?? []).map((row: any) => ({
+        ...row,
+        profiles: Array.isArray(row.profiles) ? row.profiles[0] ?? null : row.profiles ?? null,
+      })) as StaffWithProfile[]
     },
     enabled: !!organizationId,
   })

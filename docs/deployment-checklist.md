@@ -50,7 +50,7 @@ npm i -g vercel
 # Link project to Vercel
 vercel link
 
-# Set environment variables
+# Set environment variables (Runtime)
 vercel env add NEXT_PUBLIC_SUPABASE_URL production
 vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production
 vercel env add SUPABASE_SERVICE_ROLE_KEY production
@@ -59,12 +59,48 @@ vercel env add STRIPE_WEBHOOK_SECRET production
 vercel env add NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY production
 vercel env add RESEND_API_KEY production
 vercel env add NEXT_PUBLIC_APP_URL production
+
+# Set build-time environment variables (for migrations)
+vercel env add SUPABASE_ACCESS_TOKEN production
+vercel env add SUPABASE_PROJECT_REF production
+vercel env add SUPABASE_DB_PASSWORD production
 ```
+
+### How to Get Supabase Credentials
+
+**SUPABASE_ACCESS_TOKEN:**
+1. Go to https://supabase.com/dashboard/account/tokens
+2. Generate a new access token
+3. Copy and save it securely
+
+**SUPABASE_PROJECT_REF:**
+1. Go to your Supabase project dashboard
+2. Click Settings → General
+3. Copy the "Reference ID"
+
+**SUPABASE_DB_PASSWORD:**
+1. Go to your Supabase project dashboard
+2. Click Settings → Database
+3. Use the password you set when creating the project
+4. If forgotten, you can reset it in the database settings
 
 ### 2. Configure Supabase Production
 
+**Option A: Automatic Migrations (Recommended)**
+
+Migrations run automatically during Vercel build process. Just ensure you have:
+- `SUPABASE_ACCESS_TOKEN` in Vercel environment variables
+- `SUPABASE_PROJECT_REF` in Vercel environment variables
+- `SUPABASE_DB_PASSWORD` in Vercel environment variables
+
+The `npm run build` command will automatically run migrations before building.
+
+**Option B: Manual Migrations**
+
+If you prefer to run migrations manually:
+
 ```bash
-# Connect to production project
+# Connect to production project locally
 supabase link --project-ref <your-project-ref>
 
 # Push migrations
@@ -73,6 +109,8 @@ supabase db push
 # Verify RLS policies
 supabase db remote list
 ```
+
+**Note:** For preview deployments, migrations are skipped to avoid conflicts.
 
 ### 3. Configure Webhooks
 

@@ -1,10 +1,23 @@
 {
-  "buildCommand": "rm -rf .next && npm run build",
-  "installCommand": "npm install",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install && npm install -g supabase",
+  "framework": "nextjs",
+  "regions": ["iad1"],
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "@supabase-url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase-anon-key"
+  },
+  "build": {
+    "env": {
+      "SUPABASE_ACCESS_TOKEN": "@supabase-access-token",
+      "SUPABASE_PROJECT_REF": "@supabase-project-ref",
+      "SUPABASE_DB_PASSWORD": "@supabase-db-password"
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/audit-retention",
-      "schedule": "0 2 * * *"
+      "schedule": "0 0 * * *"
     }
   ]
 }

@@ -238,19 +238,21 @@ export function DashboardSidebar({
           <img
             src={logoUrl}
             alt={appName}
-            className="h-9 w-auto max-w-[120px] object-contain shrink-0"
+            className="h-9 w-auto max-w-full object-contain"
           />
         ) : (
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent text-white font-bold text-sm">
-            {initials}
-          </div>
+          <>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent text-white font-bold text-sm">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold truncate">{appName}</h2>
+              <p className="text-xs text-sidebar-muted uppercase tracking-wider truncate">
+                {tagline}
+              </p>
+            </div>
+          </>
         )}
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold truncate">{appName}</h2>
-          <p className="text-xs text-sidebar-muted uppercase tracking-wider truncate">
-            {tagline}
-          </p>
-        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">

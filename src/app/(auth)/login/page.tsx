@@ -32,6 +32,9 @@ type LoginBranding = {
   logo_url: string | null;
   primary_color: string;
   favicon_url: string | null;
+  login_bg_color: string | null;
+  login_bg_image_url: string | null;
+  login_bg_overlay_opacity: number;
 };
 
 export default function LoginPage() {
@@ -74,6 +77,9 @@ export default function LoginPage() {
   const appName = branding?.app_name ?? "KT-Portal";
   const tagline = branding?.tagline ?? "Client Portal";
   const logoUrl = branding?.logo_url;
+  const loginBgColor = branding?.login_bg_color;
+  const loginBgImageUrl = branding?.login_bg_image_url;
+  const loginBgOverlayOpacity = branding?.login_bg_overlay_opacity ?? 0.5;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,11 +119,42 @@ export default function LoginPage() {
     }
   };
 
+  // Determine background styles
+  const hasCustomBackground = loginBgColor || loginBgImageUrl;
+  const backgroundStyle: React.CSSProperties = {};
+  
+  if (loginBgImageUrl) {
+    backgroundStyle.backgroundImage = `url(${loginBgImageUrl})`;
+    backgroundStyle.backgroundSize = 'cover';
+    backgroundStyle.backgroundPosition = 'center';
+    backgroundStyle.backgroundRepeat = 'no-repeat';
+  } else if (loginBgColor) {
+    backgroundStyle.backgroundColor = loginBgColor;
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black overflow-hidden relative">
-      {/* Decorative Blur Elements */}
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full animate-pulse" />
-      <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-blue-500/10 blur-[100px] rounded-full" />
+    <div 
+      className={cn(
+        "flex min-h-screen items-center justify-center p-4 overflow-hidden relative",
+        !hasCustomBackground && "bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black"
+      )}
+      style={hasCustomBackground ? backgroundStyle : undefined}
+    >
+      {/* Dark overlay for background image */}
+      {loginBgImageUrl && (
+        <div 
+          className="absolute inset-0 bg-black" 
+          style={{ opacity: loginBgOverlayOpacity }}
+        />
+      )}
+      
+      {/* Decorative Blur Elements - only show for default background */}
+      {!hasCustomBackground && (
+        <>
+          <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full animate-pulse" />
+          <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-blue-500/10 blur-[100px] rounded-full" />
+        </>
+      )}
 
       <Card className="w-full max-w-md shadow-2xl border-slate-800 bg-slate-900/50 backdrop-blur-xl relative z-10 transition-all duration-500 hover:shadow-primary/5">
         <CardHeader className="space-y-2 pb-8">

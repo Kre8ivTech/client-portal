@@ -11,6 +11,9 @@ export type PortalBrandingInput = {
   logo_url: string | null;
   primary_color: string;
   favicon_url: string | null;
+  login_bg_color: string | null;
+  login_bg_image_url: string | null;
+  login_bg_overlay_opacity: number;
 };
 
 function hexToHsl(hex: string): string {
@@ -74,6 +77,9 @@ export async function updatePortalBranding(formData: FormData): Promise<{
   const logo_url = (formData.get("logo_url") as string)?.trim() || null;
   const favicon_url = (formData.get("favicon_url") as string)?.trim() || null;
   let primary_color = (formData.get("primary_color") as string)?.trim() || "231 48% 58%";
+  const login_bg_color = (formData.get("login_bg_color") as string)?.trim() || null;
+  const login_bg_image_url = (formData.get("login_bg_image_url") as string)?.trim() || null;
+  const login_bg_overlay_opacity = parseFloat((formData.get("login_bg_overlay_opacity") as string) || "0.5");
 
   if (primary_color.startsWith("#")) {
     primary_color = hexToHsl(primary_color);
@@ -85,6 +91,9 @@ export async function updatePortalBranding(formData: FormData): Promise<{
     logo_url: logo_url || null,
     favicon_url: favicon_url || null,
     primary_color,
+    login_bg_color: login_bg_color || null,
+    login_bg_image_url: login_bg_image_url || null,
+    login_bg_overlay_opacity: Math.max(0, Math.min(1, login_bg_overlay_opacity)),
   };
   // @ts-expect-error - portal_branding table exists; Supabase client type may not list it until types are regenerated
   const { error } = await supabase.from("portal_branding").update(payload).eq("id", PORTAL_BRANDING_ID);
@@ -105,13 +114,16 @@ export type PortalBrandingResult = {
   logo_url: string | null;
   primary_color: string;
   favicon_url: string | null;
+  login_bg_color: string | null;
+  login_bg_image_url: string | null;
+  login_bg_overlay_opacity: number;
 };
 
 export async function getPortalBranding(): Promise<PortalBrandingResult> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("portal_branding")
-    .select("app_name, tagline, logo_url, primary_color, favicon_url")
+    .select("app_name, tagline, logo_url, primary_color, favicon_url, login_bg_color, login_bg_image_url, login_bg_overlay_opacity")
     .eq("id", PORTAL_BRANDING_ID)
     .single();
 
@@ -122,6 +134,9 @@ export async function getPortalBranding(): Promise<PortalBrandingResult> {
       logo_url: null,
       primary_color: "231 48% 58%",
       favicon_url: null,
+      login_bg_color: null,
+      login_bg_image_url: null,
+      login_bg_overlay_opacity: 0.5,
     };
   }
 
@@ -131,6 +146,9 @@ export async function getPortalBranding(): Promise<PortalBrandingResult> {
     logo_url: string | null;
     primary_color: string;
     favicon_url: string | null;
+    login_bg_color: string | null;
+    login_bg_image_url: string | null;
+    login_bg_overlay_opacity: number | null;
   };
   return {
     app_name: row.app_name,
@@ -138,5 +156,8 @@ export async function getPortalBranding(): Promise<PortalBrandingResult> {
     logo_url: row.logo_url ?? null,
     primary_color: row.primary_color ?? "231 48% 58%",
     favicon_url: row.favicon_url ?? null,
+    login_bg_color: row.login_bg_color ?? null,
+    login_bg_image_url: row.login_bg_image_url ?? null,
+    login_bg_overlay_opacity: row.login_bg_overlay_opacity ?? 0.5,
   };
 }

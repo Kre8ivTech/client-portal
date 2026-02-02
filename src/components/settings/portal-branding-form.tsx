@@ -15,6 +15,9 @@ type Branding = {
   logo_url: string | null;
   primary_color: string;
   favicon_url: string | null;
+  login_bg_color: string | null;
+  login_bg_image_url: string | null;
+  login_bg_overlay_opacity: number;
 };
 
 function hslToCss(hsl: string): string {
@@ -137,6 +140,84 @@ export function PortalBrandingForm({ branding }: { branding: Branding }) {
               </div>
             </div>
           </div>
+
+          <div className="border-t pt-6 mt-6">
+            <h3 className="text-base font-semibold mb-4">Login Page Customization</h3>
+            <div className="grid gap-6 sm:grid-cols-2">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login_bg_color">Login Background Color</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      id="login_bg_color"
+                      name="login_bg_color"
+                      defaultValue={branding.login_bg_color ?? ""}
+                      placeholder="#1e293b or leave blank for default gradient"
+                      className="bg-background flex-1"
+                    />
+                    {branding.login_bg_color && (
+                      <div
+                        className="h-10 w-10 shrink-0 rounded-md border border-border"
+                        style={{ backgroundColor: branding.login_bg_color }}
+                        title="Preview"
+                      />
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Solid color for login page background (hex format)
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="login_bg_image_url">Login Background Image URL</Label>
+                  <Input
+                    id="login_bg_image_url"
+                    name="login_bg_image_url"
+                    type="url"
+                    defaultValue={branding.login_bg_image_url ?? ""}
+                    placeholder="https://..."
+                    className="bg-background"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Optional background image (overrides background color)
+                  </p>
+                  {branding.login_bg_image_url && (
+                    <div className="mt-2 h-24 rounded-lg overflow-hidden border border-border">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- dynamic user-provided background image URL */}
+                      <img
+                        src={branding.login_bg_image_url}
+                        alt="Login background preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login_bg_overlay_opacity">Background Overlay Opacity</Label>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      id="login_bg_overlay_opacity"
+                      name="login_bg_overlay_opacity"
+                      type="number"
+                      step="0.05"
+                      min="0"
+                      max="1"
+                      defaultValue={branding.login_bg_overlay_opacity}
+                      className="bg-background flex-1"
+                    />
+                    <span className="text-sm text-muted-foreground shrink-0">
+                      {Math.round(branding.login_bg_overlay_opacity * 100)}%
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Dark overlay opacity over background image (0 = transparent, 1 = opaque)
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {message && (
             <Alert variant={message.type === "error" ? "destructive" : "default"}>
               {message.type === "success" ? (

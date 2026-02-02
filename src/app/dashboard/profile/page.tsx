@@ -79,24 +79,11 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row items-center gap-8 mb-8">
-              <div className="relative">
-                <div className="relative h-28 w-28 rounded-full bg-slate-100 border-4 border-white shadow-xl flex items-center justify-center text-3xl font-bold text-slate-300 overflow-hidden">
-                  {profile?.avatar_url ? (
-                    <Image
-                      src={profile.avatar_url}
-                      alt="Avatar"
-                      fill
-                      className="rounded-full object-cover"
-                      sizes="112px"
-                    />
-                  ) : (
-                    user?.email?.charAt(0).toUpperCase()
-                  )}
-                </div>
-                <button className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full border-2 border-white shadow-lg hover:scale-110 transition-transform">
-                  <Camera size={16} />
-                </button>
-              </div>
+              <AvatarUpload 
+                userId={user.id} 
+                currentAvatarUrl={profile?.avatar_url} 
+                fallbackChar={user?.email?.charAt(0).toUpperCase() || 'U'} 
+              />
               <div className="text-center sm:text-left">
                 <h3 className="text-xl font-bold text-slate-900">
                   {profile?.name || "Complete your profile"}
@@ -243,6 +230,8 @@ function NotificationToggle({
           type="checkbox"
           defaultChecked={defaultChecked}
           className="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary accent-primary"
+          aria-label={`Enable ${title}`}
+          title={`Enable ${title}`}
         />
       </div>
     </div>

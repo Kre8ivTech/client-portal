@@ -52,6 +52,27 @@ Organizations marked as "Priority Clients" receive:
 - Medium: 4h first response / 24h resolution
 - Low: 12h first response / 36h resolution
 
+## Admin Configuration
+
+Administrators can configure SLA monitoring settings through the admin interface at:
+`/dashboard/admin/settings/sla`
+
+**Configurable Settings:**
+- **Cron Schedule**: Choose from presets (daily, hourly, 15min, etc.) or enter custom cron expression
+- **Client Monitoring**: Enable/disable real-time browser-based monitoring
+- **Check Intervals**: Configure how often to check SLA status
+- **Warning Thresholds**: Set when to send warning notifications (% of time remaining)
+- **Critical Thresholds**: Define critical urgency levels (hours remaining)
+- **Cooldown Periods**: Prevent notification spam with configurable cooldowns
+- **Auto Escalation**: Automatically escalate breached tickets
+
+**Benefits:**
+- No code changes required to adjust settings
+- Real-time configuration updates
+- Vercel plan compatibility indicators
+- Manual SLA check trigger
+- Suitable for different operational needs
+
 ## Setup
 
 ### 1. Environment Variables

@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
+import { useRealtimeTicketComments } from '@/hooks/use-realtime-ticket-comments'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -36,6 +37,9 @@ export function TicketComments({ ticketId, userId, userRole }: TicketCommentsPro
 
   const isStaff = userRole === 'super_admin' || userRole === 'staff'
 
+  // Subscribe to real-time comment updates using our hook
+  useRealtimeTicketComments(ticketId)
+
   const { data: comments, isLoading, error: queryError } = useQuery({
     queryKey: ['ticket-comments', ticketId],
     queryFn: async () => {
@@ -54,29 +58,6 @@ export function TicketComments({ ticketId, userId, userRole }: TicketCommentsPro
       return data as Comment[]
     }
   })
-
-  // Real-time subscription
-  useEffect(() => {
-    const channel = supabase
-      .channel(`ticket-comments-${ticketId}`)
-      .on(
-        'postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'ticket_comments',
-          filter: `ticket_id=eq.${ticketId}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['ticket-comments', ticketId] })
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [ticketId, queryClient, supabase])
 
   const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault()

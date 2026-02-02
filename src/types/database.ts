@@ -9,5 +9,4 @@
  * stub type so the app can compile.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Database = any;

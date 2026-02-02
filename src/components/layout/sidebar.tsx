@@ -103,8 +103,11 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   },
 ];
 
-// Role visibility: client = Support + Account; partner = + White Label + Clients + Reports; staff = + Capacity + User Mgmt + Financials + Reports + Time + Forms; super_admin = full + Tenants + Audit.
-// Note: Staff without is_account_manager flag cannot see invoices.
+// Role visibility (sidebar):
+// - client = Support + Account
+// - partner = + White Label + Clients + Plans + Reports
+// - staff = Support + Account (+ Invoices only if is_account_manager)
+// - super_admin = full + Tenants + Audit
 function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: boolean): string[] {
   const supportClient = [
     "/dashboard/tickets",
@@ -152,16 +155,13 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/audit",
       ];
     case "staff":
-      // Staff with account manager flag sees invoices, otherwise they don't
+      // Staff should not see admin navigation (admin pages are super_admin only).
+      // Staff with account manager flag sees invoices, otherwise they don't.
       return [
         "/dashboard",
         ...supportClient,
         "/dashboard/capacity",
         ...(isAccountManager ? accountBase : accountBaseNoInvoices),
-        ...adminStaff,
-        "/dashboard/admin/services",
-        "/dashboard/admin/contracts",
-        "/dashboard/admin/notifications",
       ];
     case "partner":
       return [

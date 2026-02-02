@@ -46,6 +46,25 @@ export default async function DashboardLayout({
   ]);
   let userRow = userData as UserRow | null;
   let profileRow = profileData as ProfileRow | null;
+  
+  const isStaffOrAdmin = userRow?.role === "staff" || userRow?.role === "super_admin";
+  const orgId = userRow?.organization_id;
+  
+  const [{ data: recentTickets }, { data: planAssignments }] = isStaffOrAdmin && orgId
+    ? await Promise.all([
+        supabase
+          .from("tickets")
+          .select("id, ticket_number, subject")
+          .eq("organization_id", orgId)
+          .order("created_at", { ascending: false })
+          .limit(20),
+        supabase
+          .from("plan_assignments")
+          .select("id, plans(name), organizations(name)")
+          .eq("status", "active")
+          .limit(20),
+      ])
+    : [{ data: null }, { data: null }];
 
   // Backfill if auth user has no public.users/public.profiles row (e.g. trigger failed or pre-migration user)
   if ((userError?.code === "PGRST116" || !userRow) && user?.email) {
@@ -99,7 +118,12 @@ export default async function DashboardLayout({
       <DashboardSidebar profile={profile} branding={branding} />
 
       <div className="flex-1 flex flex-col min-h-0 min-w-0">
-        <DashboardTopbar user={{ email: user.email }} profile={profile} />
+        <DashboardTopbar 
+          user={{ email: user.email }} 
+          profile={profile}
+          tickets={recentTickets ?? []}
+          planAssignments={planAssignments ?? []}
+        />
         <main className="p-6 flex-1 overflow-auto">{children}</main>
       </div>
 

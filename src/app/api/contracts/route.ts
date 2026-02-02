@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { contractCreateSchema } from '@/lib/validators/contract'
 import { writeAuditLog } from '@/lib/audit'
+import { escapeHtml, sanitizeHtml } from '@/lib/security'
 
 /**
  * GET /api/contracts
@@ -194,13 +195,17 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Basic template rendering - replace {{variable}} with values
+      // Basic template rendering - replace {{variable}} with escaped values to prevent XSS
       content_html = template.template_content
       if (content_html && content_data) {
         Object.entries(content_data).forEach(([key, value]) => {
           const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g')
-          content_html = content_html!.replace(regex, String(value))
+          // Escape HTML entities to prevent XSS attacks
+          const escapedValue = escapeHtml(String(value))
+          content_html = content_html!.replace(regex, escapedValue)
         })
+        // Sanitize the entire HTML content after substitution
+        content_html = sanitizeHtml(content_html)
       }
     }
 

@@ -90,6 +90,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     items: [
       { href: "/dashboard/clients", icon: Users, label: "Clients" },
       { href: "/dashboard/users", icon: UserCog, label: "User Management" },
+      { href: "/dashboard/admin/staff-management", icon: UserCog, label: "Staff Management" },
       { href: "/dashboard/tenants", icon: Building2, label: "Tenants" },
       { href: "/dashboard/plans", icon: Layers, label: "Plans" },
       { href: "/dashboard/financials", icon: DollarSign, label: "Financials" },
@@ -145,6 +146,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/integrations",
         "/dashboard/clients",
         ...adminStaff,
+        "/dashboard/admin/staff-management",
         "/dashboard/admin/services",
         "/dashboard/admin/contracts",
         "/dashboard/tenants",

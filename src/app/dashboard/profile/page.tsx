@@ -13,6 +13,7 @@ import { User, Bell, Shield, Camera, Mail } from "lucide-react";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { PasswordChangeForm } from "@/components/profile/password-change-form";
 import { EmailChangeForm } from "@/components/profile/email-change-form";
+import { AvatarUpload } from "@/components/profile/avatar-upload";
 import { useState, useEffect } from "react";
 
 export default function ProfilePage() {

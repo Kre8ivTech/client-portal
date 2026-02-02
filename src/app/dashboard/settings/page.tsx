@@ -28,15 +28,16 @@ export default async function SettingsPage() {
   ]);
 
   // Fix organization fetch logic
-  const organizationId = userData?.organization_id;
+  const userRow = userData as { id: string; role: string; organization_id: string | null } | null;
+  const organizationId = userRow?.organization_id;
   let organizationSettings = {};
   
   if (organizationId) {
      const { data: org } = await supabase.from("organizations").select("settings").eq("id", organizationId).single();
-     organizationSettings = org?.settings || {};
+     const orgData = org as { settings: any } | null;
+     organizationSettings = orgData?.settings || {};
   }
 
-  const userRow = userData as { id: string; role: string } | null;
   const profileRow = profileData as { id: string; name: string | null; avatar_url: string | null; organization_name: string | null; organization_slug: string | null } | null;
   const profile =
     userRow && profileRow

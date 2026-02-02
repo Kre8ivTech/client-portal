@@ -53,11 +53,18 @@ export default async function TicketPage({
     assigned_staff: (ticketData as QueryResult).assigned_staff
   }
 
+  const { data: deliverables } = await supabase
+    .from('deliverables')
+    .select('*')
+    .eq('ticket_id', id)
+    .order('created_at', { ascending: false })
+
   return (
     <TicketDetail
       ticket={ticketWithRelations as any}
       userId={user.id}
       userRole={profile?.role}
+      deliverables={deliverables || []}
     />
   );
 }

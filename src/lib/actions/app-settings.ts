@@ -61,8 +61,7 @@ export async function updateStripeSettings(payload: {
     return { success: false, error: "Only super_admin can update settings." };
   }
 
-  // @ts-expect-error - app_settings table exists
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("app_settings")
     .update(payload)
     .eq("id", APP_SETTINGS_ID);

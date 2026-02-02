@@ -26,7 +26,7 @@ export default async function NewInvoicePage() {
     (p.role === 'super_admin' ||
       (p.role === 'staff' && p.is_account_manager))
 
-  if (!isAuthorized) {
+  if (!isAuthorized || !p?.organization_id) {
     return <div>Forbidden - Account manager access required</div>
   }
 

@@ -8,7 +8,7 @@ const APP_SETTINGS_ID = '00000000-0000-0000-0000-000000000001'
  */
 export async function getStripeConfig() {
   const supabase = getSupabaseAdmin()
-  const { data: settings } = await supabase
+  const { data: settings } = await (supabase as any)
     .from('app_settings')
     .select('*')
     .eq('id', APP_SETTINGS_ID)

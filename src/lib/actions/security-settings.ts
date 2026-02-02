@@ -30,7 +30,7 @@ export async function updateSecuritySettings(organizationId: string, data: Secur
       .eq('id', organizationId)
       .single()
 
-    const currentSettings = org?.settings || {}
+    const currentSettings = (org as any)?.settings || {}
     const newSettings = {
       ...currentSettings,
       security: {
@@ -40,7 +40,7 @@ export async function updateSecuritySettings(organizationId: string, data: Secur
       }
     }
 
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('organizations')
       .update({ settings: newSettings })
       .eq('id', organizationId)

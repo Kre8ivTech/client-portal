@@ -8,10 +8,12 @@ import { TicketComments } from './ticket-comments'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { format } from 'date-fns'
-import { Calendar, User, Tag, Clock, ChevronLeft } from 'lucide-react'
+import { Calendar, User, Tag, Clock, ChevronLeft, Package } from 'lucide-react'
 import Link from 'next/link'
 import { Database } from '@/types/database'
 import { TICKET_CATEGORIES } from '@/lib/validators/ticket'
+import { DeliverableList } from './deliverable-list'
+import { DeliverableForm } from './deliverable-form'
 
 type Ticket = Database['public']['Tables']['tickets']['Row'] & {
   creator?: {
@@ -27,14 +29,27 @@ interface TicketDetailProps {
   ticket: Ticket
   userId: string
   userRole?: string
+  deliverables?: any[]
 }
 
-export function TicketDetail({ ticket: initialTicket, userId, userRole }: TicketDetailProps) {
+export function TicketDetail({ ticket: initialTicket, userId, userRole, deliverables = [] }: TicketDetailProps) {
   const [ticket, setTicket] = useState(initialTicket)
+  const [currentDeliverables, setDeliverables] = useState(deliverables)
   const [staff, setStaff] = useState<any[]>([])
   const [isAssigning, setIsAssigning] = useState(false)
   const supabase = createClient() as any
   const canAssign = userRole === 'super_admin' || userRole === 'staff'
+  const isStaff = userRole === 'super_admin' || userRole === 'staff' || userRole === 'partner' || userRole === 'partner_staff'
+
+  const refreshDeliverables = async () => {
+    const { data } = await supabase
+      .from('deliverables')
+      .select('*')
+      .eq('ticket_id', ticket.id)
+      .order('created_at', { ascending: false })
+    
+    if (data) setDeliverables(data)
+  }
 
   useEffect(() => {
     if (canAssign) {
@@ -57,12 +72,13 @@ export function TicketDetail({ ticket: initialTicket, userId, userRole }: Ticket
       .from('tickets')
       .update({ assigned_to: staffId === 'unassigned' ? null : staffId })
       .eq('id', ticket.id)
-
+    
     if (!error) {
       setTicket({ ...ticket, assigned_to: staffId === 'unassigned' ? null : staffId })
     }
     setIsAssigning(false)
   }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Link 
@@ -108,6 +124,20 @@ export function TicketDetail({ ticket: initialTicket, userId, userRole }: Ticket
               </div>
             </CardContent>
           </Card>
+
+          {/* Deliverables Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Package className="h-5 w-5 text-primary" />
+                Deliverables & Reviews
+              </h3>
+              {isStaff && (
+                <DeliverableForm ticketId={ticket.id} onSuccess={refreshDeliverables} />
+              )}
+            </div>
+            <DeliverableList deliverables={currentDeliverables} isStaff={isStaff} />
+          </div>
 
           <TicketComments ticketId={ticket.id} userId={userId} userRole={userRole} />
         </div>

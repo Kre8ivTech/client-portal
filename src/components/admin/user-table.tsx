@@ -56,6 +56,11 @@ export function UserTable() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [resettingUserId, setResettingUserId] = useState<string | null>(null);
+  
+  // Action states
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  
   const { toast } = useToast();
 
   const fetchUsers = async () => {

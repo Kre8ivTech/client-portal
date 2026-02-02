@@ -1,12 +1,38 @@
 /**
- * Supabase database types.
+ * Database types for KT-Portal
  *
- * This file is normally generated via:
- *   supabase gen types typescript --local > src/types/database.ts
+ * NOTE: This file should be regenerated after schema changes using:
+ * supabase gen types typescript --local > src/types/database.ts
  *
- * The generated file was accidentally overwritten in this branch. Until the
- * Supabase CLI is available in CI/local dev for regeneration, we keep a small
- * stub type so the app can compile.
+ * These are placeholder types. The actual application uses 'as any' casts
+ * in many places due to the dynamic nature of the Supabase client.
  */
 
-export type Database = any;
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[]
+
+export interface Database {
+  public: {
+    Tables: {
+      [key: string]: {
+        Row: Record<string, unknown>
+        Insert: Record<string, unknown>
+        Update: Record<string, unknown>
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+  }
+}

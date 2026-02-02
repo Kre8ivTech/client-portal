@@ -3,14 +3,14 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { getPortalBranding } from "@/lib/actions/portal-branding";
+import { getBaseMetadata } from "@/lib/seo";
 import { Toaster } from "@/components/ui/toaster";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: "KT-Portal | Kre8ivTech Client Portal",
-  description: "Multi-tenant SaaS client portal for Kre8ivTech, LLC",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return getBaseMetadata();
+}
 
 export default async function RootLayout({
   children,

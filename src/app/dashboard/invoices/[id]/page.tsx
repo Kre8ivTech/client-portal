@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params
   const supabase = await createServerSupabaseClient()
 
-  const { data: invoice } = await (supabase as any)
+  const { data: invoice } = await supabase
     .from('invoices')
     .select('invoice_number, status, total, currency')
     .eq('id', id)

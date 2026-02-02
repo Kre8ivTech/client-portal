@@ -88,9 +88,9 @@ export async function createContractFromTemplate(
         description: metadata.description || template.description,
         contract_type: template.contract_type,
         status: 'draft',
+        content_html: contractContent,
         metadata: {
           ...metadata,
-          template_content: contractContent,
           variables: metadata
         }
       })

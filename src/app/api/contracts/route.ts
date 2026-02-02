@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Basic template rendering - replace {{variable}} with values
-      content_html = template.content
+      content_html = template.template_content
       if (content_html && content_data) {
         Object.entries(content_data).forEach(([key, value]) => {
           const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g')

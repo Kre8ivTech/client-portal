@@ -130,12 +130,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     if (input.metadata && existingContract.template_id) {
       const { data: template } = await (supabase as any)
         .from('contract_templates')
-        .select('content')
+        .select('template_content')
         .eq('id', existingContract.template_id)
         .single()
 
-      if (template?.content) {
-        content_html = template.content
+      if (template?.template_content) {
+        content_html = template.template_content
         const mergedMetadata = { ...existingContract.metadata, ...input.metadata }
         Object.entries(mergedMetadata).forEach(([key, value]) => {
           const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g')

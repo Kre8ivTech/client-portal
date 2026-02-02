@@ -31,30 +31,30 @@ export default async function ReceivablesPage() {
     .order("due_date", { ascending: true });
 
   // Calculate AR metrics
-  const totalAR = unpaidInvoices?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
+  const totalAR = unpaidInvoices?.reduce((sum, inv: any) => sum + (inv.amount || 0), 0) || 0;
 
   const now = new Date();
-  const aged30 = unpaidInvoices?.filter((inv) => {
+  const aged30 = unpaidInvoices?.filter((inv: any) => {
     if (!inv.due_date) return false;
     const daysOverdue = Math.floor((now.getTime() - new Date(inv.due_date).getTime()) / (1000 * 60 * 60 * 24));
     return daysOverdue > 0 && daysOverdue <= 30;
   }) || [];
 
-  const aged60 = unpaidInvoices?.filter((inv) => {
+  const aged60 = unpaidInvoices?.filter((inv: any) => {
     if (!inv.due_date) return false;
     const daysOverdue = Math.floor((now.getTime() - new Date(inv.due_date).getTime()) / (1000 * 60 * 60 * 24));
     return daysOverdue > 30 && daysOverdue <= 60;
   }) || [];
 
-  const aged90Plus = unpaidInvoices?.filter((inv) => {
+  const aged90Plus = unpaidInvoices?.filter((inv: any) => {
     if (!inv.due_date) return false;
     const daysOverdue = Math.floor((now.getTime() - new Date(inv.due_date).getTime()) / (1000 * 60 * 60 * 24));
     return daysOverdue > 60;
   }) || [];
 
-  const aged30Total = aged30.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-  const aged60Total = aged60.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-  const aged90PlusTotal = aged90Plus.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+  const aged30Total = aged30.reduce((sum, inv: any) => sum + (inv.amount || 0), 0);
+  const aged60Total = aged60.reduce((sum, inv: any) => sum + (inv.amount || 0), 0);
+  const aged90PlusTotal = aged90Plus.reduce((sum, inv: any) => sum + (inv.amount || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -117,7 +117,7 @@ export default async function ReceivablesPage() {
           <CardDescription>All unpaid invoices sorted by due date</CardDescription>
         </CardHeader>
         <CardContent>
-          {!unpaidInvoices?.length ? (
+          {!unpaidInvoices || unpaidInvoices.length === 0 ? (
             <div className="rounded-lg border-2 border-dashed border-muted bg-muted/30 p-6 text-center text-muted-foreground text-sm">
               No outstanding receivables. All invoices are paid.
             </div>
@@ -133,7 +133,7 @@ export default async function ReceivablesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {unpaidInvoices.map((invoice) => {
+                {unpaidInvoices.map((invoice: any) => {
                   const daysOverdue = invoice.due_date
                     ? Math.floor((now.getTime() - new Date(invoice.due_date).getTime()) / (1000 * 60 * 60 * 24))
                     : 0;

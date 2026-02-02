@@ -50,7 +50,7 @@ export default async function InvoicingRevenuePage() {
     .select("amount")
     .eq("status", "paid");
 
-  const totalRevenue = revenueData?.reduce((sum, inv) => sum + (inv.amount || 0), 0) || 0;
+  const totalRevenue = revenueData?.reduce((sum, inv: any) => sum + (inv.amount || 0), 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -121,7 +121,7 @@ export default async function InvoicingRevenuePage() {
           <CardDescription>Latest invoices across all clients</CardDescription>
         </CardHeader>
         <CardContent>
-          {!recentInvoices?.length ? (
+          {!recentInvoices || recentInvoices.length === 0 ? (
             <div className="rounded-lg border-2 border-dashed border-muted bg-muted/30 p-6 text-center text-muted-foreground text-sm">
               No invoices found. Create your first invoice to get started.
             </div>
@@ -137,7 +137,7 @@ export default async function InvoicingRevenuePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {recentInvoices.map((invoice) => (
+                {recentInvoices.map((invoice: any) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">
                       <Link

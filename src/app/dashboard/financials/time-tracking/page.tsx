@@ -30,13 +30,13 @@ export default async function TimeTrackingPage() {
     .limit(50);
 
   // Calculate metrics
-  const totalHours = timeEntries?.reduce((sum, entry) => sum + (entry.hours || 0), 0) || 0;
+  const totalHours = timeEntries?.reduce((sum, entry: any) => sum + (entry.hours || 0), 0) || 0;
   const billableHours = timeEntries
-    ?.filter((e) => e.is_billable)
-    .reduce((sum, entry) => sum + (entry.hours || 0), 0) || 0;
+    ?.filter((e: any) => e.is_billable)
+    .reduce((sum, entry: any) => sum + (entry.hours || 0), 0) || 0;
   const billableRevenue = timeEntries
-    ?.filter((e) => e.is_billable)
-    .reduce((sum, entry) => sum + (entry.hours || 0) * (entry.billable_rate || 0), 0) || 0;
+    ?.filter((e: any) => e.is_billable)
+    .reduce((sum, entry: any) => sum + (entry.hours || 0) * (entry.billable_rate || 0), 0) || 0;
 
   const utilization = totalHours > 0 ? (billableHours / totalHours) * 100 : 0;
 
@@ -101,7 +101,7 @@ export default async function TimeTrackingPage() {
           <CardDescription>Latest time tracking activity</CardDescription>
         </CardHeader>
         <CardContent>
-          {!timeEntries?.length ? (
+          {!timeEntries || timeEntries.length === 0 ? (
             <div className="rounded-lg border-2 border-dashed border-muted bg-muted/30 p-6 text-center text-muted-foreground text-sm">
               No time entries found. Start tracking time to see data here.
             </div>
@@ -117,7 +117,7 @@ export default async function TimeTrackingPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {timeEntries.slice(0, 10).map((entry) => (
+                {timeEntries.slice(0, 10).map((entry: any) => (
                   <TableRow key={entry.id}>
                     <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
                     <TableCell className="font-medium">{entry.hours.toFixed(2)}</TableCell>

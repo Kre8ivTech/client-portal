@@ -36,7 +36,7 @@ export default async function SubscriptionsPage() {
     .eq("status", "active");
 
   // Calculate MRR
-  const mrr = subscriptions?.reduce((sum, sub) => sum + (sub.monthly_cost || 0), 0) || 0;
+  const mrr = subscriptions?.reduce((sum, sub: any) => sum + (sub.monthly_cost || 0), 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -101,7 +101,7 @@ export default async function SubscriptionsPage() {
           <CardDescription>All active recurring revenue commitments</CardDescription>
         </CardHeader>
         <CardContent>
-          {!subscriptions?.length ? (
+          {!subscriptions || subscriptions.length === 0 ? (
             <div className="rounded-lg border-2 border-dashed border-muted bg-muted/30 p-6 text-center text-muted-foreground text-sm">
               No active subscriptions found.
             </div>
@@ -117,7 +117,7 @@ export default async function SubscriptionsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {subscriptions.map((sub) => (
+                {subscriptions.map((sub: any) => (
                   <TableRow key={sub.id}>
                     <TableCell className="font-medium">
                       {(sub.plans as any)?.name || "Unknown Plan"}

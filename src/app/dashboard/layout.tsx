@@ -50,7 +50,7 @@ export default async function DashboardLayout({
   const isStaffOrAdmin = userRow?.role === "staff" || userRow?.role === "super_admin";
   const orgId = userRow?.organization_id;
   
-  const [{ data: recentTickets }, { data: planAssignments }] = isStaffOrAdmin && orgId
+  const [{ data: recentTickets }, { data: planAssignmentsRaw }] = isStaffOrAdmin && orgId
     ? await Promise.all([
         supabase
           .from("tickets")
@@ -65,6 +65,15 @@ export default async function DashboardLayout({
           .limit(20),
       ])
     : [{ data: null }, { data: null }];
+
+  // Supabase relationship typing can vary (object vs array). Normalize for consumers.
+  const planAssignments = (planAssignmentsRaw ?? []).map((pa: any) => ({
+    id: pa.id,
+    plans: Array.isArray(pa.plans) ? pa.plans[0] ?? null : pa.plans ?? null,
+    organizations: Array.isArray(pa.organizations)
+      ? pa.organizations[0] ?? null
+      : pa.organizations ?? null,
+  }));
 
   // Backfill if auth user has no public.users/public.profiles row (e.g. trigger failed or pre-migration user)
   if ((userError?.code === "PGRST116" || !userRow) && user?.email) {

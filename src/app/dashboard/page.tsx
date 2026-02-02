@@ -3,7 +3,8 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { format } from "date-fns";
 import type { LucideIcon } from "lucide-react";
-import { Ticket, FolderKanban, CreditCard, BookOpen, Wrench } from "lucide-react";
+import { Ticket, FolderKanban, CreditCard, BookOpen, Wrench, Calendar as CalendarIcon } from "lucide-react";
+import { TicketCalendar } from "@/components/dashboard/ticket-calendar";
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +24,7 @@ export default async function DashboardPage() {
   let planName: string | null = null
   let supportHoursRemaining: string | null = null
   let recentTickets: { id: string; ticket_number: number; subject: string; status: string; created_at: string }[] = []
+  let calendarTickets: any[] = []
 
   if (organizationId) {
     const { count } = await supabase
@@ -63,6 +65,15 @@ export default async function DashboardPage() {
       status: t.status,
       created_at: t.created_at,
     }))
+
+    const { data: allTickets } = await supabase
+      .from('tickets')
+      .select('id, ticket_number, subject, status, priority, created_at, description, updated_at')
+      .eq('organization_id', organizationId)
+      .order('created_at', { ascending: false })
+      .limit(100)
+    
+    calendarTickets = allTickets ?? []
   }
 
   return (
@@ -89,58 +100,62 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 shadow-sm">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Recent Activity</CardTitle>
-            <CardDescription>Latest support ticket updates</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentTickets.length === 0 ? (
-              <p className="text-muted-foreground italic py-8 text-center">
-                No recent activity to display.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {recentTickets.map((ticket) => (
-                  <li key={ticket.id}>
-                    <Link
-                      href={`/dashboard/tickets/${ticket.id}`}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
-                    >
-                      <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-                        <Ticket className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                          {ticket.subject}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          #{ticket.ticket_number} ·{" "}
-                          {format(new Date(ticket.created_at), "MMM d, yyyy")}
-                        </p>
-                      </div>
-                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize shrink-0">
-                        {ticket.status.replace("_", " ")}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {recentTickets.length > 0 && (
-              <div className="mt-4 pt-4 border-t">
-                <Link
-                  href="/dashboard/tickets"
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  View all support tickets
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-2 space-y-6">
+          <TicketCalendar tickets={calendarTickets} />
 
-        <Card className="shadow-sm">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Recent Activity</CardTitle>
+              <CardDescription>Latest support ticket updates</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {recentTickets.length === 0 ? (
+                <p className="text-muted-foreground italic py-8 text-center">
+                  No recent activity to display.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {recentTickets.map((ticket) => (
+                    <li key={ticket.id}>
+                      <Link
+                        href={`/dashboard/tickets/${ticket.id}`}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors group"
+                      >
+                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                          <Ticket className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                            {ticket.subject}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            #{ticket.ticket_number} ·{" "}
+                            {format(new Date(ticket.created_at), "MMM d, yyyy")}
+                          </p>
+                        </div>
+                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-muted text-muted-foreground capitalize shrink-0">
+                          {ticket.status.replace("_", " ")}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {recentTickets.length > 0 && (
+                <div className="mt-4 pt-4 border-t">
+                  <Link
+                    href="/dashboard/tickets"
+                    className="text-sm font-medium text-primary hover:underline"
+                  >
+                    View all support tickets
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="shadow-sm h-fit">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Quick Actions</CardTitle>
             <CardDescription>Shortcuts</CardDescription>

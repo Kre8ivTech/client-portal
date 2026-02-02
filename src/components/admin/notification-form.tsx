@@ -268,7 +268,7 @@ export function NotificationForm({ userRole, isAccountManager, organizationId }:
               onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
             />
             <p className="text-xs text-muted-foreground">
-              Leave empty for notifications that don't expire
+              Leave empty for notifications that don&apos;t expire
             </p>
           </div>
 

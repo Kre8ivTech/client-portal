@@ -193,7 +193,7 @@ export function ServiceCard({ service }: ServiceCardProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Service?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{service.name}"? This action cannot be undone.
+              Are you sure you want to delete &quot;{service.name}&quot;? This action cannot be undone.
               {service.requires_approval && ' Services with pending requests cannot be deleted.'}
             </AlertDialogDescription>
           </AlertDialogHeader>

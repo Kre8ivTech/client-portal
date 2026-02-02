@@ -21,7 +21,7 @@ import { Clock, Plus } from "lucide-react";
 import { TimeEntryDeleteButton } from "@/components/time/time-entry-delete-button";
 
 export default async function TimeTrackingPage() {
-  const { user, profile } = await requireRole(["super_admin", "staff", "partner"]);
+  const { user, profile } = await requireRole(["super_admin", "staff"]);
 
   const supabase = await createServerSupabaseClient();
   const orgId = (profile as { organization_id?: string } | null)?.organization_id ?? null;
@@ -51,7 +51,7 @@ export default async function TimeTrackingPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Time Tracking</h1>
         <p className="text-muted-foreground">
-          Log time and view time reports.
+          Log time and view time reports (staff and admin only).
         </p>
       </div>
 

@@ -87,8 +87,7 @@ export function DashboardTopbar({
   const displayName = profile?.name?.trim() || user.email?.split("@")[0] || "User";
   const isSuperAdmin = profile?.role === "super_admin";
   const isStaff = profile?.role === "staff";
-  const isPartner = profile?.role === "partner";
-  const showTimer = isSuperAdmin || isStaff || isPartner;
+  const showTimer = isSuperAdmin || isStaff;
 
   return (
     <header className="h-16 border-b bg-card flex items-center justify-between px-6 shadow-sm flex-shrink-0">

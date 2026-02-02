@@ -47,7 +47,7 @@ export default async function DashboardLayout({
   let userRow = userData as UserRow | null;
   let profileRow = profileData as ProfileRow | null;
   
-  const isStaffOrAdmin = userRow?.role === "staff" || userRow?.role === "super_admin" || userRow?.role === "partner";
+  const isStaffOrAdmin = userRow?.role === "staff" || userRow?.role === "super_admin";
   const orgId = userRow?.organization_id;
   
   const [{ data: recentTickets }, { data: planAssignments }] = isStaffOrAdmin && orgId

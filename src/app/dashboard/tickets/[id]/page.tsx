@@ -23,7 +23,7 @@ export default async function TicketPage({
   // Fetch ticket with creator and assigned staff info
   const { data: ticketData, error } = await (supabase
     .from('tickets')
-    .select('*, assigned_staff:user_profiles!assigned_to(id, name)')
+    .select('*, assigned_staff:user_profiles!tickets_assigned_to_fkey(id, name)')
     .eq('id', id)
     .single() as unknown as Promise<{ data: Record<string, unknown> | null; error: Error | null }>)
 

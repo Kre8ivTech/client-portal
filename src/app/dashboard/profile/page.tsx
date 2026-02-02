@@ -9,15 +9,18 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Image from "next/image";
-import { User, Bell, Shield, Camera, Mail } from "lucide-react";
+import { User, Bell, Shield, Camera, Mail, Loader2 } from "lucide-react";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { PasswordChangeForm } from "@/components/profile/password-change-form";
 import { EmailChangeForm } from "@/components/profile/email-change-form";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<any>(null)
   const [user, setUser] = useState<any>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -51,6 +54,49 @@ export default function ProfilePage() {
     }
     loadProfile()
   }, [supabase])
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setAvatarError(null)
+    setUploadingAvatar(true)
+
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const response = await fetch("/api/user/avatar", {
+        method: "POST",
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        setAvatarError(result.error || "Failed to upload image")
+        return
+      }
+
+      // Update local state with new avatar URL
+      setProfile((prev: any) => ({
+        ...prev,
+        avatar_url: result.avatar_url,
+      }))
+    } catch {
+      setAvatarError("Failed to upload image")
+    } finally {
+      setUploadingAvatar(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    }
+  }
 
   if (!user) return null
 
@@ -92,8 +138,26 @@ export default function ProfilePage() {
                   ) : (
                     user?.email?.charAt(0).toUpperCase()
                   )}
+                  {uploadingAvatar && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-white" />
+                    </div>
+                  )}
                 </div>
-                <button className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full border-2 border-white shadow-lg hover:scale-110 transition-transform">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  aria-label="Upload avatar"
+                />
+                <button
+                  type="button"
+                  onClick={handleAvatarClick}
+                  disabled={uploadingAvatar}
+                  className="absolute bottom-0 right-0 p-2 bg-primary text-white rounded-full border-2 border-white shadow-lg hover:scale-110 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   <Camera size={16} />
                 </button>
               </div>
@@ -108,6 +172,9 @@ export default function ProfilePage() {
                     {formatRole(profile?.role)}
                   </span>
                 </p>
+                {avatarError && (
+                  <p className="mt-2 text-sm text-red-600">{avatarError}</p>
+                )}
               </div>
             </div>
 

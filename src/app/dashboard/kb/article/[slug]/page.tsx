@@ -1,5 +1,5 @@
+import type { Metadata } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ArrowLeft, Clock, User, Share2, ThumbsUp, ThumbsDown, MessageSquare, ChevronRight } from 'lucide-react'
@@ -7,9 +7,42 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
+import { generatePageMetadata, truncateDescription, stripHtml } from '@/lib/seo'
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>
+}
+
+export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
+  const { slug } = await params
+  const supabase = (await createServerSupabaseClient()) as any
+
+  const { data: article } = await supabase
+    .from('kb_articles')
+    .select('title, content, excerpt, created_at, updated_at, author:profiles(name)')
+    .eq('slug', slug)
+    .single()
+
+  if (!article) {
+    return generatePageMetadata({ title: 'Article Not Found' })
+  }
+
+  const description = article.excerpt
+    ? truncateDescription(article.excerpt)
+    : truncateDescription(stripHtml(article.content || ''))
+
+  return generatePageMetadata({
+    title: article.title,
+    description,
+    openGraph: {
+      type: 'article',
+      title: article.title,
+      description,
+      publishedTime: article.created_at,
+      modifiedTime: article.updated_at,
+      authors: article.author?.name ? [article.author.name] : undefined,
+    },
+  })
 }
 
 export default async function ArticlePage({ params }: ArticlePageProps) {

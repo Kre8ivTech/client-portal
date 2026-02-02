@@ -28,7 +28,6 @@ export async function createForm(formData: FormData) {
   const slug = (formData.get("slug") as string)?.toLowerCase().replace(/\s+/g, "-") || name.toLowerCase().replace(/\s+/g, "-");
   const description = (formData.get("description") as string) || null;
 
-  // @ts-expect-error - forms Insert type may not be inferred until types are regenerated
   const { error } = await supabase.from("forms").insert({
     organization_id: (profile as { organization_id?: string } | null)?.organization_id ?? null,
     created_by: user.id,

@@ -1,6 +1,38 @@
+import type { Metadata } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { TicketDetail } from '@/components/tickets/ticket-detail'
 import { notFound } from 'next/navigation'
+import { generatePageMetadata, truncateDescription, stripHtml } from '@/lib/seo'
+
+interface PageProps {
+  params: Promise<{ id: string }>
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params
+  const supabase = await createServerSupabaseClient()
+
+  const { data } = await supabase
+    .from('tickets')
+    .select('ticket_number, subject, description')
+    .eq('id', id)
+    .single()
+
+  const ticket = data as { ticket_number: string; subject: string; description: string | null } | null
+  if (!ticket) {
+    return generatePageMetadata({ title: 'Ticket Not Found' })
+  }
+
+  const description = ticket.description
+    ? truncateDescription(stripHtml(ticket.description))
+    : `Support ticket ${ticket.ticket_number}`
+
+  return generatePageMetadata({
+    title: `${ticket.ticket_number}: ${ticket.subject}`,
+    description,
+    noIndex: true,
+  })
+}
 
 export default async function TicketPage({
   params,

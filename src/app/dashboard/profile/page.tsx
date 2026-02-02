@@ -66,9 +66,9 @@ export default function ProfilePage() {
         </p>
       </div>
 
-      <div className="space-y-8">
-        {/* Personal Info Section */}
-        <Card className="border-slate-200 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Personal Info Section - Full Width */}
+        <Card className="border-slate-200 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm lg:col-span-2">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100">
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <User className="text-primary w-5 h-5" />

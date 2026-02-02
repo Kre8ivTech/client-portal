@@ -192,6 +192,12 @@ main() {
     show_menu
     read -p "Select a branch to rebase (or 0 to exit): " choice
     
+    # Validate input is numeric
+    if ! [[ "$choice" =~ ^[0-9]+$ ]]; then
+      print_color "$RED" "Invalid choice: please enter a number"
+      continue
+    fi
+    
     if [ "$choice" == "0" ]; then
       print_color "$GREEN" "Goodbye!"
       exit 0
@@ -199,7 +205,7 @@ main() {
       local idx=$((choice - 1))
       rebase_branch "${PRIORITY_BRANCHES[$idx]}"
       
-      read -p "Press Enter to continue..." dummy
+      read -p "Press Enter to continue..." _
     else
       print_color "$RED" "Invalid choice"
     fi

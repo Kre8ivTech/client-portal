@@ -21,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, RefreshCw, RotateCcw, Loader2, MoreVertical, Pencil, Trash2, UserPlus } from "lucide-react";
+import { Search, RefreshCw, RotateCcw, Loader2, MoreVertical, Pencil, Trash2, UserPlus, Shield } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
   DropdownMenu,
@@ -41,6 +41,8 @@ interface User {
   email: string;
   role: string;
   organization_id: string | null;
+  is_account_manager?: boolean;
+  status?: string;
   created_at: string;
   user_profiles: {
     name: string | null;
@@ -113,14 +115,15 @@ export function UserTable({ currentUserRole = 'client', isAccountManager = false
     if (currentUserRole === 'super_admin') {
       fetchOrganizations();
     }
-  }, [page, roleFilter]);
+  }, [page, roleFilter, currentUserRole]);
 
   const fetchOrganizations = async () => {
     try {
       const response = await fetch('/api/organizations');
       if (response.ok) {
         const data = await response.json();
-        setOrganizations(data.organizations || []);
+        // API returns { data: organizations, ... }
+        setOrganizations(data.data || data.organizations || []);
       }
     } catch (error) {
       console.error('Failed to fetch organizations:', error);
@@ -304,8 +307,17 @@ export function UserTable({ currentUserRole = 'client', isAccountManager = false
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem onClick={() => setEditingUser(user)}>
-                            <Pencil className="mr-2 h-4 w-4" />
-                            Edit User
+                            {currentUserRole === "super_admin" ? (
+                              <>
+                                <Shield className="mr-2 h-4 w-4" />
+                                Edit Permissions
+                              </>
+                            ) : (
+                              <>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit User
+                              </>
+                            )}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleResetPassword(user.id, user.email)}
@@ -382,6 +394,8 @@ export function UserTable({ currentUserRole = 'client', isAccountManager = false
           open={!!editingUser} 
           onOpenChange={(open) => !open && setEditingUser(null)} 
           onSuccess={fetchUsers}
+          currentUserRole={currentUserRole}
+          organizations={organizations}
         />
       )}
       

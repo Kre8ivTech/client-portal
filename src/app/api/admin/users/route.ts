@@ -67,7 +67,7 @@ export async function GET(request: Request) {
     // First get users with filtering
     let usersQuery = (supabase as any)
       .from("users")
-      .select("id, email, role, organization_id, created_at", { count: 'exact' });
+      .select("id, email, role, organization_id, is_account_manager, status, created_at", { count: 'exact' });
 
     // Filter by organization for non-super_admin users
     if (profile.role !== "super_admin" && profile.organization_id) {

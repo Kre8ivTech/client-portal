@@ -5,7 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { writeAuditLog } from '@/lib/audit'
 import { requireRole } from '@/lib/require-role'
-import { createUserSchema, canCreateUsers, getAllowedRolesToCreate, type CreateUserInput } from '@/lib/validators/user'
+import { createUserSchema, updateUserSchema, canCreateUsers, getAllowedRolesToCreate, type CreateUserInput, type UpdateUserInput } from '@/lib/validators/user'
 
 export async function createUser(input: CreateUserInput) {
   await requireRole(['super_admin', 'staff'])
@@ -194,8 +194,9 @@ export async function deleteUser(userId: string) {
     .single()
 
   try {
-    // Delete from Supabase Auth (this will cascade to public.users and public.profiles via triggers/FKs)
-    const { error: deleteError } = await supabase.auth.admin.deleteUser(userId)
+    // Delete from Supabase Auth (requires service role; cascades to public.users/public.profiles via FK)
+    const supabaseAdmin = getSupabaseAdmin()
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
 
     if (deleteError) {
       console.error('Error deleting user from auth:', deleteError)
@@ -220,7 +221,7 @@ export async function deleteUser(userId: string) {
   }
 }
 
-export async function updateUser(userId: string, data: { name?: string; role?: string; organization_id?: string | null }) {
+export async function updateUser(userId: string, input: UpdateUserInput) {
   await requireRole(['super_admin', 'staff'])
   
   const supabase = await createServerSupabaseClient()
@@ -231,27 +232,106 @@ export async function updateUser(userId: string, data: { name?: string; role?: s
   }
 
   try {
-    // 1. Update public.users (role, organization)
-    if (data.role || data.organization_id !== undefined) {
-      const updates: any = {}
-      if (data.role) updates.role = data.role
-      if (data.organization_id !== undefined) updates.organization_id = data.organization_id
+    const validationResult = updateUserSchema.safeParse(input)
+    if (!validationResult.success) {
+      return {
+        success: false,
+        error: 'Validation failed',
+        details: validationResult.error.flatten().fieldErrors,
+      }
+    }
 
-      const { error: userError } = await (supabase as any)
+    const data = validationResult.data
+
+    // Current user row (role/org)
+    const { data: currentUserData } = await (supabase as any)
+      .from('users')
+      .select('id, role, organization_id')
+      .eq('id', currentUser.id)
+      .single()
+
+    const currentRole = currentUserData?.role as string | undefined
+    const currentOrgId = (currentUserData?.organization_id as string | null | undefined) ?? null
+
+    if (!currentRole) {
+      return { success: false, error: 'User profile not found' }
+    }
+
+    const isSuperAdmin = currentRole === 'super_admin'
+    const isStaff = currentRole === 'staff'
+
+    // Prevent self-demotion / lockout
+    if (isSuperAdmin && userId === currentUser.id && data.role && data.role !== 'super_admin') {
+      return { success: false, error: 'You cannot change your own role from super_admin' }
+    }
+
+    // Staff limitations: can only edit client users within their own org, and only update display name
+    if (isStaff && !isSuperAdmin) {
+      // Ensure target user is in same org and is a client
+      const { data: targetUser } = await (supabase as any)
         .from('users')
-        .update(updates)
+        .select('id, role, organization_id')
         .eq('id', userId)
+        .single()
 
+      if (!targetUser) {
+        return { success: false, error: 'User not found' }
+      }
+
+      if (targetUser.organization_id !== currentOrgId) {
+        return { success: false, error: 'Forbidden - Can only manage users in your organization' }
+      }
+
+      if (targetUser.role !== 'client') {
+        return { success: false, error: 'Forbidden - Staff can only edit client users' }
+      }
+
+      // Strip disallowed fields
+      const allowed: UpdateUserInput = { name: data.name }
+      const supabaseAdmin = getSupabaseAdmin()
+      if (allowed.name) {
+        const { error: profileError } = await (supabaseAdmin as any)
+          .from('profiles')
+          .update({ name: allowed.name })
+          .eq('user_id', userId)
+        if (profileError) throw profileError
+      }
+
+      await writeAuditLog({
+        action: 'user.update',
+        entity_type: 'user',
+        entity_id: userId,
+        new_values: allowed,
+      })
+
+      revalidatePath('/dashboard/users')
+      return { success: true }
+    }
+
+    // Super admin can update all fields (via service role)
+    const supabaseAdmin = getSupabaseAdmin()
+
+    // 1. Update public.users (role, organization, flags, status)
+    const userUpdates: any = {}
+    if (data.role) userUpdates.role = data.role
+    if (data.organization_id !== undefined) userUpdates.organization_id = data.organization_id
+    if (data.is_account_manager !== undefined) userUpdates.is_account_manager = data.is_account_manager
+    if (data.status) userUpdates.status = data.status
+
+    if (Object.keys(userUpdates).length > 0) {
+      const { error: userError } = await (supabaseAdmin as any)
+        .from('users')
+        .update(userUpdates)
+        .eq('id', userId)
       if (userError) throw userError
     }
 
     // 2. Update public.profiles (name)
     if (data.name) {
-      const { error: profileError } = await (supabase as any)
+      const { error: profileError } = await (supabaseAdmin as any)
         .from('profiles')
         .update({ name: data.name })
         .eq('user_id', userId)
-
       if (profileError) throw profileError
     }
 
@@ -259,7 +339,7 @@ export async function updateUser(userId: string, data: { name?: string; role?: s
       action: 'user.update',
       entity_type: 'user',
       entity_id: userId,
-      new_values: data
+      new_values: data,
     })
 
     revalidatePath('/dashboard/users')

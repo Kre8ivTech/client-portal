@@ -10,6 +10,8 @@ import Image from 'next/image'
 import { format } from 'date-fns'
 import { MessageSquare, Send, Loader2, User, AlertCircle } from 'lucide-react'
 import { Database } from '@/types/database'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 
 type Comment = Database['public']['Tables']['ticket_comments']['Row'] & {
   author?: {
@@ -21,14 +23,18 @@ type Comment = Database['public']['Tables']['ticket_comments']['Row'] & {
 interface TicketCommentsProps {
   ticketId: string
   userId: string
+  userRole?: string
 }
 
-export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
+export function TicketComments({ ticketId, userId, userRole }: TicketCommentsProps) {
   const [newComment, setNewComment] = useState('')
+  const [isInternal, setIsInternal] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
   const supabase = createClient() as any
   const queryClient = useQueryClient()
+
+  const isStaff = userRole === 'super_admin' || userRole === 'staff'
 
   const { data: comments, isLoading, error: queryError } = useQuery({
     queryKey: ['ticket-comments', ticketId],
@@ -83,13 +89,14 @@ export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
         ticket_id: ticketId,
         author_id: userId,
         content: newComment.trim(),
-        is_internal: false
+        is_internal: isInternal
       })
 
     if (error) {
       setPostError(error.message || 'Failed to post comment. Please try again.')
     } else {
       setNewComment('')
+      setIsInternal(false)
       setPostError(null)
     }
     setIsSubmitting(false)
@@ -140,10 +147,18 @@ export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
                   </span>
                 </div>
                 <div className={`p-3 rounded-2xl text-sm ${
-                  comment.author_id === userId 
-                    ? 'bg-primary text-white rounded-tr-none' 
-                    : 'bg-white border text-slate-700 rounded-tl-none shadow-sm'
+                  comment.is_internal
+                    ? 'bg-amber-50 border-amber-200 text-amber-900 border'
+                    : comment.author_id === userId 
+                      ? 'bg-primary text-white rounded-tr-none' 
+                      : 'bg-white border text-slate-700 rounded-tl-none shadow-sm'
                 }`}>
+                  {comment.is_internal && (
+                    <div className="text-[10px] font-bold uppercase mb-1 flex items-center gap-1 text-amber-600">
+                      <AlertCircle className="h-3 w-3" />
+                      Internal Note
+                    </div>
+                  )}
                   {comment.content}
                 </div>
               </div>
@@ -159,26 +174,41 @@ export function TicketComments({ ticketId, userId }: TicketCommentsProps) {
           <AlertDescription>{postError}</AlertDescription>
         </Alert>
       )}
-      <form onSubmit={handlePostComment} className="relative pt-2">
-        <Input
-          placeholder="Type your message..."
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          className="pr-12 py-6 rounded-xl border-slate-200 focus:ring-primary h-12"
-          disabled={isSubmitting}
-        />
-        <Button 
-          type="submit" 
-          size="icon" 
-          className="absolute right-1.5 top-[14px] h-9 w-9 rounded-lg"
-          disabled={!newComment.trim() || isSubmitting}
-        >
-          {isSubmitting ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
-        </Button>
+      <form onSubmit={handlePostComment} className="space-y-4 pt-2">
+        <div className="relative">
+          <Input
+            placeholder="Type your message..."
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            className="pr-12 py-6 rounded-xl border-slate-200 focus:ring-primary h-12"
+            disabled={isSubmitting}
+          />
+          <Button 
+            type="submit" 
+            size="icon" 
+            className="absolute right-1.5 top-1.5 h-9 w-9 rounded-lg"
+            disabled={!newComment.trim() || isSubmitting}
+          >
+            {isSubmitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+        
+        {isStaff && (
+          <div className="flex items-center gap-2 px-1">
+            <Switch 
+              id="internal-note" 
+              checked={isInternal} 
+              onCheckedChange={setIsInternal} 
+            />
+            <Label htmlFor="internal-note" className="text-sm font-medium text-slate-600 cursor-pointer">
+              Mark as internal note (Staff only)
+            </Label>
+          </div>
+        )}
       </form>
     </div>
   )

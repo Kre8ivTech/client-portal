@@ -1,5 +1,9 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 import { TicketComments } from './ticket-comments'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -17,9 +21,43 @@ type Ticket = Database['public']['Tables']['tickets']['Row'] & {
 interface TicketDetailProps {
   ticket: Ticket
   userId: string
+  userRole?: string
 }
 
-export function TicketDetail({ ticket, userId }: TicketDetailProps) {
+export function TicketDetail({ ticket: initialTicket, userId, userRole }: TicketDetailProps) {
+  const [ticket, setTicket] = useState(initialTicket)
+  const [staff, setStaff] = useState<any[]>([])
+  const [isAssigning, setIsAssigning] = useState(false)
+  const supabase = createClient() as any
+  const canAssign = userRole === 'super_admin' || userRole === 'staff'
+
+  useEffect(() => {
+    if (canAssign) {
+      const fetchStaff = async () => {
+        const { data } = await supabase
+          .from('user_profiles')
+          .select('id, name')
+          .in('role', ['super_admin', 'staff'])
+          .order('name')
+        
+        if (data) setStaff(data)
+      }
+      fetchStaff()
+    }
+  }, [canAssign, supabase])
+
+  const handleAssign = async (staffId: string) => {
+    setIsAssigning(true)
+    const { error } = await supabase
+      .from('tickets')
+      .update({ assigned_to: staffId === 'unassigned' ? null : staffId })
+      .eq('id', ticket.id)
+
+    if (!error) {
+      setTicket({ ...ticket, assigned_to: staffId === 'unassigned' ? null : staffId })
+    }
+    setIsAssigning(false)
+  }
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <Link 
@@ -66,7 +104,7 @@ export function TicketDetail({ ticket, userId }: TicketDetailProps) {
             </CardContent>
           </Card>
 
-          <TicketComments ticketId={ticket.id} userId={userId} />
+          <TicketComments ticketId={ticket.id} userId={userId} userRole={userRole} />
         </div>
 
         <div className="space-y-6">
@@ -90,6 +128,29 @@ export function TicketDetail({ ticket, userId }: TicketDetailProps) {
               label="Category" 
               value={ticket.category || 'Uncategorized'} 
             />
+
+            {canAssign && (
+              <div className="pt-2 border-t mt-4">
+                <span className="text-xs font-semibold text-slate-400 uppercase tracking-tighter mb-2 block">Assigned To</span>
+                <Select
+                  disabled={isAssigning}
+                  onValueChange={handleAssign}
+                  defaultValue={ticket.assigned_to || 'unassigned'}
+                >
+                  <SelectTrigger className="w-full h-9 text-xs">
+                    <SelectValue placeholder="Unassigned" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="unassigned" className="text-xs">Unassigned</SelectItem>
+                    {staff.map((s) => (
+                      <SelectItem key={s.id} value={s.id} className="text-xs">
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             
             <div className="pt-2">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-tighter mb-2 block">Tags</span>

@@ -10,9 +10,15 @@ export default async function TicketPage({
   const { id } = await params
   const supabase = await createServerSupabaseClient()
 
-  // Get current user to pass to client components
+  // Get current user and their profile
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
+
+  const { data: profile } = await supabase
+    .from('user_profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single() as any;
 
   // Fetch ticket (cast through unknown due to generated types)
   const { data: ticketData, error } = await (supabase
@@ -43,5 +49,11 @@ export default async function TicketPage({
   }
 
   type TicketWithCreator = typeof ticketData & { creator: { name: string | null } | null }
-  return <TicketDetail ticket={ticketWithCreator as any} userId={user.id} />
+  return (
+    <TicketDetail 
+      ticket={ticketWithCreator as any} 
+      userId={user.id} 
+      userRole={profile?.role} 
+    />
+  );
 }

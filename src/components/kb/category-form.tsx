@@ -41,7 +41,7 @@ export function CategoryForm({ category }: CategoryFormProps) {
     try {
       if (category) {
         // Update existing category
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('kb_categories')
           .update({
             ...formData,
@@ -57,7 +57,7 @@ export function CategoryForm({ category }: CategoryFormProps) {
         })
       } else {
         // Create new category
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('kb_categories')
           .insert([formData])
 
@@ -92,7 +92,7 @@ export function CategoryForm({ category }: CategoryFormProps) {
     setLoading(true)
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('kb_categories')
         .delete()
         .eq('id', category.id)

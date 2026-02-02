@@ -54,7 +54,7 @@ export function ArticleForm({ article, categories, userId }: ArticleFormProps) {
 
       if (article) {
         // Update existing article
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('kb_articles')
           .update(dataToSave)
           .eq('id', article.id)
@@ -67,7 +67,7 @@ export function ArticleForm({ article, categories, userId }: ArticleFormProps) {
         })
       } else {
         // Create new article
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('kb_articles')
           .insert([dataToSave])
 
@@ -102,7 +102,7 @@ export function ArticleForm({ article, categories, userId }: ArticleFormProps) {
     setLoading(true)
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('kb_articles')
         .delete()
         .eq('id', article.id)

@@ -14,12 +14,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { WorkTimerButton } from "@/components/time/work-timer-button";
 
 type UserInfo = { email?: string | null };
 type ProfileInfo = {
   name?: string | null;
   avatar_url?: string | null;
   role?: string | null;
+  organization_id?: string | null;
 } | null;
 
 const segmentLabels: Record<string, string> = {
@@ -68,14 +70,24 @@ function getBreadcrumbs(pathname: string): { label: string; href?: string }[] {
 export function DashboardTopbar({
   user,
   profile,
+  tickets = [],
+  planAssignments = [],
 }: {
   user: UserInfo;
   profile: ProfileInfo;
+  tickets?: Array<{ id: string; ticket_number: number; subject: string }>;
+  planAssignments?: Array<{
+    id: string;
+    plans: { name: string } | null;
+    organizations: { name: string } | null;
+  }>;
 }) {
   const pathname = usePathname();
   const breadcrumbs = getBreadcrumbs(pathname);
   const displayName = profile?.name?.trim() || user.email?.split("@")[0] || "User";
   const isSuperAdmin = profile?.role === "super_admin";
+  const isStaff = profile?.role === "staff";
+  const showTimer = isSuperAdmin || isStaff;
 
   return (
     <header className="h-16 border-b bg-card flex items-center justify-between px-6 shadow-sm flex-shrink-0">
@@ -98,6 +110,13 @@ export function DashboardTopbar({
       </div>
 
       <div className="flex items-center gap-3 shrink-0">
+        {showTimer && profile?.organization_id && (
+          <WorkTimerButton
+            organizationId={profile.organization_id}
+            tickets={tickets}
+            planAssignments={planAssignments}
+          />
+        )}
         {isSuperAdmin && (
           <span className="hidden sm:inline-flex items-center rounded-md border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
             Administrator

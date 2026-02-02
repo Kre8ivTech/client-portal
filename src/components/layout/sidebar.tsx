@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   Home,
@@ -79,9 +78,9 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: "Settings",
     items: [
       { href: "/dashboard/settings", icon: Settings, label: "General" },
-      { href: "/dashboard/settings#white-label", icon: Palette, label: "White Label" },
-      { href: "/dashboard/settings#security", icon: Shield, label: "Security" },
-      { href: "/dashboard/settings#notifications", icon: Bell, label: "Notifications" },
+      { href: "/dashboard/settings/white-label", icon: Palette, label: "White Label" },
+      { href: "/dashboard/settings/security", icon: Shield, label: "Security" },
+      { href: "/dashboard/settings/notifications", icon: Bell, label: "Notifications" },
       { href: "/dashboard/integrations", icon: Plug, label: "Integrations" },
     ],
   },
@@ -118,13 +117,13 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     "/dashboard/settings",
     "/dashboard/vault",
     "/dashboard/billing",
-    "/dashboard/settings#security",
+    "/dashboard/settings/security",
     "/dashboard/profile",
-    "/dashboard/settings#notifications",
+    "/dashboard/settings/notifications",
   ];
   // Account items without invoices (for non-account-manager staff)
   const accountBaseNoInvoices = accountBase.filter(href => href !== "/dashboard/invoices");
-  const whiteLabel = "/dashboard/settings#white-label";
+  const whiteLabel = "/dashboard/settings/white-label";
   const adminStaff = [
     "/dashboard/users",
     "/dashboard/plans",
@@ -206,15 +205,6 @@ export function DashboardSidebar({
   branding?: SidebarBranding | null;
 }) {
   const pathname = usePathname();
-  const [hash, setHash] = useState("");
-
-  // Track hash changes for proper active state on hash-based navigation
-  useEffect(() => {
-    const updateHash = () => setHash(window.location.hash);
-    updateHash();
-    window.addEventListener("hashchange", updateHash);
-    return () => window.removeEventListener("hashchange", updateHash);
-  }, []);
 
   // Admin links (e.g. Clients) require profile.role === "super_admin". Ensure profile is loaded (RLS: "Users can read their own profile").
   const role = profile?.role ?? "client";
@@ -275,22 +265,16 @@ export function DashboardSidebar({
               </p>
               <ul className="space-y-0.5">
                 {items.map((item) => {
-                  const [itemPath, itemHash] = item.href.split("#");
-
                   let isActive = false;
-                  if (itemHash) {
-                    // Hash-based route: must match path AND hash exactly
-                    isActive = pathname === itemPath && hash === `#${itemHash}`;
-                  } else if (item.href === "/dashboard") {
-                    // Dashboard home: exact match only, no hash
-                    isActive = pathname === "/dashboard" && !hash;
-                  } else if (pathname === itemPath) {
-                    // Exact path match with no hash in the item
-                    // Only active if there's no hash in the URL, or if it's not a settings page
-                    isActive = itemPath !== "/dashboard/settings" || !hash;
+                  if (item.href === "/dashboard") {
+                    // Dashboard home: exact match only
+                    isActive = pathname === "/dashboard";
+                  } else if (pathname === item.href) {
+                    // Exact path match
+                    isActive = true;
                   } else {
-                    // Nested route: startsWith but not for items that have hash siblings
-                    isActive = pathname.startsWith(itemPath + "/");
+                    // Nested route: check if current path starts with item path
+                    isActive = pathname.startsWith(item.href + "/");
                   }
                   return (
                     <li key={item.href}>

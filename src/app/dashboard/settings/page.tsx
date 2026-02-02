@@ -7,6 +7,7 @@ import { Globe, Palette, ShieldCheck } from "lucide-react";
 import { CalendarOfficeHours } from "@/components/settings/calendar-office-hours";
 import { PortalBrandingForm } from "@/components/settings/portal-branding-form";
 import { AdminAccessInfo } from "@/components/settings/admin-access-info";
+import { SecuritySettings } from "@/components/settings/security-settings";
 import { getPortalBranding } from "@/lib/actions/portal-branding";
 
 export default async function SettingsPage() {
@@ -19,10 +20,22 @@ export default async function SettingsPage() {
   const [
     { data: userData },
     { data: profileData },
+    { data: orgData }
   ] = await Promise.all([
-    supabase.from("users").select("id, role").eq("id", user.id).single(),
+    supabase.from("users").select("id, role, organization_id").eq("id", user.id).single(),
     supabase.from("user_profiles").select("id, name, avatar_url, organization_name, organization_slug").eq("id", user.id).single(),
+    supabase.from("organizations").select("id, settings").eq("id", user?.user_metadata?.organization_id || user?.id /* fallback if needed, though organization_id should exist */).single() // logic check below
   ]);
+
+  // Fix organization fetch logic
+  const organizationId = userData?.organization_id;
+  let organizationSettings = {};
+  
+  if (organizationId) {
+     const { data: org } = await supabase.from("organizations").select("settings").eq("id", organizationId).single();
+     organizationSettings = org?.settings || {};
+  }
+
   const userRow = userData as { id: string; role: string } | null;
   const profileRow = profileData as { id: string; name: string | null; avatar_url: string | null; organization_name: string | null; organization_slug: string | null } | null;
   const profile =
@@ -67,7 +80,7 @@ export default async function SettingsPage() {
 
         {/* Organization branding - admin/staff/partners only (NOT clients) */}
         {canSeeBranding && !isSuperAdmin && (
-          <Card className="border-border shadow-sm overflow-hidden">
+          <Card id="white-label" className="border-border shadow-sm overflow-hidden scroll-mt-20">
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle className="text-lg font-semibold flex items-center gap-2">
                 <Palette className="text-primary w-5 h-5" />
@@ -105,29 +118,14 @@ export default async function SettingsPage() {
         )}
 
         {/* Security / System Section */}
-        <Card className="border-slate-200 shadow-sm opacity-60 grayscale-[0.5]">
-          <CardHeader>
-            <div className="flex justify-between items-start">
-              <div>
-                <CardTitle className="text-lg font-semibold flex items-center gap-2">
-                  <ShieldCheck className="text-primary w-5 h-5" />
-                  Advanced Security
-                </CardTitle>
-                <CardDescription>2FA, IP Whitelisting, and SSO integration.</CardDescription>
-              </div>
-              <div className="px-2 py-1 bg-amber-50 text-amber-700 text-[10px] font-bold uppercase rounded border border-amber-100">Enterprise</div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4 grayscale text-slate-400">
-            <div className="flex items-center justify-between py-2 border-b border-slate-100">
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Single Sign-On (SAML/OpenID)</p>
-                <p className="text-xs">Connect your corporate identity provider.</p>
-              </div>
-              <Button size="sm" variant="outline" disabled>Configure</Button>
-            </div>
-          </CardContent>
-        </Card>
+        {organizationId && (isStaffOrAdmin || isPartner) && (
+          // @ts-ignore
+          <SecuritySettings 
+            organizationId={organizationId} 
+            // @ts-ignore
+            settings={organizationSettings?.security} 
+          />
+        )}
       </div>
     </div>
   )

@@ -21,8 +21,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, RefreshCw, RotateCcw, Loader2 } from "lucide-react";
+import { Search, RefreshCw, RotateCcw, Loader2, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { EditUserDialog } from "./edit-user-dialog";
+import { DeleteUserDialog } from "./delete-user-dialog";
 
 interface User {
   id: string;
@@ -238,19 +248,39 @@ export function UserTable() {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleResetPassword(user.id, user.email)}
-                        disabled={resettingUserId === user.id}
-                      >
-                        {resettingUserId === user.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <RotateCcw className="h-3 w-3 mr-1" />
-                        )}
-                        Reset Password
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => setEditingUser(user)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit User
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleResetPassword(user.id, user.email)}
+                            disabled={resettingUserId === user.id}
+                          >
+                            {resettingUserId === user.id ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="mr-2 h-4 w-4" />
+                            )}
+                            Reset Password
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => setDeletingUser(user)}
+                            className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete User
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 );
@@ -285,6 +315,25 @@ export function UserTable() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Dialogs */}
+      {editingUser && (
+        <EditUserDialog 
+          user={editingUser} 
+          open={!!editingUser} 
+          onOpenChange={(open) => !open && setEditingUser(null)} 
+          onSuccess={fetchUsers}
+        />
+      )}
+      
+      {deletingUser && (
+        <DeleteUserDialog 
+          user={deletingUser} 
+          open={!!deletingUser} 
+          onOpenChange={(open) => !open && setDeletingUser(null)} 
+          onSuccess={fetchUsers}
+        />
       )}
     </div>
   );

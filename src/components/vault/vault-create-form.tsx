@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 
 export function VaultCreateForm() {
   const router = useRouter();
@@ -49,7 +51,19 @@ export function VaultCreateForm() {
         <Input id="username" name="username" placeholder="Login or email" />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor="password">Password</Label>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger type="button">
+                <Info className="h-4 w-4 text-muted-foreground" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[250px]">
+                <p>Credentials are encrypted with AES-256-GCM using a secure server-side key. Only authorized users in your organization can decrypt them.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <Input id="password" name="password" type="password" placeholder="••••••••" required />
       </div>
       {error && <p className="text-sm text-destructive">{error}</p>}

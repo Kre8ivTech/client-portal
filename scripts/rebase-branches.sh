@@ -3,6 +3,7 @@
 # Branch Rebase Helper Script
 # This script helps maintainers rebase feature branches onto main
 #
+# Requirements: bash (uses bash-specific features like [[ ]], $REPLY, read -n)
 # Usage: ./scripts/rebase-branches.sh [branch-name]
 # If no branch name is provided, it will show the menu
 

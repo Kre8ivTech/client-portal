@@ -21,7 +21,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, RefreshCw, RotateCcw, Loader2, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Search, RefreshCw, RotateCcw, Loader2, MoreVertical, Pencil, Trash2, UserPlus } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
   DropdownMenu,
@@ -33,6 +33,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EditUserDialog } from "./edit-user-dialog";
 import { DeleteUserDialog } from "./delete-user-dialog";
+import { AddUserDialog } from "./add-user-dialog";
+import { canCreateUsers, type UserRole } from "@/lib/validators/user";
 
 interface User {
   id: string;
@@ -48,7 +50,12 @@ interface User {
   }[];
 }
 
-export function UserTable() {
+interface UserTableProps {
+  currentUserRole?: UserRole;
+  isAccountManager?: boolean;
+}
+
+export function UserTable({ currentUserRole = 'client', isAccountManager = false }: UserTableProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -56,12 +63,17 @@ export function UserTable() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [resettingUserId, setResettingUserId] = useState<string | null>(null);
+  const [organizations, setOrganizations] = useState<{ id: string; name: string }[]>([]);
   
   // Action states
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [addingUser, setAddingUser] = useState(false);
   
   const { toast } = useToast();
+  
+  // Check if current user can create users
+  const canCreate = canCreateUsers(currentUserRole, isAccountManager);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -96,7 +108,24 @@ export function UserTable() {
 
   useEffect(() => {
     fetchUsers();
+    
+    // Fetch organizations if super_admin
+    if (currentUserRole === 'super_admin') {
+      fetchOrganizations();
+    }
   }, [page, roleFilter]);
+
+  const fetchOrganizations = async () => {
+    try {
+      const response = await fetch('/api/organizations');
+      if (response.ok) {
+        const data = await response.json();
+        setOrganizations(data.organizations || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch organizations:', error);
+    }
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,6 +187,19 @@ export function UserTable() {
 
   return (
     <div className="space-y-4">
+      {/* Header with Add User button */}
+      {canCreate && (
+        <div className="flex justify-between items-center">
+          <div className="text-sm text-muted-foreground">
+            Manage users in your organization
+          </div>
+          <Button onClick={() => setAddingUser(true)}>
+            <UserPlus className="mr-2 h-4 w-4" />
+            Add User
+          </Button>
+        </div>
+      )}
+      
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <form onSubmit={handleSearch} className="flex-1 flex gap-2">
@@ -323,6 +365,17 @@ export function UserTable() {
       )}
 
       {/* Dialogs */}
+      {addingUser && (
+        <AddUserDialog
+          open={addingUser}
+          onOpenChange={setAddingUser}
+          onSuccess={fetchUsers}
+          currentUserRole={currentUserRole}
+          isAccountManager={isAccountManager}
+          organizations={organizations}
+        />
+      )}
+      
       {editingUser && (
         <EditUserDialog 
           user={editingUser} 

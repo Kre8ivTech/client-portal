@@ -3,6 +3,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { writeAuditLog } from '@/lib/audit'
+import { escapeHtml, sanitizeHtml } from '@/lib/security'
 
 type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'expired' | 'cancelled'
 
@@ -66,16 +67,21 @@ export async function createContractFromTemplate(
       return { success: false, error: 'Client not found' }
     }
 
-    // Perform variable substitution on template content
+    // Perform variable substitution on template content with HTML escaping
     let contractContent = template.template_content
     const variables = template.variables || []
 
-    // Replace template variables with metadata values
+    // Replace template variables with escaped metadata values to prevent XSS
     for (const variable of variables) {
       const placeholder = `{{${variable.name || variable.key}}}`
-      const value = metadata[variable.name || variable.key] || variable.default || ''
+      const rawValue = metadata[variable.name || variable.key] || variable.default || ''
+      // Escape HTML entities to prevent XSS attacks
+      const value = escapeHtml(String(rawValue))
       contractContent = contractContent.replace(new RegExp(placeholder, 'g'), value)
     }
+    
+    // Sanitize the entire HTML content after substitution
+    contractContent = sanitizeHtml(contractContent)
 
     // Create the contract
     const { data: contract, error: contractError } = await supabase

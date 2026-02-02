@@ -56,7 +56,7 @@ export default function ProfilePage() {
   if (!user) return null
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h2 className="text-3xl font-bold tracking-tight text-slate-900 border-b pb-4">
           My Account
@@ -66,9 +66,9 @@ export default function ProfilePage() {
         </p>
       </div>
 
-      <div className="space-y-8">
-        {/* Personal Info Section */}
-        <Card className="border-slate-200 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Personal Info Section - Full Width */}
+        <Card className="border-slate-200 shadow-sm overflow-hidden bg-white/50 backdrop-blur-sm lg:col-span-2">
           <CardHeader className="bg-slate-50/50 border-b border-slate-100">
             <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <User className="text-primary w-5 h-5" />

@@ -2,6 +2,7 @@
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { validateImageUrl, validateHexColor, validateOpacity } from "@/lib/security";
 
 const PORTAL_BRANDING_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -74,12 +75,24 @@ export async function updatePortalBranding(formData: FormData): Promise<{
 
   const app_name = (formData.get("app_name") as string)?.trim() || "KT-Portal";
   const tagline = (formData.get("tagline") as string)?.trim() || null;
-  const logo_url = (formData.get("logo_url") as string)?.trim() || null;
-  const favicon_url = (formData.get("favicon_url") as string)?.trim() || null;
+  
+  // Validate and sanitize URLs to prevent CSS injection and other attacks
+  const logo_url_input = (formData.get("logo_url") as string)?.trim() || null;
+  const logo_url = validateImageUrl(logo_url_input);
+  
+  const favicon_url_input = (formData.get("favicon_url") as string)?.trim() || null;
+  const favicon_url = validateImageUrl(favicon_url_input);
+  
+  const login_bg_image_url_input = (formData.get("login_bg_image_url") as string)?.trim() || null;
+  const login_bg_image_url = validateImageUrl(login_bg_image_url_input);
+  
+  // Validate color inputs
   let primary_color = (formData.get("primary_color") as string)?.trim() || "231 48% 58%";
-  const login_bg_color = (formData.get("login_bg_color") as string)?.trim() || null;
-  const login_bg_image_url = (formData.get("login_bg_image_url") as string)?.trim() || null;
-  const login_bg_overlay_opacity = parseFloat((formData.get("login_bg_overlay_opacity") as string) || "0.5");
+  const login_bg_color_input = (formData.get("login_bg_color") as string)?.trim() || null;
+  const login_bg_color = login_bg_color_input ? validateHexColor(login_bg_color_input) : null;
+  
+  const login_bg_overlay_opacity_input = (formData.get("login_bg_overlay_opacity") as string) || "0.5";
+  const login_bg_overlay_opacity = validateOpacity(login_bg_overlay_opacity_input);
 
   if (primary_color.startsWith("#")) {
     primary_color = hexToHsl(primary_color);
@@ -88,12 +101,12 @@ export async function updatePortalBranding(formData: FormData): Promise<{
   const payload = {
     app_name,
     tagline,
-    logo_url: logo_url || null,
-    favicon_url: favicon_url || null,
+    logo_url,
+    favicon_url,
     primary_color,
-    login_bg_color: login_bg_color || null,
-    login_bg_image_url: login_bg_image_url || null,
-    login_bg_overlay_opacity: Math.max(0, Math.min(1, login_bg_overlay_opacity)),
+    login_bg_color,
+    login_bg_image_url,
+    login_bg_overlay_opacity,
   };
   // @ts-expect-error - portal_branding table exists; Supabase client type may not list it until types are regenerated
   const { error } = await supabase.from("portal_branding").update(payload).eq("id", PORTAL_BRANDING_ID);

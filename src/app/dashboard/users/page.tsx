@@ -10,7 +10,7 @@ import {
 import { UserTable } from "@/components/admin/user-table";
 
 export default async function UserManagementPage() {
-  await requireRole(["super_admin", "staff"]);
+  const { role, isAccountManager } = await requireRole(["super_admin", "staff"]);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -20,7 +20,7 @@ export default async function UserManagementPage() {
           User Management
         </h2>
         <p className="text-slate-500 mt-2">
-          Manage users, reset passwords, and view user details
+          Manage users, reset passwords, and create new user accounts
         </p>
       </div>
 
@@ -32,7 +32,10 @@ export default async function UserManagementPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <UserTable />
+          <UserTable 
+            currentUserRole={role} 
+            isAccountManager={isAccountManager}
+          />
         </CardContent>
       </Card>
     </div>

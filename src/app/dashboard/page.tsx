@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { format } from "date-fns";
 import type { LucideIcon } from "lucide-react";
-import { Ticket, FolderKanban, CreditCard, BookOpen, Wrench, Calendar as CalendarIcon } from "lucide-react";
+import { Ticket, FolderKanban, CreditCard, BookOpen, Wrench, Calendar as CalendarIcon, Users, DollarSign } from "lucide-react";
 import { TicketCalendar } from "@/components/dashboard/ticket-calendar";
 import { DashboardInbox } from "@/components/dashboard/inbox";
 import { InboxWrapper } from "@/components/dashboard/inbox-wrapper";
@@ -18,16 +18,29 @@ export default async function DashboardPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('organization_id')
+    .select('organization_id, role, is_account_manager')
     .eq('id', user.id)
     .single()
 
   const organizationId = profile?.organization_id
+  const userRole = profile?.role ?? 'client'
+  const isAccountManager = profile?.is_account_manager ?? false
+  
   let openTicketsCount = 0
   let planName: string | null = null
   let supportHoursRemaining: string | null = null
   let recentTickets: { id: string; ticket_number: number; subject: string; status: string; created_at: string }[] = []
   let calendarTickets: any[] = []
+  
+  // Staff-specific data
+  let assignedClientsCount = 0
+  let assignedClients: { id: string; name: string; slug: string }[] = []
+  
+  // Admin/Account Manager-specific data
+  let paidInvoicesTotal = 0
+  let overdueInvoicesTotal = 0
+  let paidInvoicesCount = 0
+  let overdueInvoicesCount = 0
 
   if (organizationId) {
     const { count } = await supabase
@@ -79,6 +92,60 @@ export default async function DashboardPage() {
     calendarTickets = allTickets ?? []
   }
 
+  // Fetch assigned clients for staff
+  if (userRole === 'staff' || userRole === 'super_admin') {
+    const { data: staffAssignments } = await supabase
+      .from('staff_assignments')
+      .select('organization_id, organizations(id, name, slug)')
+      .eq('staff_user_id', user.id)
+      .is('unassigned_at', null)
+    
+    if (staffAssignments && staffAssignments.length > 0) {
+      // Get unique organizations
+      const uniqueOrgs = new Map()
+      staffAssignments.forEach((assignment: any) => {
+        if (assignment.organizations && !uniqueOrgs.has(assignment.organizations.id)) {
+          uniqueOrgs.set(assignment.organizations.id, assignment.organizations)
+        }
+      })
+      assignedClients = Array.from(uniqueOrgs.values())
+      assignedClientsCount = assignedClients.length
+    }
+  }
+
+  // Fetch financial snapshot for admin and account managers
+  if (userRole === 'super_admin' || (userRole === 'staff' && isAccountManager)) {
+    // Get paid invoices total
+    const { data: paidInvoices } = await supabase
+      .from('invoices')
+      .select('total, amount_paid')
+      .eq('status', 'paid')
+    
+    if (paidInvoices && paidInvoices.length > 0) {
+      paidInvoicesCount = paidInvoices.length
+      paidInvoicesTotal = paidInvoices.reduce((sum: number, inv: any) => sum + (inv.amount_paid || 0), 0)
+    }
+
+    // Get overdue invoices
+    const today = new Date().toISOString().split('T')[0]
+    const { data: overdueInvoices } = await supabase
+      .from('invoices')
+      .select('total, balance_due')
+      .in('status', ['sent', 'partially_paid'])
+      .lt('due_date', today)
+    
+    if (overdueInvoices && overdueInvoices.length > 0) {
+      overdueInvoicesCount = overdueInvoices.length
+      overdueInvoicesTotal = overdueInvoices.reduce((sum: number, inv: any) => sum + (inv.balance_due || 0), 0)
+    }
+  }
+
+  // Determine which cards to show based on role
+  const isStaff = userRole === 'staff' || userRole === 'super_admin'
+  const isAdmin = userRole === 'super_admin'
+  const isAdminOrAccountManager = isAdmin || (userRole === 'staff' && isAccountManager)
+  const showCurrentPlan = !isStaff
+
   return (
     <div className="space-y-6">
       <NotificationBox />
@@ -96,12 +163,38 @@ export default async function DashboardPage() {
           value="—"
           description="On track"
         />
-        <StatsCard
-          icon={CreditCard}
-          title="Current Plan"
-          value={planName ?? "—"}
-          description={supportHoursRemaining ?? "No active plan"}
-        />
+        
+        {/* Show Current Plan card only for clients and partners */}
+        {showCurrentPlan && (
+          <StatsCard
+            icon={CreditCard}
+            title="Current Plan"
+            value={planName ?? "—"}
+            description={supportHoursRemaining ?? "No active plan"}
+          />
+        )}
+        
+        {/* Show Assigned Clients card for staff */}
+        {isStaff && (
+          <StatsCard
+            icon={Users}
+            title="Assigned Clients"
+            value={String(assignedClientsCount)}
+            description={assignedClientsCount > 0 ? `${assignedClientsCount} organization${assignedClientsCount !== 1 ? 's' : ''}` : "No assignments"}
+            link="/dashboard/clients"
+          />
+        )}
+        
+        {/* Show Financial Snapshot for admin and account managers */}
+        {isAdminOrAccountManager && (
+          <StatsCard
+            icon={DollarSign}
+            title="Financial Snapshot"
+            value={`$${(paidInvoicesTotal / 100).toFixed(0)}`}
+            description={`${paidInvoicesCount} paid, ${overdueInvoicesCount} overdue ($${(overdueInvoicesTotal / 100).toFixed(0)})`}
+            link="/dashboard/admin/invoices"
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -205,14 +298,16 @@ function StatsCard({
   title,
   value,
   description,
+  link,
 }: {
   icon: LucideIcon;
   title: string;
   value: string;
   description: string;
+  link?: string;
 }) {
-  return (
-    <Card className="shadow-sm overflow-hidden">
+  const cardContent = (
+    <>
       <CardHeader className="pb-2 flex flex-row items-start justify-between space-y-0">
         <div>
           <CardDescription className="text-xs uppercase tracking-wide">
@@ -227,6 +322,22 @@ function StatsCard({
       <CardContent>
         <p className="text-xs text-muted-foreground">{description}</p>
       </CardContent>
+    </>
+  );
+
+  if (link) {
+    return (
+      <Link href={link} className="block">
+        <Card className="shadow-sm overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
+          {cardContent}
+        </Card>
+      </Link>
+    );
+  }
+
+  return (
+    <Card className="shadow-sm overflow-hidden">
+      {cardContent}
     </Card>
   );
 }

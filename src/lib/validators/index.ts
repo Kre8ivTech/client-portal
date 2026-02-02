@@ -6,3 +6,6 @@
 
 // Plan-related validators
 export * from './plan'
+
+// User-related validators
+export * from './user'

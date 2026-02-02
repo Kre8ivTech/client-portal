@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  CreditCard,
   Bot,
   Mail,
   Calendar,
@@ -16,6 +15,8 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { CalendarIntegrations } from "@/components/integrations/calendar-integrations";
+import { StripeSettingsForm } from "@/components/integrations/stripe-settings-form";
+import { getAppSettings } from "@/lib/actions/app-settings";
 
 export default async function IntegrationsPage() {
   const supabase = await createServerSupabaseClient();
@@ -39,6 +40,9 @@ export default async function IntegrationsPage() {
     redirect("/dashboard");
   }
 
+  // Fetch settings
+  const appSettings = await getAppSettings();
+
   // Fetch user's calendar integrations
   const { data: calendarIntegrations } = await supabase
     .from("oauth_integrations")
@@ -47,7 +51,6 @@ export default async function IntegrationsPage() {
     .in("provider", ["google_calendar", "microsoft_outlook", "apple_caldav"]);
 
   // Check which integrations are configured (via env vars on server)
-  const stripeConfigured = !!process.env.STRIPE_SECRET_KEY;
   const resendConfigured = !!process.env.RESEND_API_KEY;
   const anthropicConfigured = !!process.env.ANTHROPIC_API_KEY;
   const openaiConfigured = !!process.env.OPENAI_API_KEY;
@@ -64,67 +67,7 @@ export default async function IntegrationsPage() {
 
       <div className="grid gap-8">
         {/* Stripe Integration */}
-        <Card className="border-border shadow-sm overflow-hidden">
-          <CardHeader className="bg-muted/30 border-b">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#635BFF]/10 rounded-lg">
-                  <CreditCard className="w-5 h-5 text-[#635BFF]" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg font-semibold">Stripe</CardTitle>
-                  <CardDescription>Payment processing and invoicing</CardDescription>
-                </div>
-              </div>
-              <ConnectionStatus connected={stripeConfigured} />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="stripe-secret">Secret Key</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="stripe-secret"
-                  type="password"
-                  placeholder="sk_live_..."
-                  defaultValue={stripeConfigured ? "••••••••••••••••" : ""}
-                  className="font-mono text-sm"
-                  readOnly={stripeConfigured}
-                />
-                <Button variant="outline" size="sm" className="shrink-0">
-                  {stripeConfigured ? "Update" : "Save"}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Get your API keys from the{" "}
-                <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
-                  Stripe Dashboard <ExternalLink className="w-3 h-3" />
-                </a>
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stripe-webhook">Webhook Secret</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="stripe-webhook"
-                  type="password"
-                  placeholder="whsec_..."
-                  className="font-mono text-sm"
-                  readOnly
-                />
-                <Button variant="outline" size="sm" className="shrink-0">
-                  Update
-                </Button>
-              </div>
-            </div>
-            <div className="p-3 bg-muted/50 rounded-lg text-sm">
-              <p className="font-medium mb-1">Webhook Endpoint</p>
-              <code className="text-xs text-muted-foreground">
-                {process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/stripe
-              </code>
-            </div>
-          </CardContent>
-        </Card>
+        <StripeSettingsForm initialSettings={appSettings} />
 
         {/* AI Providers */}
         <Card className="border-border shadow-sm overflow-hidden">
@@ -228,7 +171,7 @@ export default async function IntegrationsPage() {
             <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex gap-2">
               <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <p className="text-xs text-amber-700">
-                API keys are stored securely as environment variables. Contact your system administrator to update production keys.
+                API keys are stored securely as environment variables or in application settings. Contact your system administrator for production updates.
               </p>
             </div>
           </CardContent>
@@ -284,14 +227,6 @@ export default async function IntegrationsPage() {
                 Must be a verified domain in your Resend account
               </p>
             </div>
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" size="sm">
-                Send Test Email
-              </Button>
-              <Button variant="outline" size="sm">
-                View Email Templates
-              </Button>
-            </div>
           </CardContent>
         </Card>
 
@@ -332,3 +267,4 @@ function ConnectionStatus({ connected }: { connected: boolean }) {
     </Badge>
   );
 }
+

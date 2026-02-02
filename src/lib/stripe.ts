@@ -1,6 +1,56 @@
 import Stripe from 'stripe'
+import { getSupabaseAdmin } from './supabase/admin'
 
-/** Server-side Stripe instance. Requires STRIPE_SECRET_KEY at runtime. */
+const APP_SETTINGS_ID = '00000000-0000-0000-0000-000000000001'
+
+/**
+ * Retrieves Stripe configuration from database or environment variables
+ */
+export async function getStripeConfig() {
+  const supabase = getSupabaseAdmin()
+  const { data: settings } = await supabase
+    .from('app_settings')
+    .select('*')
+    .eq('id', APP_SETTINGS_ID)
+    .single()
+
+  const mode = settings?.stripe_mode || (process.env.NODE_ENV === 'production' ? 'live' : 'test')
+  
+  const secretKey = mode === 'live'
+    ? (settings?.stripe_live_secret_key || process.env.STRIPE_SECRET_KEY)
+    : (settings?.stripe_test_secret_key || process.env.STRIPE_TEST_SECRET_KEY || process.env.STRIPE_SECRET_KEY)
+    
+  const webhookSecret = mode === 'live'
+    ? (settings?.stripe_live_webhook_secret || process.env.STRIPE_WEBHOOK_SECRET)
+    : (settings?.stripe_test_webhook_secret || process.env.STRIPE_TEST_WEBHOOK_SECRET || process.env.STRIPE_WEBHOOK_SECRET)
+
+  return {
+    mode,
+    secretKey,
+    webhookSecret,
+    isConfigured: Boolean(secretKey)
+  }
+}
+
+/**
+ * Returns a Stripe instance based on current configuration.
+ */
+export async function getStripeClient(): Promise<Stripe> {
+  const { secretKey } = await getStripeConfig()
+  
+  if (!secretKey) {
+    throw new Error('Stripe is not configured. Please set Stripe keys in Integrations settings or environment variables.')
+  }
+
+  return new Stripe(secretKey, {
+    apiVersion: '2026-01-28.clover',
+    typescript: true,
+  })
+}
+
+/** Server-side Stripe instance for backward compatibility (singleton). 
+ * Note: It's better to use getStripeClient() for dynamic configuration.
+ */
 export const stripe: Stripe = process.env.STRIPE_SECRET_KEY
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: '2026-01-28.clover',
@@ -12,8 +62,13 @@ export const stripe: Stripe = process.env.STRIPE_SECRET_KEY
 export const isStripeConfigured = Boolean(process.env.STRIPE_SECRET_KEY)
 
 /** Returns the Stripe instance when configured, otherwise null. */
-function getStripe(): Stripe | null {
-  return isStripeConfigured ? stripe : null
+async function getStripe(): Promise<Stripe | null> {
+  const { secretKey } = await getStripeConfig()
+  if (!secretKey) return null
+  return new Stripe(secretKey, {
+    apiVersion: '2026-01-28.clover',
+    typescript: true,
+  })
 }
 
 // Stripe configuration constants
@@ -62,9 +117,9 @@ export interface StripeProductResult {
 export async function createStripeProduct(
   input: CreateStripeProductInput
 ): Promise<StripeProductResult> {
-  const stripe = getStripe()
+  const stripe = await getStripe()
   if (!stripe) {
-    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY.')
+    throw new Error('Stripe is not configured. Please set Stripe keys in settings.')
   }
 
   // Create the product
@@ -112,9 +167,9 @@ export async function createStripeProduct(
 export async function updateStripeProduct(
   input: UpdateStripeProductInput
 ): Promise<StripeProductResult> {
-  const stripe = getStripe()
+  const stripe = await getStripe()
   if (!stripe) {
-    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY.')
+    throw new Error('Stripe is not configured. Please set Stripe keys in settings.')
   }
 
   // Update the product
@@ -184,9 +239,9 @@ export async function updateStripeProduct(
  * Archives a Stripe Product (marks as inactive)
  */
 export async function archiveStripeProduct(stripeProductId: string): Promise<void> {
-  const stripe = getStripe()
+  const stripe = await getStripe()
   if (!stripe) {
-    throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY.')
+    throw new Error('Stripe is not configured. Please set Stripe keys in settings.')
   }
 
   await stripe.products.update(stripeProductId, { active: false })
@@ -198,7 +253,7 @@ export async function archiveStripeProduct(stripeProductId: string): Promise<voi
 export async function getStripeProduct(
   stripeProductId: string
 ): Promise<Stripe.Product | null> {
-  const stripe = getStripe()
+  const stripe = await getStripe()
   if (!stripe) {
     return null
   }
@@ -217,7 +272,7 @@ export async function getStripeProduct(
  * Retrieves a Stripe Price by ID
  */
 export async function getStripePrice(stripePriceId: string): Promise<Stripe.Price | null> {
-  const stripe = getStripe()
+  const stripe = await getStripe()
   if (!stripe) {
     return null
   }
@@ -231,3 +286,4 @@ export async function getStripePrice(stripePriceId: string): Promise<Stripe.Pric
     throw error
   }
 }
+

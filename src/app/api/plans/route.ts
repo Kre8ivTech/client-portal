@@ -5,6 +5,7 @@ import { createPlanSchema, listPlansQuerySchema } from '@/lib/validators/plan'
 import {
   isStripeConfigured,
   createStripeProduct,
+  getStripeConfig,
 } from '@/lib/stripe'
 
 /**
@@ -182,7 +183,8 @@ export async function POST(request: NextRequest) {
     let stripePriceId: string | null = null
 
     // Sync with Stripe if enabled and configured
-    if (sync_to_stripe && isStripeConfigured) {
+    const { isConfigured: stripeAvailable } = await getStripeConfig()
+    if (sync_to_stripe && stripeAvailable) {
       try {
         const stripeResult = await createStripeProduct({
           name: input.name,

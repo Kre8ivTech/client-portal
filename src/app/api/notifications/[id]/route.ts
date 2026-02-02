@@ -3,7 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient()
@@ -17,10 +17,12 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
+
     const { data: notification, error } = await supabase
       .from('notifications')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (error) {
@@ -40,7 +42,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient()
@@ -53,6 +55,8 @@ export async function PATCH(
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { id } = await params
 
     // Check if user has permission to update
     const { data: profile } = await supabase
@@ -69,7 +73,7 @@ export async function PATCH(
     const { data: notification } = await supabase
       .from('notifications')
       .select('created_by')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (!notification) {
@@ -101,7 +105,7 @@ export async function PATCH(
     const { data: updated, error: updateError } = await supabase
       .from('notifications')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
 
@@ -118,7 +122,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient()
@@ -131,6 +135,8 @@ export async function DELETE(
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const { id } = await params
 
     // Check if user has permission to delete
     const { data: profile } = await supabase
@@ -147,7 +153,7 @@ export async function DELETE(
     const { data: notification } = await supabase
       .from('notifications')
       .select('created_by')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (!notification) {
@@ -168,7 +174,7 @@ export async function DELETE(
     const { error: deleteError } = await supabase
       .from('notifications')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (deleteError) {
       return NextResponse.json({ error: deleteError.message }, { status: 500 })

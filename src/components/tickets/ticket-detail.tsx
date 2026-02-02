@@ -16,6 +16,10 @@ type Ticket = Database['public']['Tables']['tickets']['Row'] & {
   creator?: {
     name: string | null
   }
+  assigned_staff?: {
+    id: string
+    name: string | null
+  } | null
 }
 
 interface TicketDetailProps {
@@ -129,7 +133,7 @@ export function TicketDetail({ ticket: initialTicket, userId, userRole }: Ticket
               value={ticket.category || 'Uncategorized'} 
             />
 
-            {canAssign && (
+            {canAssign ? (
               <div className="pt-2 border-t mt-4">
                 <span className="text-xs font-semibold text-slate-400 uppercase tracking-tighter mb-2 block">Assigned To</span>
                 <Select
@@ -150,6 +154,12 @@ export function TicketDetail({ ticket: initialTicket, userId, userRole }: Ticket
                   </SelectContent>
                 </Select>
               </div>
+            ) : (
+              <DetailItem
+                icon={<User className="h-4 w-4 text-slate-400" />}
+                label="Assigned To"
+                value={ticket.assigned_staff?.name || 'Unassigned'}
+              />
             )}
             
             <div className="pt-2">

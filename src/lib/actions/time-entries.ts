@@ -25,8 +25,8 @@ export async function createTimeEntry(formData: FormData) {
     throw new Error("No organization found for user");
 
   const role = profile.role;
-  if (role !== "staff" && role !== "super_admin")
-    throw new Error("Only staff and admin can log time");
+  if (role !== "staff" && role !== "super_admin" && role !== "partner")
+    throw new Error("Only staff, admin, and partners can log time");
 
   const description = formData.get("description") as string;
   const hoursStr = formData.get("hours") as string;

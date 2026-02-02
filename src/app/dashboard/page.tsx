@@ -7,6 +7,7 @@ import { Ticket, FolderKanban, CreditCard, BookOpen, Wrench, Calendar as Calenda
 import { TicketCalendar } from "@/components/dashboard/ticket-calendar";
 import { DashboardInbox } from "@/components/dashboard/inbox";
 import { InboxWrapper } from "@/components/dashboard/inbox-wrapper";
+import { NotificationBox } from "@/components/dashboard/notification-box";
 
 export const dynamic = 'force-dynamic'
 
@@ -80,6 +81,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <NotificationBox />
+      
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <StatsCard
           icon={Ticket}

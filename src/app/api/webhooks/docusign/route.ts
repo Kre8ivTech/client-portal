@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { downloadDocument } from '@/lib/docusign/envelopes';
 import { uploadContract } from '@/lib/storage/s3';
+import { triggerWebhooks } from '@/lib/zapier/webhooks';
 
 export const runtime = 'nodejs';
 
@@ -280,6 +281,14 @@ async function handleEnvelopeCompleted(
       envelopeId: event.envelopeId,
       documentUrl,
       message: 'All signers have completed the contract',
+    });
+
+    // Trigger Zapier webhook for contract signed
+    triggerWebhooks('contract.signed', contract.organization_id, {
+      id: contract.id,
+      status: 'signed',
+      signed_at: new Date().toISOString(),
+      document_url: documentUrl,
     });
 
     console.log(`[DocuSign Webhook] Successfully processed envelope completion for contract ${contract.id}`);

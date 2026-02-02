@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { CalendarIntegrations } from "@/components/integrations/calendar-integrations";
 import { StripeSettingsForm } from "@/components/integrations/stripe-settings-form";
+import { ZapierIntegration } from "@/components/integrations/zapier-integration";
 import { getAppSettings } from "@/lib/actions/app-settings";
 
 export default async function IntegrationsPage() {
@@ -249,6 +250,17 @@ export default async function IntegrationsPage() {
             <CalendarIntegrations integrations={calendarIntegrations || []} />
           </CardContent>
         </Card>
+
+        {/* Zapier Integration */}
+        <div>
+          <div className="mb-4">
+            <h3 className="text-xl font-semibold">Automation</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Connect with Zapier to automate workflows and integrate with thousands of apps
+            </p>
+          </div>
+          <ZapierIntegration />
+        </div>
       </div>
     </div>
   );

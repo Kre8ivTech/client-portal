@@ -12,12 +12,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { id } = await params
   const supabase = await createServerSupabaseClient()
 
-  const { data: ticket } = await supabase
+  const { data } = await supabase
     .from('tickets')
     .select('ticket_number, subject, description')
     .eq('id', id)
-    .single() as { data: { ticket_number: string; subject: string; description: string | null } | null }
+    .single()
 
+  const ticket = data as { ticket_number: string; subject: string; description: string | null } | null
   if (!ticket) {
     return generatePageMetadata({ title: 'Ticket Not Found' })
   }

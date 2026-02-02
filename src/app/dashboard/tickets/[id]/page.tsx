@@ -20,10 +20,10 @@ export default async function TicketPage({
     .eq('id', user.id)
     .single() as any;
 
-  // Fetch ticket (cast through unknown due to generated types)
+  // Fetch ticket with creator and assigned staff info
   const { data: ticketData, error } = await (supabase
     .from('tickets')
-    .select('*')
+    .select('*, assigned_staff:user_profiles!tickets_assigned_to_fkey(id, name)')
     .eq('id', id)
     .single() as unknown as Promise<{ data: Record<string, unknown> | null; error: Error | null }>)
 
@@ -31,7 +31,7 @@ export default async function TicketPage({
     return notFound()
   }
 
-  // Flatten the nested creator data structure (creator.profiles.name → creator.name)
+  // Flatten the nested data structures
   type QueryResult = typeof ticketData & {
     creator: {
       id: string
@@ -39,21 +39,25 @@ export default async function TicketPage({
         name: string | null
       } | null
     } | null
+    assigned_staff: {
+      id: string
+      name: string | null
+    } | null
   }
 
-  const ticketWithCreator = {
+  const ticketWithRelations = {
     ...ticketData,
     creator: (ticketData as QueryResult).creator?.profiles
       ? { name: (ticketData as QueryResult).creator?.profiles?.name }
-      : null
+      : null,
+    assigned_staff: (ticketData as QueryResult).assigned_staff
   }
 
-  type TicketWithCreator = typeof ticketData & { creator: { name: string | null } | null }
   return (
-    <TicketDetail 
-      ticket={ticketWithCreator as any} 
-      userId={user.id} 
-      userRole={profile?.role} 
+    <TicketDetail
+      ticket={ticketWithRelations as any}
+      userId={user.id}
+      userRole={profile?.role}
     />
   );
 }

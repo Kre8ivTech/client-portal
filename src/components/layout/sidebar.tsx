@@ -96,6 +96,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/reports", icon: LineChart, label: "Reports" },
       { href: "/dashboard/time", icon: Clock, label: "Time Tracking" },
       { href: "/dashboard/forms", icon: FileEdit, label: "Forms" },
+      { href: "/dashboard/admin/services", icon: Wrench, label: "Manage Services" },
       { href: "/dashboard/admin/contracts", icon: ClipboardList, label: "Manage Contracts" },
       { href: "/dashboard/audit", icon: History, label: "Audit Log" },
     ],
@@ -144,6 +145,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/integrations",
         "/dashboard/clients",
         ...adminStaff,
+        "/dashboard/admin/services",
         "/dashboard/admin/contracts",
         "/dashboard/tenants",
         "/dashboard/audit",
@@ -156,6 +158,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/capacity",
         ...(isAccountManager ? accountBase : accountBaseNoInvoices),
         ...adminStaff,
+        "/dashboard/admin/services",
         "/dashboard/admin/contracts",
       ];
     case "partner":

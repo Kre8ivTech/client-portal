@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import type { LucideIcon } from "lucide-react";
 import { Ticket, FolderKanban, CreditCard, BookOpen, Wrench, Calendar as CalendarIcon } from "lucide-react";
 import { TicketCalendar } from "@/components/dashboard/ticket-calendar";
+import { DashboardInbox } from "@/components/dashboard/inbox";
+import { InboxWrapper } from "@/components/dashboard/inbox-wrapper";
 
 export const dynamic = 'force-dynamic'
 
@@ -155,35 +157,41 @@ export default async function DashboardPage() {
           </Card>
         </div>
 
-        <Card className="shadow-sm h-fit">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Quick Actions</CardTitle>
-            <CardDescription>Shortcuts</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Link
-              href="/dashboard/tickets/new"
-              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-sm font-medium"
-            >
-              <Ticket className="h-4 w-4 text-primary shrink-0" />
-              New support ticket
-            </Link>
-            <Link
-              href="/dashboard/service/new"
-              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-sm font-medium"
-            >
-              <Wrench className="h-4 w-4 text-primary shrink-0" />
-              New service request
-            </Link>
-            <Link
-              href="/dashboard/kb"
-              className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-sm font-medium"
-            >
-              <BookOpen className="h-4 w-4 text-primary shrink-0" />
-              Knowledge Base
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          <InboxWrapper>
+            <DashboardInbox />
+          </InboxWrapper>
+          
+          <Card className="shadow-sm h-fit">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Quick Actions</CardTitle>
+              <CardDescription>Shortcuts</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Link
+                href="/dashboard/tickets/new"
+                className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-sm font-medium"
+              >
+                <Ticket className="h-4 w-4 text-primary shrink-0" />
+                New support ticket
+              </Link>
+              <Link
+                href="/dashboard/service/new"
+                className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-sm font-medium"
+              >
+                <Wrench className="h-4 w-4 text-primary shrink-0" />
+                New service request
+              </Link>
+              <Link
+                href="/dashboard/kb"
+                className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors text-sm font-medium"
+              >
+                <BookOpen className="h-4 w-4 text-primary shrink-0" />
+                Knowledge Base
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );

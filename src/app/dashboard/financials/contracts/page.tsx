@@ -108,7 +108,7 @@ export default async function ContractsFinancialPage() {
           <CardDescription>Latest client agreements and contracts</CardDescription>
         </CardHeader>
         <CardContent>
-          {!contracts?.length ? (
+          {!contracts || contracts.length === 0 ? (
             <div className="rounded-lg border-2 border-dashed border-muted bg-muted/30 p-6 text-center text-muted-foreground text-sm">
               No contracts found.
             </div>
@@ -124,7 +124,7 @@ export default async function ContractsFinancialPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {contracts.map((contract) => (
+                {contracts.map((contract: any) => (
                   <TableRow key={contract.id}>
                     <TableCell className="font-medium">
                       <Link

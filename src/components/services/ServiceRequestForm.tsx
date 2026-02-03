@@ -44,6 +44,7 @@ export function ServiceRequestForm({ services }: ServiceRequestFormProps) {
   } = useForm<ServiceRequestInput>({
     resolver: zodResolver(serviceRequestSchema) as any,
     defaultValues: {
+      service_id: '',
       priority: 'medium',
     },
   })
@@ -146,7 +147,10 @@ export function ServiceRequestForm({ services }: ServiceRequestFormProps) {
                     ? 'ring-2 ring-primary bg-primary/5'
                     : 'hover:shadow-md'
                 }`}
-                onClick={() => setSelectedServiceId(service.id)}
+                onClick={() => {
+                  setSelectedServiceId(service.id)
+                  setValue('service_id', service.id)
+                }}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">
@@ -190,6 +194,9 @@ export function ServiceRequestForm({ services }: ServiceRequestFormProps) {
               </Card>
             ))}
           </div>
+          {errors.service_id && (
+            <p className="text-sm text-red-500 mt-2">{errors.service_id.message || 'Please select a service'}</p>
+          )}
         </CardContent>
       </Card>
 

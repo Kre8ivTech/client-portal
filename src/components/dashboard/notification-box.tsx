@@ -16,7 +16,7 @@ export function NotificationBox() {
   const [loading, setLoading] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
   const [dismissedSignature, setDismissedSignature] = useState<string | null>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   const STORAGE_KEY = 'ktp.dashboard.notifications.dismissedSignature'
 
@@ -45,7 +45,7 @@ export function NotificationBox() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [supabase])
 
   useEffect(() => {
     // Load persisted dismissal state (client-only)

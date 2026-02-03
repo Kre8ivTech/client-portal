@@ -108,7 +108,7 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="w-full space-y-8">
       <Link 
         href="/dashboard/tickets" 
         className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors mb-4 w-fit"

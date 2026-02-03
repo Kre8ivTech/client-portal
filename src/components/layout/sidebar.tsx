@@ -91,6 +91,18 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     ],
   },
   {
+    label: "Financial Management",
+    items: [
+      { href: "/dashboard/financials/invoicing", icon: FileText, label: "Invoicing & Revenue" },
+      { href: "/dashboard/financials/receivables", icon: DollarSign, label: "Accounts Receivable" },
+      { href: "/dashboard/financials/time-tracking", icon: Clock, label: "Time & Utilization" },
+      { href: "/dashboard/financials/subscriptions", icon: Layers, label: "Subscriptions" },
+      { href: "/dashboard/financials/cash-flow", icon: LineChart, label: "Cash & Runway" },
+      { href: "/dashboard/financials/budgeting", icon: BarChart3, label: "Budgets & Forecasts" },
+      { href: "/dashboard/financials/reports", icon: FileText, label: "Financial Reports" },
+    ],
+  },
+  {
     label: "Admin",
     items: [
       { href: "/dashboard/clients", icon: Users, label: "Clients" },
@@ -109,18 +121,6 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/admin/notifications", icon: Bell, label: "Notifications" },
       { href: "/dashboard/admin/settings/sla", icon: Clock, label: "SLA Settings" },
       { href: "/dashboard/audit", icon: History, label: "Audit Log" },
-    ],
-  },
-  {
-    label: "Financial Management",
-    items: [
-      { href: "/dashboard/financials/invoicing", icon: FileText, label: "Invoicing & Revenue" },
-      { href: "/dashboard/financials/receivables", icon: DollarSign, label: "Accounts Receivable" },
-      { href: "/dashboard/financials/time-tracking", icon: Clock, label: "Time & Utilization" },
-      { href: "/dashboard/financials/subscriptions", icon: Layers, label: "Subscriptions" },
-      { href: "/dashboard/financials/cash-flow", icon: LineChart, label: "Cash & Runway" },
-      { href: "/dashboard/financials/budgeting", icon: BarChart3, label: "Budgets & Forecasts" },
-      { href: "/dashboard/financials/reports", icon: FileText, label: "Financial Reports" },
     ],
   },
 ];

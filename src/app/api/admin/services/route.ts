@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { serviceSchema } from '@/lib/validators/service'
 
+function isMissingColumnSchemaCacheError(message: string | undefined, column: string) {
+  if (!message) return false
+  const m = message.toLowerCase()
+  return (
+    m.includes('schema cache') &&
+    (m.includes(`'${column.toLowerCase()}'`) || m.includes(`"${column.toLowerCase()}"`))
+  )
+}
+
 // GET /api/admin/services - List all services
 export async function GET(request: NextRequest) {
   try {
@@ -43,7 +52,8 @@ export async function GET(request: NextRequest) {
       .from('services')
       .select('*, created_by_user:users!created_by(id, profiles(name))')
     
-    if (p.organization_id) {
+    // Staff are scoped to their own org. Super admins can view across orgs.
+    if (p.role !== 'super_admin' && p.organization_id) {
       query = query.eq('organization_id', p.organization_id)
     }
     
@@ -117,16 +127,50 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const requestedOrgId = (result.data as any).organization_id as string | undefined
+    const targetOrgId =
+      p.role === 'super_admin'
+        ? (requestedOrgId || p.organization_id)
+        : p.organization_id
+
+    if (!targetOrgId) {
+      return NextResponse.json(
+        { error: 'Missing organization context for service creation' },
+        { status: 400 }
+      )
+    }
+
+    // Non-super-admins cannot override organization_id
+    const insertData: any = {
+      ...result.data,
+      organization_id: targetOrgId,
+      created_by: user.id,
+    }
+    if (p.role !== 'super_admin') {
+      delete insertData.organization_id
+      insertData.organization_id = targetOrgId
+    }
+
     // Insert service
-    const { data: service, error } = await (supabase as any)
+    let service: any = null
+    let error: any = null
+
+    ;({ data: service, error } = await (supabase as any)
       .from('services')
-      .insert({
-        ...result.data,
-        organization_id: p.organization_id,
-        created_by: user.id,
-      })
+      .insert(insertData)
       .select()
-      .single()
+      .single())
+
+    // Backwards-compat: if DB schema doesn't have is_global yet, retry without it.
+    if (error && isMissingColumnSchemaCacheError(error.message, 'is_global')) {
+      const retryData = { ...insertData }
+      delete retryData.is_global
+      ;({ data: service, error } = await (supabase as any)
+        .from('services')
+        .insert(retryData)
+        .select()
+        .single())
+    }
 
     if (error) {
       console.error('Error creating service:', error)

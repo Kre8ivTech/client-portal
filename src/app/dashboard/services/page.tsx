@@ -26,14 +26,27 @@ export default async function ServicesPage() {
   // - Active services in user's organization
   // - Global services (is_global = true)
   // - Parent org services (if white-label client)
-  const { data: services, error } = await supabase
+  const baseSelect =
+    "id, name, description, category, base_rate, rate_type, estimated_hours, is_active, display_order";
+  const selectWithGlobal = `${baseSelect}, is_global`;
+
+  let { data: services, error } = await supabase
     .from("services")
-    .select(
-      "id, name, description, category, base_rate, rate_type, estimated_hours, is_active, is_global, display_order",
-    )
+    .select(selectWithGlobal)
     .eq("is_active", true)
     .order("display_order", { ascending: true })
     .order("created_at", { ascending: false });
+
+  // Backwards-compat: if DB hasn't been migrated yet, retry without is_global.
+  if (error && String(error.message || "").toLowerCase().includes("schema cache") && String(error.message || "").toLowerCase().includes("is_global")) {
+    ({ data: services, error } = await supabase
+      .from("services")
+      .select(baseSelect)
+      .eq("is_active", true)
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: false }));
+    services = (services || []).map((s: any) => ({ ...s, is_global: false }));
+  }
 
   if (error) {
     console.error("Error fetching services:", error);

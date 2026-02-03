@@ -22,9 +22,17 @@ import { Loader2 } from 'lucide-react'
 
 interface ServiceFormProps {
   initialData?: Partial<ServiceInput> & { id?: string }
+  organizations?: Array<{ id: string; name: string }>
+  canSelectOrganization?: boolean
+  defaultOrganizationId?: string | null
 }
 
-export function ServiceForm({ initialData }: ServiceFormProps) {
+export function ServiceForm({
+  initialData,
+  organizations,
+  canSelectOrganization = false,
+  defaultOrganizationId = null,
+}: ServiceFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -38,6 +46,7 @@ export function ServiceForm({ initialData }: ServiceFormProps) {
   } = useForm<ServiceInput>({
     resolver: zodResolver(serviceSchema) as any,
     defaultValues: initialData || {
+      organization_id: defaultOrganizationId || undefined,
       requires_approval: true,
       is_active: true,
       is_global: false,
@@ -49,6 +58,7 @@ export function ServiceForm({ initialData }: ServiceFormProps) {
   const rateType = watch('rate_type')
   const isActive = watch('is_active')
   const requiresApproval = watch('requires_approval')
+  const organizationId = watch('organization_id')
 
   const onSubmit = async (data: ServiceInput) => {
     setIsSubmitting(true)
@@ -96,6 +106,35 @@ export function ServiceForm({ initialData }: ServiceFormProps) {
           <CardDescription>Essential details about the service</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {canSelectOrganization && organizations && organizations.length > 0 && (
+            <div>
+              <Label htmlFor="organization_id">Organization</Label>
+              <Select
+                defaultValue={organizationId || initialData?.organization_id}
+                onValueChange={(value) => setValue('organization_id', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.organization_id && (
+                <p className="text-sm text-red-600 mt-1">
+                  {errors.organization_id.message as any}
+                </p>
+              )}
+              <p className="text-xs text-slate-500 mt-1">
+                Choose which organization this service belongs to.
+              </p>
+            </div>
+          )}
+
           <div>
             <Label htmlFor="name">Service Name *</Label>
             <Input

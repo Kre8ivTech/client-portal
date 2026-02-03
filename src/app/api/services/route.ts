@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+function isMissingColumnSchemaCacheError(message: string | undefined, column: string) {
+  if (!message) return false;
+  const m = message.toLowerCase();
+  return (
+    m.includes("schema cache") &&
+    (m.includes(`'${column.toLowerCase()}'`) || m.includes(`"${column.toLowerCase()}"`))
+  );
+}
+
 // GET /api/services - List available services for clients
 export async function GET(request: NextRequest) {
   try {
@@ -29,11 +38,13 @@ export async function GET(request: NextRequest) {
 
     // Build query - RLS will filter to only show accessible services
     // (active services in user's org + global services)
+    const baseSelect =
+      "id, name, description, category, base_rate, rate_type, estimated_hours, is_active, display_order";
+    const selectWithGlobal = `${baseSelect}, is_global`;
+
     let query = supabase
       .from("services")
-      .select(
-        "id, name, description, category, base_rate, rate_type, estimated_hours, is_active, is_global, display_order",
-      )
+      .select(selectWithGlobal)
       .eq("is_active", true) // Only show active services to clients
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: false });
@@ -43,14 +54,33 @@ export async function GET(request: NextRequest) {
       query = query.eq("category", category);
     }
 
-    const { data: services, error } = await query;
+    let { data: services, error } = await query;
+    let responseServices: any[] | null = services as any;
+
+    // Backwards-compat: retry without is_global if DB hasn't been migrated yet.
+    if (error && isMissingColumnSchemaCacheError(error.message, "is_global")) {
+      let retryQuery = supabase
+        .from("services")
+        .select(baseSelect)
+        .eq("is_active", true)
+        .order("display_order", { ascending: true })
+        .order("created_at", { ascending: false });
+      if (category) {
+        retryQuery = retryQuery.eq("category", category);
+      }
+      ({ data: services, error } = await retryQuery);
+      // Normalize response shape for callers expecting is_global
+      responseServices = (services || []).map((s: any) => ({ ...s, is_global: false }));
+    } else {
+      responseServices = services as any;
+    }
 
     if (error) {
       console.error("Error fetching services:", error);
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ data: services }, { status: 200 });
+    return NextResponse.json({ data: responseServices }, { status: 200 });
   } catch (err) {
     console.error("Unexpected error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -2,6 +2,9 @@ import { z } from 'zod'
 
 // Service creation/update schema
 export const serviceSchema = z.object({
+  // Optional: super admins may create services for a specific organization.
+  // For non-super-admins, the API will ignore this and use the caller's organization_id.
+  organization_id: z.string().uuid('Invalid organization ID').optional(),
   name: z.string().min(3, 'Name must be at least 3 characters').max(200, 'Name too long'),
   description: z.string().min(10, 'Description must be at least 10 characters').max(2000, 'Description too long').optional().nullable(),
   category: z.enum(['custom_code', 'custom_software', 'custom_plugin', 'maintenance', 'support', 'consulting', 'other']),

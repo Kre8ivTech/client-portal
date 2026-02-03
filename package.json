@@ -47,7 +47,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "docusign-esign": "^8.5.0",
-    "isomorphic-dompurify": "^2.35.0",
+    "isomorphic-dompurify": "2.26.0",
     "langchain": "^1.2.16",
     "lucide-react": "^0.474.0",
     "next": "^16.1.6",
@@ -76,6 +76,8 @@
     "typescript": "^5"
   },
   "overrides": {
-    "rimraf": "^5.0.5"
+    "rimraf": "^5.0.5",
+    "jsdom": "26.1.0",
+    "html-encoding-sniffer": "4.0.0"
   }
 }

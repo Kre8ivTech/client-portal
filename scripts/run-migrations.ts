@@ -206,24 +206,39 @@ function runMigrations() {
     if (needsIncludeAll) {
       log('\n▶️  Applying migrations with --include-all...', 'blue')
       try {
-        execSync(
+        const output = execSync(
           dbUrl
             ? `supabase db push --include-all --db-url "${dbUrl}"`
             : 'supabase db push --include-all',
           {
-            stdio: 'inherit', // Show output for --include-all
+            stdio: ['ignore', 'pipe', 'pipe'], // Capture output to detect duplicate key errors
+            encoding: 'utf-8',
             env: {
               ...process.env,
               SUPABASE_ACCESS_TOKEN: process.env.SUPABASE_ACCESS_TOKEN,
               SUPABASE_DB_PASSWORD: dbPassword,
-            }
+            },
+            input: 'Y\n' // Auto-confirm the prompt
           }
         )
+
+        // Log the output
+        if (output) {
+          console.log(output)
+        }
 
         log('\n✅ Migrations applied successfully!', 'green')
         return true
       } catch (includeAllError: any) {
         const errorOutput = (includeAllError.stdout || '') + (includeAllError.stderr || '') + (includeAllError.message || '')
+
+        // Log the error output for debugging
+        if (includeAllError.stdout) {
+          console.log(includeAllError.stdout)
+        }
+        if (includeAllError.stderr) {
+          console.error(includeAllError.stderr)
+        }
 
         // Check again for duplicate keys (migrations already applied via --include-all)
         if (errorOutput.includes('duplicate key') && errorOutput.includes('schema_migrations')) {

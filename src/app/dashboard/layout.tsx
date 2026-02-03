@@ -4,6 +4,7 @@ import { DashboardSidebar } from "@/components/layout/sidebar";
 import { DashboardTopbar } from "@/components/layout/dashboard-topbar";
 import { LiveChatWidget } from "@/components/messaging/live-chat-widget";
 import { SLAMonitorWrapper } from "@/components/tickets/sla-monitor-wrapper";
+import { AIChatbotWidget } from "@/components/ai/ai-chatbot-widget";
 import { getPortalBranding } from "@/lib/actions/portal-branding";
 
 export const dynamic = "force-dynamic";
@@ -139,6 +140,10 @@ export default async function DashboardLayout({
 
       <LiveChatWidget />
       <SLAMonitorWrapper />
+      <AIChatbotWidget
+        userId={user.id}
+        organizationId={profile?.organization_id || undefined}
+      />
     </div>
   );
 }

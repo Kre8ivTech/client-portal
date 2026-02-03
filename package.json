@@ -30,6 +30,7 @@
     "review:post": "tsx scripts/github/post-review.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
     "@aws-sdk/client-s3": "^3.980.0",
     "@aws-sdk/s3-request-presigner": "^3.980.0",
     "@hookform/resolvers": "^5.2.2",

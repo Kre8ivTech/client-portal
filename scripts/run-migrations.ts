@@ -152,22 +152,39 @@ function runMigrations() {
     const dbUrl = getDbUrl()
     const dbPassword = process.env.SUPABASE_DB_PASSWORD || process.env.POSTGRES_PASSWORD
 
-    const output = execSync(
-      dbUrl
-        ? `supabase db push --dry-run --db-url "${dbUrl}"`
-        : 'supabase db push --dry-run',
-      { 
-        encoding: 'utf-8',
-        env: {
-          ...process.env,
-          SUPABASE_ACCESS_TOKEN: process.env.SUPABASE_ACCESS_TOKEN,
-          SUPABASE_DB_PASSWORD: dbPassword,
+    // First try to run dry-run to see pending migrations
+    // If it fails with history mismatch, we'll catch it and proceed with --include-all
+    let output = ''
+    try {
+      output = execSync(
+        dbUrl
+          ? `supabase db push --dry-run --db-url "${dbUrl}"`
+          : 'supabase db push --dry-run',
+        { 
+          encoding: 'utf-8',
+          env: {
+            ...process.env,
+            SUPABASE_ACCESS_TOKEN: process.env.SUPABASE_ACCESS_TOKEN,
+            SUPABASE_DB_PASSWORD: dbPassword,
+          },
+          stdio: ['ignore', 'pipe', 'pipe'] // Capture stdout and stderr
         }
+      )
+      
+      log('📋 Migration preview:', 'blue')
+      console.log(output)
+    } catch (dryRunError: any) {
+      const errorOutput = dryRunError.stderr?.toString() || dryRunError.stdout?.toString() || dryRunError.message
+      
+      // Check if the error is about history mismatch which can be resolved with --include-all
+      if (errorOutput.includes('include-all') || errorOutput.includes('history table')) {
+        log('⚠️  Migration history mismatch detected. Proceeding with --include-all...', 'yellow')
+        output = 'needs-include-all'
+      } else {
+        // Genuine error, rethrow
+        throw dryRunError
       }
-    )
-    
-    log('📋 Migration preview:', 'blue')
-    console.log(output)
+    }
 
     const applyCommand = dbUrl
       ? `supabase db push --include-all --db-url "${dbUrl}"`

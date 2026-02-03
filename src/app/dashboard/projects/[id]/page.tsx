@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -20,6 +21,7 @@ import {
   Clock,
   Target,
   Settings,
+  AlertTriangle,
 } from 'lucide-react'
 import { ProjectMembersPanel } from '@/components/projects/project-members-panel'
 import { ProjectOrganizationsPanel } from '@/components/projects/project-organizations-panel'
@@ -102,7 +104,35 @@ export default async function ProjectDetailPage({
     .eq('id', projectId)
     .single()
 
-  if (error || !project) notFound()
+  if (error) {
+    if ((error as any).code === 'PGRST205') {
+      return (
+        <div className="space-y-6">
+          <Link
+            href="/dashboard/projects"
+            className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors w-fit"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back to Projects
+          </Link>
+
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Projects system is not available yet</AlertTitle>
+            <AlertDescription>
+              The database table <span className="font-mono">public.projects</span> was not found
+              (Supabase error <span className="font-mono">PGRST205</span>). This usually means
+              production migrations haven&apos;t been applied yet.
+            </AlertDescription>
+          </Alert>
+        </div>
+      )
+    }
+
+    notFound()
+  }
+
+  if (!project) notFound()
 
   // Determine permissions
   const isSuperAdmin = role === 'super_admin'

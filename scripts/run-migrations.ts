@@ -89,14 +89,26 @@ function checkEnvironment() {
 function checkSupabaseCLI() {
   log('\n🔍 Checking Supabase CLI...', 'blue')
   
+  // Prefer local CLI when available (via devDependency), fall back to global binary.
+  // Note: Vercel build environments may not expose a global `supabase` in PATH.
+  let supabaseCmd = 'supabase'
   try {
     execSync('supabase --version', { stdio: 'pipe' })
     log('✅ Supabase CLI is installed', 'green')
+    ;(globalThis as any).__SUPABASE_CMD__ = supabaseCmd
     return true
   } catch (error) {
-    log('⚠️  Supabase CLI not found in path.', 'yellow')
-    log('   Ensure it is installed as a devDependency and run via npm scripts.', 'yellow')
-    return false
+    try {
+      supabaseCmd = 'npx supabase'
+      execSync('npx supabase --version', { stdio: 'pipe' })
+      log('✅ Supabase CLI available via npx', 'green')
+      ;(globalThis as any).__SUPABASE_CMD__ = supabaseCmd
+      return true
+    } catch {
+      log('⚠️  Supabase CLI not found in path.', 'yellow')
+      log('   Ensure it is installed as a devDependency and run via npm scripts.', 'yellow')
+      return false
+    }
   }
 }
 
@@ -117,6 +129,7 @@ function checkMigrations() {
 
 function linkSupabaseProject() {
   log('\n🔗 Linking Supabase project...', 'blue')
+  const supabaseCmd = ((globalThis as any).__SUPABASE_CMD__ as string | undefined) || 'supabase'
   
   const projectRef = process.env.SUPABASE_PROJECT_REF || deriveProjectRef()
   if (!projectRef) {
@@ -127,7 +140,7 @@ function linkSupabaseProject() {
   try {
     // Link to remote project
     execSync(
-      `supabase link --project-ref ${projectRef}`,
+      `${supabaseCmd} link --project-ref ${projectRef}`,
       { 
         stdio: 'pipe',
         env: {
@@ -147,6 +160,7 @@ function linkSupabaseProject() {
 
 function runMigrations() {
   log('\n🚀 Running migrations...', 'blue')
+  const supabaseCmd = ((globalThis as any).__SUPABASE_CMD__ as string | undefined) || 'supabase'
 
   try {
     const dbUrl = getDbUrl()
@@ -159,8 +173,8 @@ function runMigrations() {
       log('\n▶️  Attempting to apply new migrations...', 'blue')
       execSync(
         dbUrl
-          ? `supabase db push --db-url "${dbUrl}"`
-          : 'supabase db push',
+          ? `${supabaseCmd} db push --db-url "${dbUrl}"`
+          : `${supabaseCmd} db push`,
         {
           stdio: ['ignore', 'pipe', 'pipe'], // Capture output to detect errors
           encoding: 'utf-8',
@@ -208,8 +222,8 @@ function runMigrations() {
       try {
         const output = execSync(
           dbUrl
-            ? `supabase db push --include-all --db-url "${dbUrl}"`
-            : 'supabase db push --include-all',
+            ? `${supabaseCmd} db push --include-all --db-url "${dbUrl}"`
+            : `${supabaseCmd} db push --include-all`,
           {
             stdio: ['ignore', 'pipe', 'pipe'], // Capture output to detect duplicate key errors
             encoding: 'utf-8',

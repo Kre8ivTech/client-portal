@@ -16,7 +16,7 @@ export default async function AIAdminPage() {
       <div>
         <h2 className="text-3xl font-bold tracking-tight">AI Assistant Settings</h2>
         <p className="text-muted-foreground mt-2">
-          Manage prompts and behavior for the portal's AI assistant.
+          Manage prompts and behavior for the portal&apos;s AI assistant.
         </p>
       </div>
       

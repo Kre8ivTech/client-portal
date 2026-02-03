@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check user permissions
-    const { data: profile } = await supabase
+    const { data: profile } = await (supabase as any)
       .from('users')
       .select('role, is_account_manager, organization_id')
       .eq('id', user.id)

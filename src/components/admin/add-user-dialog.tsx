@@ -261,7 +261,7 @@ export function AddUserDialog({
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                The user will need to use the "Forgot Password" feature to set their password.
+                The user will need to use the &quot;Forgot Password&quot; feature to set their password.
               </AlertDescription>
             </Alert>
           )}

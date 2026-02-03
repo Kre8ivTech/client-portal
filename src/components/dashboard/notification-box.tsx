@@ -68,7 +68,7 @@ export function NotificationBox() {
 
   async function markAsRead(notificationId: string) {
     try {
-      await supabase.rpc('mark_notification_read', { notification_id: notificationId })
+      await (supabase as any).rpc('mark_notification_read', { notification_id: notificationId })
       loadNotifications()
     } catch (error) {
       console.error('Error marking notification as read:', error)
@@ -77,7 +77,7 @@ export function NotificationBox() {
 
   async function dismissNotification(notificationId: string) {
     try {
-      await supabase.rpc('dismiss_notification', { notification_id: notificationId })
+      await (supabase as any).rpc('dismiss_notification', { notification_id: notificationId })
       loadNotifications()
     } catch (error) {
       console.error('Error dismissing notification:', error)

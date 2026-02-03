@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -15,7 +15,10 @@ export function NotificationBox() {
   const [notifications, setNotifications] = useState<UserNotification[]>([])
   const [loading, setLoading] = useState(true)
   const [unreadCount, setUnreadCount] = useState(0)
-  const supabase = createClient()
+  const [dismissedSignature, setDismissedSignature] = useState<string | null>(null)
+  const supabase = useMemo(() => createClient(), [])
+
+  const STORAGE_KEY = 'ktp.dashboard.notifications.dismissedSignature'
 
   useEffect(() => {
     loadNotifications()
@@ -41,6 +44,15 @@ export function NotificationBox() {
 
     return () => {
       supabase.removeChannel(channel)
+    }
+  }, [supabase])
+
+  useEffect(() => {
+    // Load persisted dismissal state (client-only)
+    try {
+      setDismissedSignature(window.localStorage.getItem(STORAGE_KEY))
+    } catch {
+      // ignore
     }
   }, [])
 
@@ -86,20 +98,41 @@ export function NotificationBox() {
 
   const visibleNotifications = notifications.filter(n => !n.is_dismissed)
 
-  if (loading) {
-    return (
-      <Card className="shadow-sm">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Notifications
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </CardContent>
-      </Card>
-    )
+  const currentSignature = useMemo(() => {
+    if (visibleNotifications.length === 0) return ''
+    return visibleNotifications
+      .map((n) => `${n.id}:${n.updated_at}:${n.read_at ?? ''}:${n.dismissed_at ?? ''}`)
+      .join('|')
+  }, [visibleNotifications])
+
+  const isSectionDismissed = dismissedSignature !== null && dismissedSignature === currentSignature
+
+  useEffect(() => {
+    // If content changes, automatically re-show the section.
+    if (!dismissedSignature) return
+    if (currentSignature && dismissedSignature !== currentSignature) {
+      try {
+        window.localStorage.removeItem(STORAGE_KEY)
+      } catch {
+        // ignore
+      }
+      setDismissedSignature(null)
+    }
+  }, [currentSignature, dismissedSignature])
+
+  function dismissSection() {
+    if (!currentSignature) return
+    try {
+      window.localStorage.setItem(STORAGE_KEY, currentSignature)
+    } catch {
+      // ignore
+    }
+    setDismissedSignature(currentSignature)
+  }
+
+  // Only show this widget when there's something to show.
+  if (loading || visibleNotifications.length === 0 || isSectionDismissed) {
+    return null
   }
 
   return (
@@ -115,29 +148,31 @@ export function NotificationBox() {
               </Badge>
             )}
           </CardTitle>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 shrink-0 opacity-60 hover:opacity-100"
+            onClick={dismissSection}
+            aria-label="Close notifications section"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
         <CardDescription>Important updates and announcements</CardDescription>
       </CardHeader>
       <CardContent>
-        {visibleNotifications.length === 0 ? (
-          <div className="text-center py-8">
-            <Bell className="h-8 w-8 text-muted-foreground/50 mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">No notifications</p>
+        <ScrollArea className="h-[400px] pr-4">
+          <div className="space-y-3">
+            {visibleNotifications.map((notification) => (
+              <NotificationItem
+                key={notification.id}
+                notification={notification}
+                onMarkRead={markAsRead}
+                onDismiss={dismissNotification}
+              />
+            ))}
           </div>
-        ) : (
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-3">
-              {visibleNotifications.map((notification) => (
-                <NotificationItem
-                  key={notification.id}
-                  notification={notification}
-                  onMarkRead={markAsRead}
-                  onDismiss={dismissNotification}
-                />
-              ))}
-            </div>
-          </ScrollArea>
-        )}
+        </ScrollArea>
       </CardContent>
     </Card>
   )

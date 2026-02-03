@@ -16,6 +16,10 @@ const compat = new FlatCompat({
 export default [
   ...compat.extends("next/core-web-vitals"),
   {
+    // Tooling / agent directories are not part of the shipped app.
+    ignores: [".claude/**", ".claude-flow/**", ".swarm/**"],
+  },
+  {
     rules: {
       // This repo contains lots of long-form JSX copy (user guides, etc.).
       // Keeping this as an error creates high churn for content-only edits.

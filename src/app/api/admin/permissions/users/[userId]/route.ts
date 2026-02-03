@@ -13,9 +13,10 @@ const updateUserPermissionsSchema = z.object({
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  props: { params: Promise<{ userId: string }> }
 ) {
   try {
+    const params = await props.params;
     const supabase = await createServerSupabaseClient()
     const { userId } = params
 
@@ -64,9 +65,10 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  props: { params: Promise<{ userId: string }> }
 ) {
   try {
+    const params = await props.params;
     const supabase = await createServerSupabaseClient()
     const { userId } = params
 

@@ -8,7 +8,7 @@
     },
     {
       "path": "/api/cron/file-sync",
-      "schedule": "15 * * * *"
+      "schedule": "0 3 * * *"
     }
   ]
 }

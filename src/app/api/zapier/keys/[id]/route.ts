@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 // DELETE: Revoke an API key
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params;
     const supabase = await createServerSupabaseClient();
     const {
       data: { user },
@@ -19,7 +24,7 @@ export async function DELETE(
     const { error } = await supabase
       .from("api_keys")
       .delete()
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("user_id", user.id);
 
     if (error) {
@@ -38,9 +43,10 @@ export async function DELETE(
 // PATCH: Update an API key (toggle active status)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params;
     const supabase = await createServerSupabaseClient();
     const {
       data: { user },
@@ -56,7 +62,7 @@ export async function PATCH(
     const { data, error } = await supabase
       .from("api_keys")
       .update({ is_active })
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("user_id", user.id)
       .select()
       .single();

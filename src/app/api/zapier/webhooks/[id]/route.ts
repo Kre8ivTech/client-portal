@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { verifyApiKey } from "@/lib/zapier/auth";
 
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 // DELETE: Remove a webhook subscription
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params;
     // Try API key auth first
     const apiKeyContext = await verifyApiKey(request);
     
@@ -33,7 +38,7 @@ export async function DELETE(
     const { error } = await supabase
       .from("zapier_webhooks")
       .delete()
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("user_id", userId);
 
     if (error) {
@@ -52,9 +57,10 @@ export async function DELETE(
 // PATCH: Update webhook (toggle active status or update URL)
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
+    const { id } = await params;
     // Try API key auth first
     const apiKeyContext = await verifyApiKey(request);
     
@@ -91,7 +97,7 @@ export async function PATCH(
     const { data, error } = await supabase
       .from("zapier_webhooks")
       .update(updateData)
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("user_id", userId)
       .select()
       .single();

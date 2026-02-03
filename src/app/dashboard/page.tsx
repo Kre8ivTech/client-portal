@@ -8,6 +8,8 @@ import { TicketCalendar } from "@/components/dashboard/ticket-calendar";
 import { DashboardInbox } from "@/components/dashboard/inbox";
 import { InboxWrapper } from "@/components/dashboard/inbox-wrapper";
 import { NotificationBox } from "@/components/dashboard/notification-box";
+import { CriticalTicketsWidget } from "@/components/dashboard/critical-tickets-widget";
+import { SLAComplianceWidget } from "@/components/dashboard/sla-compliance-widget";
 
 export const dynamic = 'force-dynamic'
 
@@ -41,6 +43,20 @@ export default async function DashboardPage() {
   let overdueInvoicesTotal = 0
   let paidInvoicesCount = 0
   let overdueInvoicesCount = 0
+
+  // Critical tickets data
+  let criticalTickets: any[] = []
+
+  // SLA compliance data
+  let slaStats = {
+    total_tickets: 0,
+    compliant: 0,
+    at_risk: 0,
+    breached: 0,
+    compliance_percentage: 100,
+    avg_response_time_hours: 0,
+    avg_resolution_time_hours: 0
+  }
 
   if (organizationId) {
     const { count } = await supabase
@@ -140,6 +156,94 @@ export default async function DashboardPage() {
     }
   }
 
+  // Fetch critical tickets for staff/admin
+  if (userRole === 'staff' || userRole === 'super_admin') {
+    const { data: criticalTicketsData } = await supabase
+      .from('tickets')
+      .select('id, ticket_number, subject, priority, status, created_at')
+      .in('priority', ['critical', 'high'])
+      .in('status', ['new', 'open', 'in_progress'])
+      .order('priority', { ascending: false })
+      .order('created_at', { ascending: true })
+      .limit(10)
+
+    if (criticalTicketsData) {
+      criticalTickets = criticalTicketsData.map((ticket: any) => ({
+        ...ticket,
+        time_elapsed_hours: Math.floor(
+          (new Date().getTime() - new Date(ticket.created_at).getTime()) / (1000 * 60 * 60)
+        )
+      }))
+    }
+
+    // Calculate SLA stats
+    const { data: allActiveTickets } = await supabase
+      .from('tickets')
+      .select('id, created_at, first_response_at, resolved_at, priority, sla_response_target, sla_resolution_target')
+      .in('status', ['new', 'open', 'in_progress', 'pending_client', 'resolved'])
+
+    if (allActiveTickets && allActiveTickets.length > 0) {
+      const now = new Date()
+      let compliant = 0
+      let atRisk = 0
+      let breached = 0
+      let totalResponseTime = 0
+      let totalResolutionTime = 0
+      let responseCount = 0
+      let resolutionCount = 0
+
+      allActiveTickets.forEach((ticket: any) => {
+        const createdAt = new Date(ticket.created_at)
+        const responseTarget = ticket.sla_response_target || 24 // default 24 hours
+        const resolutionTarget = ticket.sla_resolution_target || 48 // default 48 hours
+
+        // Check response SLA
+        if (ticket.first_response_at) {
+          const responseTime = (new Date(ticket.first_response_at).getTime() - createdAt.getTime()) / (1000 * 60 * 60)
+          totalResponseTime += responseTime
+          responseCount++
+        }
+
+        // Check resolution SLA
+        if (ticket.resolved_at) {
+          const resolutionTime = (new Date(ticket.resolved_at).getTime() - createdAt.getTime()) / (1000 * 60 * 60)
+          totalResolutionTime += resolutionTime
+          resolutionCount++
+        }
+
+        // Determine ticket SLA status
+        const hoursElapsed = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60)
+        const responseTimeElapsed = ticket.first_response_at
+          ? (new Date(ticket.first_response_at).getTime() - createdAt.getTime()) / (1000 * 60 * 60)
+          : hoursElapsed
+
+        if (!ticket.first_response_at && hoursElapsed > responseTarget) {
+          breached++
+        } else if (!ticket.first_response_at && hoursElapsed > responseTarget * 0.8) {
+          atRisk++
+        } else if (!ticket.resolved_at && hoursElapsed > resolutionTarget) {
+          breached++
+        } else if (!ticket.resolved_at && hoursElapsed > resolutionTarget * 0.8) {
+          atRisk++
+        } else {
+          compliant++
+        }
+      })
+
+      slaStats = {
+        total_tickets: allActiveTickets.length,
+        compliant,
+        at_risk: atRisk,
+        breached,
+        compliance_percentage: allActiveTickets.length > 0
+          ? (compliant / allActiveTickets.length) * 100
+          : 100,
+        avg_response_time_hours: responseCount > 0 ? totalResponseTime / responseCount : 0,
+        avg_resolution_time_hours: resolutionCount > 0 ? totalResolutionTime / resolutionCount : 0
+      }
+    }
+  }
+
   // Determine which cards to show based on role
   const isStaff = userRole === 'staff' || userRole === 'super_admin'
   const isAdmin = userRole === 'super_admin'
@@ -196,6 +300,14 @@ export default async function DashboardPage() {
           />
         )}
       </div>
+
+      {/* Critical Tickets and SLA Compliance for Staff/Admin */}
+      {isStaff && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CriticalTicketsWidget tickets={criticalTickets} />
+          <SLAComplianceWidget stats={slaStats} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

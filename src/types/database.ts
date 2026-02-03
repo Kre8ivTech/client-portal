@@ -870,6 +870,7 @@ export type Database = {
           custom_domain: string | null
           custom_domain_verified: boolean | null
           custom_domain_verified_at: string | null
+          description: string | null
           id: string
           name: string
           parent_org_id: string | null
@@ -885,6 +886,7 @@ export type Database = {
           custom_domain?: string | null
           custom_domain_verified?: boolean | null
           custom_domain_verified_at?: string | null
+          description?: string | null
           id?: string
           name: string
           parent_org_id?: string | null
@@ -900,6 +902,7 @@ export type Database = {
           custom_domain?: string | null
           custom_domain_verified?: boolean | null
           custom_domain_verified_at?: string | null
+          description?: string | null
           id?: string
           name?: string
           parent_org_id?: string | null

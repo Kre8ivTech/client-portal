@@ -14,7 +14,7 @@ export default async function TicketsPage() {
   } = await supabase.auth.getUser();
 
   // Fetch tickets with organization details
-  const { data: tickets, error } = await supabase
+  const { data: tickets, error } = await (supabase as any)
     .from("tickets")
     .select(`
       *,
@@ -25,25 +25,29 @@ export default async function TicketsPage() {
   // Fetch organizations for filter (only for staff/admins)
   let organizations: Array<{ id: string; name: string }> = [];
   if (user) {
-    const { data: userProfile } = await supabase
+    const { data: userProfile } = await (supabase as any)
       .from("users")
       .select("role")
       .eq("id", user.id)
       .single();
 
-    if (userProfile?.role === "staff" || userProfile?.role === "super_admin") {
-      const { data: orgs } = await supabase
+    if ((userProfile as any)?.role === "staff" || (userProfile as any)?.role === "super_admin") {
+      const { data: orgs } = await (supabase as any)
         .from("organizations")
         .select("id, name")
         .order("name");
-      organizations = orgs || [];
+      organizations = (orgs as any) || [];
     }
   }
 
   if (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[tickets] fetch error:", error.message, error.code, error.details);
-    }
+    // Always log errors to help debugging
+    console.error("[tickets] fetch error:", {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint
+    });
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">

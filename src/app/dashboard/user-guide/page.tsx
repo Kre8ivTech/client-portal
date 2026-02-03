@@ -130,7 +130,7 @@ export default async function UserGuidePage() {
             className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-primary font-semibold py-3 rounded-lg transition-all"
           >
             <Shield className="h-4 w-4 mr-2" />
-            Admin
+            Settings
           </TabsTrigger>
         </TabsList>
 
@@ -1019,74 +1019,6 @@ export default async function UserGuidePage() {
             </Card>
           )}
 
-          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Layers className="h-5 w-5" />
-                Plans Management
-              </CardTitle>
-              <CardDescription>
-                Manage client plans and subscriptions
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-semibold mb-2">What are Plans?</h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Plans define service packages with included hours and features:
-                </p>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Monthly retainer hours</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Priority support levels</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Feature access controls</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Hourly rates and pricing</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Rollover policies</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Managing Plans</h3>
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Create new plan templates</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Assign plans to clients</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Track hour usage and remaining balance</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>Handle plan upgrades/downgrades</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-primary">•</span>
-                    <span>View plan analytics and utilization</span>
-                  </li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-
           {isSuperAdmin && (
             <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
               <CardHeader>
@@ -1209,15 +1141,87 @@ export default async function UserGuidePage() {
           </Card>
         </TabsContent>
 
-        {/* Admin Tab */}
+        {/* Settings Tab */}
         <TabsContent value="admin" className="space-y-6">
-          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
+          <Card className="border-l-4 border-l-indigo-500 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="bg-gradient-to-r from-indigo-50 to-transparent">
+              <CardTitle className="flex items-center gap-3 text-2xl">
+                <div className="p-2 bg-indigo-500/10 rounded-lg">
+                  <Layers className="h-6 w-6 text-indigo-500" />
+                </div>
+                Plans Management
+              </CardTitle>
+              <CardDescription className="text-base mt-2">
+                Configure client plans and subscription packages
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <h3 className="font-semibold mb-2">What are Plans?</h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Plans define service packages with included hours and features:
+                </p>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">•</span>
+                    <span>Monthly retainer hours</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">•</span>
+                    <span>Priority support levels</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">•</span>
+                    <span>Feature access controls</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">•</span>
+                    <span>Hourly rates and pricing</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">•</span>
+                    <span>Rollover policies</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2">Managing Plans</h3>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">•</span>
+                    <span>Create new plan templates</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">•</span>
+                    <span>Assign plans to clients</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">•</span>
+                    <span>Track hour usage and remaining balance</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">•</span>
+                    <span>Handle plan upgrades/downgrades</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary">•</span>
+                    <span>View plan analytics and utilization</span>
+                  </li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-cyan-500 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="bg-gradient-to-r from-cyan-50 to-transparent">
+              <CardTitle className="flex items-center gap-3 text-2xl">
+                <div className="p-2 bg-cyan-500/10 rounded-lg">
+                  <Clock className="h-6 w-6 text-cyan-500" />
+                </div>
                 Time Tracking
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-base mt-2">
                 Log and track time spent on client work
               </CardDescription>
             </CardHeader>

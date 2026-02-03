@@ -13,13 +13,10 @@ export default async function TicketsArchivePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Fetch archived tickets (resolved, closed, cancelled)
+  // Fetch archived tickets (resolved, closed, cancelled) - simplified query
   const { data: tickets, error } = await supabase
     .from("tickets")
-    .select(`
-      *,
-      organization:organizations!organization_id(id, name, is_priority_client)
-    `)
+    .select("*")
     .in("status", ["resolved", "closed", "cancelled"])
     .order("updated_at", { ascending: false });
 

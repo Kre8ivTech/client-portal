@@ -1,0 +1,91 @@
+version: 1
+
+review:
+  # Automatically trigger review on PR open/sync
+  auto-trigger: true
+
+  # Required agents that must pass for PR to be approved
+  required-agents:
+    - security      # OWASP, secrets, auth checks
+    - style         # ESLint, TypeScript, code conventions
+
+  # Optional agents that provide suggestions
+  optional-agents:
+    - performance   # Query optimization, bundle size
+    - architecture  # SOLID, coupling, cohesion
+
+  # Action to take based on severity
+  thresholds:
+    security: block           # Block PR on critical security issues
+    performance: warn         # Warn on regressions >5%
+    style: suggest           # Auto-fix suggestions only
+    architecture: suggest     # Architectural recommendations
+
+  # Specific rules for each agent
+  rules:
+    security:
+      - no-hardcoded-secrets
+      - proper-rls-policies
+      - service-role-server-only
+      - input-validation
+      - no-sql-injection
+      - no-xss-vulnerabilities
+      - auth-checks-required
+
+    performance:
+      - no-n-plus-one-queries
+      - efficient-supabase-queries
+      - bundle-size-limit: 500kb
+      - complexity-threshold: 15
+      - memory-leak-detection
+
+    style:
+      - eslint-compliance
+      - typescript-strict-mode
+      - file-size-limit: 800
+      - naming-conventions
+      - no-emojis
+      - conventional-commits
+
+    architecture:
+      - max-file-lines: 800
+      - max-coupling: 5
+      - follow-multi-tenancy-patterns
+      - proper-client-usage
+      - server-vs-client-components
+      - feature-organization
+
+  # Files to exclude from review
+  exclude:
+    - "**/*.test.ts"
+    - "**/*.test.tsx"
+    - "**/node_modules/**"
+    - "**/.next/**"
+    - "**/dist/**"
+    - "**/build/**"
+
+  # Comment templates
+  templates:
+    security:
+      prefix: "🔒 **Security Issue**"
+      severity-emoji:
+        critical: "🔴"
+        high: "🟠"
+        medium: "🟡"
+        low: "🟢"
+
+    performance:
+      prefix: "⚡ **Performance Impact**"
+      severity-emoji:
+        critical: "🔴"
+        high: "🟠"
+        medium: "🟡"
+        low: "🟢"
+
+    style:
+      prefix: "✨ **Code Style**"
+      auto-fix-available: "💡 Auto-fix available"
+
+    architecture:
+      prefix: "🏗️ **Architecture**"
+      recommendation: "📋 Recommendation"

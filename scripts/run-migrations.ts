@@ -147,69 +147,90 @@ function linkSupabaseProject() {
 
 function runMigrations() {
   log('\n🚀 Running migrations...', 'blue')
-  
+
   try {
     const dbUrl = getDbUrl()
     const dbPassword = process.env.SUPABASE_DB_PASSWORD || process.env.POSTGRES_PASSWORD
 
-    // First try to run dry-run to see pending migrations
-    // If it fails with history mismatch, we'll catch it and proceed with --include-all
-    let output = ''
+    // First try normal push (without --include-all)
+    // This is safer as it only applies new migrations
+    let needsIncludeAll = false
     try {
-      output = execSync(
+      log('\n▶️  Attempting to apply new migrations...', 'blue')
+      execSync(
         dbUrl
-          ? `supabase db push --dry-run --db-url "${dbUrl}"`
-          : 'supabase db push --dry-run',
-        { 
-          encoding: 'utf-8',
+          ? `supabase db push --db-url "${dbUrl}"`
+          : 'supabase db push',
+        {
+          stdio: 'inherit',
           env: {
             ...process.env,
             SUPABASE_ACCESS_TOKEN: process.env.SUPABASE_ACCESS_TOKEN,
             SUPABASE_DB_PASSWORD: dbPassword,
-          },
-          stdio: ['ignore', 'pipe', 'pipe'] // Capture stdout and stderr
+          }
         }
       )
-      
-      log('📋 Migration preview:', 'blue')
-      console.log(output)
-    } catch (dryRunError: any) {
-      const errorOutput = dryRunError.stderr?.toString() || dryRunError.stdout?.toString() || dryRunError.message
-      
+
+      log('\n✅ Migrations applied successfully!', 'green')
+      return true
+    } catch (pushError: any) {
+      const errorOutput = pushError.stderr?.toString() || pushError.stdout?.toString() || pushError.message
+
+      // Check if error is about duplicate keys (migrations already applied)
+      if (errorOutput.includes('duplicate key') && errorOutput.includes('schema_migrations')) {
+        log('✅ Migrations already applied (duplicate key detected), skipping', 'green')
+        return true
+      }
+
       // Check if the error is about history mismatch which can be resolved with --include-all
       if (errorOutput.includes('include-all') || errorOutput.includes('history table')) {
-        log('⚠️  Migration history mismatch detected. Proceeding with --include-all...', 'yellow')
-        output = 'needs-include-all'
+        log('⚠️  Migration history mismatch detected. Will retry with --include-all...', 'yellow')
+        needsIncludeAll = true
       } else {
         // Genuine error, rethrow
-        throw dryRunError
+        throw pushError
       }
     }
 
-    const applyCommand = dbUrl
-      ? `supabase db push --include-all --db-url "${dbUrl}"`
-      : 'supabase db push --include-all'
-    
-    // Actually run migrations
-    log('\n▶️  Applying migrations...', 'blue')
-    execSync(
-      applyCommand,
-      { 
-        stdio: 'inherit',
-        env: {
-          ...process.env,
-          SUPABASE_ACCESS_TOKEN: process.env.SUPABASE_ACCESS_TOKEN,
-          SUPABASE_DB_PASSWORD: dbPassword,
+    // Only use --include-all if history mismatch detected
+    if (needsIncludeAll) {
+      log('\n▶️  Applying migrations with --include-all...', 'blue')
+      try {
+        execSync(
+          dbUrl
+            ? `supabase db push --include-all --db-url "${dbUrl}"`
+            : 'supabase db push --include-all',
+          {
+            stdio: 'inherit',
+            env: {
+              ...process.env,
+              SUPABASE_ACCESS_TOKEN: process.env.SUPABASE_ACCESS_TOKEN,
+              SUPABASE_DB_PASSWORD: dbPassword,
+            }
+          }
+        )
+
+        log('\n✅ Migrations applied successfully!', 'green')
+        return true
+      } catch (includeAllError: any) {
+        const errorOutput = includeAllError.stderr?.toString() || includeAllError.stdout?.toString() || includeAllError.message
+
+        // Check again for duplicate keys (migrations already applied via --include-all)
+        if (errorOutput.includes('duplicate key') && errorOutput.includes('schema_migrations')) {
+          log('✅ Migrations already applied (duplicate key with --include-all), continuing', 'green')
+          return true
         }
+
+        // Genuine error
+        throw includeAllError
       }
-    )
-    
-    log('\n✅ Migrations applied successfully!', 'green')
+    }
+
     return true
   } catch (error: any) {
     log('❌ Migration failed', 'red')
     log(`   Error: ${error.message}`, 'red')
-    
+
     // Fail the build if migrations fail
     log('\n❌ Build failed due to migration error', 'red')
     process.exit(1)

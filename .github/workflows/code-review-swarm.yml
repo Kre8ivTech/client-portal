@@ -1,0 +1,50 @@
+name: Code Review Swarm
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  review-swarm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Get PR number
+        id: pr
+        run: echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+
+      - name: Run Code Review Swarm
+        run: |
+          npx tsx scripts/github/post-review.ts --pr=${{ steps.pr.outputs.number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload review results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: review-results
+          path: |
+            review-*.json
+          retention-days: 7

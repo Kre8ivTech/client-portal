@@ -109,20 +109,29 @@ export function UserTable({ currentUserRole = 'client', isAccountManager = false
 
   useEffect(() => {
     fetchUsers();
-    
-    // Fetch organizations if super_admin
+  }, [page, roleFilter]);
+
+  useEffect(() => {
+    // Fetch organizations for super admins so they can assign new users to an org
     if (currentUserRole === 'super_admin') {
       fetchOrganizations();
+    } else {
+      setOrganizations([]);
     }
-  }, [page, roleFilter]);
+  }, [currentUserRole]);
 
   const fetchOrganizations = async () => {
     try {
-      const response = await fetch('/api/organizations');
-      if (response.ok) {
-        const data = await response.json();
-        setOrganizations(data.organizations || []);
+      // API returns `{ data: Organization[] }` (not `{ organizations: ... }`)
+      // Limit is capped server-side to 100.
+      const response = await fetch('/api/organizations?status=active&limit=100&offset=0');
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to fetch organizations');
       }
+      const data = await response.json();
+      const orgs = (data?.data ?? []) as Array<{ id: string; name: string }>;
+      setOrganizations(orgs.map((o) => ({ id: o.id, name: o.name })));
     } catch (error) {
       console.error('Failed to fetch organizations:', error);
     }

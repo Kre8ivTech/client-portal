@@ -71,45 +71,80 @@ export default async function UserGuidePage() {
   const isSuperAdmin = role === "super_admin";
 
   return (
-    <div className="container w-full p-4 md:p-6 lg:p-8 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Admin & Staff User Guide</h1>
-        <p className="text-muted-foreground text-lg">
-          Complete reference for managing the KT-Portal system
-        </p>
+    <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Hero Header with Gradient */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-8 md:p-12 shadow-2xl">
+        <div className="absolute inset-0 bg-grid-white/10 [mask-image:linear-gradient(0deg,transparent,black)]" />
+        <div className="relative space-y-4">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 backdrop-blur-sm">
+            <Sparkles className="h-4 w-4 text-white" />
+            <span className="text-sm font-semibold text-white">
+              {isSuperAdmin ? "Super Admin" : "Staff"}
+              {isAccountManager && " • Account Manager"}
+            </span>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white">
+            Admin & Staff User Guide
+          </h1>
+          <p className="text-lg md:text-xl text-white/90 max-w-2xl">
+            Your complete reference for managing the KT-Portal system with confidence and efficiency
+          </p>
+        </div>
+        {/* Decorative Elements */}
+        <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-16 -left-16 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
       </div>
 
-      <Alert>
-        <Sparkles className="h-4 w-4" />
-        <AlertTitle>Your Role</AlertTitle>
-        <AlertDescription>
-          You are logged in as{" "}
-          <Badge variant="default" className="ml-1">
-            {isSuperAdmin ? "Super Admin" : "Staff"}
-            {isAccountManager && " (Account Manager)"}
-          </Badge>
-          . This guide shows features available to you.
-        </AlertDescription>
-      </Alert>
-
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="support">Support</TabsTrigger>
-          <TabsTrigger value="clients">Clients</TabsTrigger>
-          <TabsTrigger value="financial">Financial</TabsTrigger>
-          <TabsTrigger value="admin">Admin</TabsTrigger>
+      <Tabs defaultValue="overview" className="space-y-8">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5 gap-2 bg-muted/50 p-2 rounded-xl h-auto">
+          <TabsTrigger
+            value="overview"
+            className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-primary font-semibold py-3 rounded-lg transition-all"
+          >
+            <Home className="h-4 w-4 mr-2" />
+            Overview
+          </TabsTrigger>
+          <TabsTrigger
+            value="support"
+            className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-primary font-semibold py-3 rounded-lg transition-all"
+          >
+            <Ticket className="h-4 w-4 mr-2" />
+            Support
+          </TabsTrigger>
+          <TabsTrigger
+            value="clients"
+            className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-primary font-semibold py-3 rounded-lg transition-all"
+          >
+            <Users className="h-4 w-4 mr-2" />
+            Clients
+          </TabsTrigger>
+          <TabsTrigger
+            value="financial"
+            className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-primary font-semibold py-3 rounded-lg transition-all"
+          >
+            <DollarSign className="h-4 w-4 mr-2" />
+            Financial
+          </TabsTrigger>
+          <TabsTrigger
+            value="admin"
+            className="data-[state=active]:bg-white data-[state=active]:shadow-md data-[state=active]:text-primary font-semibold py-3 rounded-lg transition-all"
+          >
+            <Shield className="h-4 w-4 mr-2" />
+            Admin
+          </TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Home className="h-5 w-5" />
+          <Card className="border-l-4 border-l-blue-500 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-transparent">
+              <CardTitle className="flex items-center gap-3 text-2xl">
+                <div className="p-2 bg-blue-500/10 rounded-lg">
+                  <Home className="h-6 w-6 text-blue-500" />
+                </div>
                 Getting Started
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-base mt-2">
                 Welcome to the KT-Portal admin and staff guide
               </CardDescription>
             </CardHeader>
@@ -211,10 +246,15 @@ export default async function UserGuidePage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Dashboard Overview</CardTitle>
-              <CardDescription>Your command center for daily operations</CardDescription>
+          <Card className="border-l-4 border-l-green-500 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-transparent">
+              <CardTitle className="flex items-center gap-3 text-2xl">
+                <div className="p-2 bg-green-500/10 rounded-lg">
+                  <BarChart3 className="h-6 w-6 text-green-500" />
+                </div>
+                Dashboard Overview
+              </CardTitle>
+              <CardDescription className="text-base mt-2">Your command center for daily operations</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
@@ -256,13 +296,15 @@ export default async function UserGuidePage() {
 
         {/* Support Tab */}
         <TabsContent value="support" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Ticket className="h-5 w-5" />
+          <Card className="border-l-4 border-l-orange-500 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="bg-gradient-to-r from-orange-50 to-transparent">
+              <CardTitle className="flex items-center gap-3 text-2xl">
+                <div className="p-2 bg-orange-500/10 rounded-lg">
+                  <Ticket className="h-6 w-6 text-orange-500" />
+                </div>
                 Support Tickets
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-base mt-2">
                 Manage and resolve client support requests with queue-based prioritization
               </CardDescription>
             </CardHeader>
@@ -362,13 +404,15 @@ export default async function UserGuidePage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Wrench className="h-5 w-5" />
+          <Card className="border-l-4 border-l-purple-500 shadow-lg hover:shadow-xl transition-shadow duration-300">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-transparent">
+              <CardTitle className="flex items-center gap-3 text-2xl">
+                <div className="p-2 bg-purple-500/10 rounded-lg">
+                  <Wrench className="h-6 w-6 text-purple-500" />
+                </div>
                 Service Requests
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-base mt-2">
                 Process new work requests and convert to projects
               </CardDescription>
             </CardHeader>
@@ -426,7 +470,7 @@ export default async function UserGuidePage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ClipboardList className="h-5 w-5" />
@@ -501,7 +545,7 @@ export default async function UserGuidePage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
@@ -540,7 +584,7 @@ export default async function UserGuidePage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />
@@ -609,7 +653,7 @@ export default async function UserGuidePage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
@@ -680,7 +724,7 @@ export default async function UserGuidePage() {
 
         {/* Clients Tab */}
         <TabsContent value="clients" className="space-y-6">
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
@@ -735,7 +779,7 @@ export default async function UserGuidePage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <UserCog className="h-5 w-5" />
@@ -815,7 +859,7 @@ export default async function UserGuidePage() {
           </Card>
 
           {isSuperAdmin && (
-            <Card>
+            <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
@@ -885,7 +929,7 @@ export default async function UserGuidePage() {
         {/* Financial Tab */}
         <TabsContent value="financial" className="space-y-6">
           {(isSuperAdmin || isAccountManager) && (
-            <Card>
+            <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
@@ -975,7 +1019,7 @@ export default async function UserGuidePage() {
             </Card>
           )}
 
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Layers className="h-5 w-5" />
@@ -1044,7 +1088,7 @@ export default async function UserGuidePage() {
           </Card>
 
           {isSuperAdmin && (
-            <Card>
+            <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <DollarSign className="h-5 w-5" />
@@ -1092,7 +1136,7 @@ export default async function UserGuidePage() {
             </Card>
           )}
 
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <LineChart className="h-5 w-5" />
@@ -1167,7 +1211,7 @@ export default async function UserGuidePage() {
 
         {/* Admin Tab */}
         <TabsContent value="admin" className="space-y-6">
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
@@ -1244,7 +1288,7 @@ export default async function UserGuidePage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileEdit className="h-5 w-5" />
@@ -1340,7 +1384,7 @@ export default async function UserGuidePage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Wrench className="h-5 w-5" />
@@ -1383,7 +1427,7 @@ export default async function UserGuidePage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Plug className="h-5 w-5" />
@@ -1465,7 +1509,7 @@ export default async function UserGuidePage() {
 
           {isSuperAdmin && (
             <>
-              <Card>
+              <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <History className="h-5 w-5" />
@@ -1545,7 +1589,7 @@ export default async function UserGuidePage() {
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5" />
@@ -1586,7 +1630,7 @@ export default async function UserGuidePage() {
             </>
           )}
 
-          <Card>
+          <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />

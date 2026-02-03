@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getActiveNavHref } from "@/lib/navigation/get-active-nav-href";
 
 // Merged shape: users (id, organization_id, email, role, is_account_manager) + user_profiles (name, avatar_url, organization_name, organization_slug)
 type Profile = {
@@ -264,6 +265,18 @@ export function DashboardSidebar({
     .toUpperCase()
     .slice(0, 2);
 
+  const visibleNavGroups = navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => allowedHrefs.includes(item.href)),
+    }))
+    .filter((group) => group.items.length > 0);
+
+  const activeHref = getActiveNavHref(
+    pathname,
+    visibleNavGroups.flatMap((g) => g.items.map((i) => i.href)),
+  );
+
   return (
     <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground flex-shrink-0 border-r border-sidebar-muted/30">
       <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-muted/30">
@@ -290,10 +303,8 @@ export function DashboardSidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-        {navGroups.map((group) => {
-          const items = group.items.filter((item) => allowedHrefs.includes(item.href));
-          if (items.length === 0) return null;
-
+        {visibleNavGroups.map((group) => {
+          const items = group.items;
           const isAdminGroup = group.label === "Admin";
           const showAdminBadge = isAdminGroup && role === "super_admin";
 
@@ -309,17 +320,7 @@ export function DashboardSidebar({
               </p>
               <ul className="space-y-0.5">
                 {items.map((item) => {
-                  let isActive = false;
-                  if (item.href === "/dashboard") {
-                    // Dashboard home: exact match only
-                    isActive = pathname === "/dashboard";
-                  } else if (pathname === item.href) {
-                    // Exact path match
-                    isActive = true;
-                  } else {
-                    // Nested route: check if current path starts with item path
-                    isActive = pathname.startsWith(item.href + "/");
-                  }
+                  const isActive = item.href === activeHref;
                   return (
                     <li key={item.href}>
                       <Link

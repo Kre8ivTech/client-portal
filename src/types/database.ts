@@ -1386,11 +1386,13 @@ export type Database = {
       plans: {
         Row: {
           auto_send_invoices: boolean | null
+          billing_interval: Database["public"]["Enums"]["billing_interval"]
           created_at: string
           currency: string | null
           description: string | null
           dev_hourly_rate: number
           dev_hours_included: number
+          features: string[] | null
           id: string
           invoice_template_id: string | null
           is_active: boolean | null
@@ -1402,17 +1404,21 @@ export type Database = {
           rush_priority_boost: number | null
           rush_support_fee: number | null
           rush_support_included: boolean | null
+          stripe_price_id: string | null
+          stripe_product_id: string | null
           support_hourly_rate: number
           support_hours_included: number
           updated_at: string
         }
         Insert: {
           auto_send_invoices?: boolean | null
+          billing_interval?: Database["public"]["Enums"]["billing_interval"]
           created_at?: string
           currency?: string | null
           description?: string | null
           dev_hourly_rate?: number
           dev_hours_included?: number
+          features?: string[] | null
           id?: string
           invoice_template_id?: string | null
           is_active?: boolean | null
@@ -1424,17 +1430,21 @@ export type Database = {
           rush_priority_boost?: number | null
           rush_support_fee?: number | null
           rush_support_included?: boolean | null
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
           support_hourly_rate?: number
           support_hours_included?: number
           updated_at?: string
         }
         Update: {
           auto_send_invoices?: boolean | null
+          billing_interval?: Database["public"]["Enums"]["billing_interval"]
           created_at?: string
           currency?: string | null
           description?: string | null
           dev_hourly_rate?: number
           dev_hours_included?: number
+          features?: string[] | null
           id?: string
           invoice_template_id?: string | null
           is_active?: boolean | null
@@ -1446,6 +1456,8 @@ export type Database = {
           rush_priority_boost?: number | null
           rush_support_fee?: number | null
           rush_support_included?: boolean | null
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
           support_hourly_rate?: number
           support_hours_included?: number
           updated_at?: string
@@ -1979,6 +1991,7 @@ export type Database = {
       is_super_admin: { Args: never; Returns: boolean }
     }
     Enums: {
+      billing_interval: "monthly" | "yearly" | "one_time"
       coverage_type: "support" | "dev" | "both"
       dispute_status: "pending" | "under_review" | "resolved" | "rejected"
       dispute_type: "time_logged" | "invoice_amount" | "coverage" | "other"
@@ -2119,6 +2132,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      billing_interval: ["monthly", "yearly", "one_time"],
       coverage_type: ["support", "dev", "both"],
       dispute_status: ["pending", "under_review", "resolved", "rejected"],
       dispute_type: ["time_logged", "invoice_amount", "coverage", "other"],

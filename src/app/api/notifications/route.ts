@@ -15,12 +15,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's notifications
-    const { data: notifications, error } = await supabase
-      .from('notifications')
-      .select(`
-        *,
-        notification_reads!left(read_at, dismissed_at)
-      `)
+    const { data: notifications, error } = await (supabase as any)
+      .from('user_notifications')
+      .select('*')
       .order('created_at', { ascending: false })
 
     if (error) {

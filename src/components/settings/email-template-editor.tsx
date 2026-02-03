@@ -44,10 +44,12 @@ import {
   createEmailTemplate,
   updateEmailTemplate,
   renderEmailTemplate,
+} from '@/lib/actions/email-templates'
+import {
   type EmailTemplate,
   type EmailTemplateType,
   type TemplateVariable,
-} from '@/lib/actions/email-templates'
+} from '@/lib/email-templates-shared'
 
 const TEMPLATE_TYPES: Array<{ value: EmailTemplateType; label: string; variables: TemplateVariable[] }> = [
   {

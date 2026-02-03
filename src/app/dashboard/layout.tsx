@@ -62,7 +62,7 @@ export default async function DashboardLayout({
           .limit(20),
         supabase
           .from("plan_assignments")
-          .select("id, plans(name), organizations(name)")
+          .select("id, plans(name), organizations!plan_assignments_organization_id_fkey(name)")
           .eq("status", "active")
           .limit(20),
       ])

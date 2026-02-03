@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Fetch conversation context, documents, rules, and AI configs in parallel
     const [
       { data: conversationMessages },
       { data: orgDocuments },
@@ -59,13 +60,14 @@ export async function POST(request: NextRequest) {
         .from('ai_configs')
         .select('system_prompt, model_params')
         .is('organization_id', null)
-        .single()
+        .maybeSingle()
     ])
 
+    // Build system prompt
     let systemPrompt = 'You are a helpful AI assistant for a client portal.'
 
-    if (aiConfigs) {
-      systemPrompt = aiConfigs.system_prompt || systemPrompt
+    if (aiConfigs?.system_prompt) {
+      systemPrompt = aiConfigs.system_prompt
     }
 
     if (orgRules && orgRules.length > 0) {
@@ -82,11 +84,15 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const conversationHistory = (conversationMessages || []).map((msg: any) => ({
-      role: msg.role === 'assistant' ? 'assistant' : 'user',
-      content: msg.content,
-    }))
+    // Format conversation history for Anthropic API
+    const conversationHistory = (conversationMessages || [])
+      .map((msg: any) => ({
+        role: msg.role === 'assistant' ? ('assistant' as const) : ('user' as const),
+        content: msg.content,
+      }))
+      .filter((msg: any) => msg.role === 'user' || msg.role === 'assistant')
 
+    // Call Anthropic API
     const response = await anthropic.messages.create({
       model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1024,

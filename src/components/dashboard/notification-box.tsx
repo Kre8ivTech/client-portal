@@ -65,11 +65,8 @@ export function NotificationBox() {
 
       setNotifications(data || [])
 
-      // Count unread (notifications without read_at in notification_reads)
-      const unread = (data || []).filter((n: any) =>
-        !n.notification_reads?.[0]?.read_at &&
-        !n.notification_reads?.[0]?.dismissed_at
-      ).length
+      // Count unread (notifications not read and not dismissed)
+      const unread = (data || []).filter((n: any) => !n.is_read && !n.is_dismissed).length
       setUnreadCount(unread)
     } catch (error) {
       console.error('Error loading notifications:', error)

@@ -41,9 +41,12 @@ import {
   deleteEmailTemplate,
   duplicateEmailTemplate,
   setDefaultTemplate,
+} from '@/lib/actions/email-templates'
+import {
   type EmailTemplate,
   type EmailTemplateType,
-} from '@/lib/actions/email-templates'
+  getTemplateTypeDisplayName,
+} from '@/lib/email-templates-shared'
 import { EmailTemplateEditor } from './email-template-editor'
 
 interface EmailTemplateListProps {
@@ -78,31 +81,6 @@ const TEMPLATE_TYPE_GROUPS: Record<string, { label: string; types: EmailTemplate
   },
 }
 
-const getTemplateTypeDisplayName = (type: EmailTemplateType): string => {
-  const displayNames: Record<EmailTemplateType, string> = {
-    new_user: 'New User Welcome',
-    new_tenant: 'New Tenant',
-    new_organization: 'New Organization',
-    new_task: 'New Task',
-    new_service_request: 'New Service Request',
-    new_project: 'New Project',
-    new_invoice: 'New Invoice',
-    invoice_paid: 'Invoice Paid',
-    invoice_overdue: 'Invoice Overdue',
-    ticket_created: 'Ticket Created',
-    ticket_updated: 'Ticket Updated',
-    ticket_comment: 'Ticket Comment',
-    ticket_assigned: 'Ticket Assigned',
-    ticket_resolved: 'Ticket Resolved',
-    ticket_closed: 'Ticket Closed',
-    sla_warning: 'SLA Warning',
-    sla_breach: 'SLA Breach',
-    password_reset: 'Password Reset',
-    magic_link: 'Magic Link Login',
-    welcome: 'Welcome Email',
-  }
-  return displayNames[type] || type
-}
 
 export function EmailTemplateList({ isSuperAdmin, organizationId }: EmailTemplateListProps) {
   const supabase = createClient()

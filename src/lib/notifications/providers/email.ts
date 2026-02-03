@@ -4,7 +4,7 @@
  */
 
 import { NotificationResult } from '../index'
-import type { EmailTemplateType } from '@/lib/actions/email-templates'
+import type { EmailTemplateType } from '@/lib/email-templates-shared'
 
 interface EmailOptions {
   to: string

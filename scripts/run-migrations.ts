@@ -62,16 +62,9 @@ function checkSupabaseCLI() {
     log('✅ Supabase CLI is installed', 'green')
     return true
   } catch (error) {
-    log('⚠️  Supabase CLI not found, installing...', 'yellow')
-    try {
-      execSync('npm install -g supabase', { stdio: 'inherit' })
-      log('✅ Supabase CLI installed successfully', 'green')
-      return true
-    } catch (installError) {
-      log('❌ Failed to install Supabase CLI', 'red')
-      log('   Skipping migrations', 'yellow')
-      return false
-    }
+    log('⚠️  Supabase CLI not found in path.', 'yellow')
+    log('   Ensure it is installed as a devDependency and run via npm scripts.', 'yellow')
+    return false
   }
 }
 

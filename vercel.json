@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "installCommand": "npm install && npm install -g supabase",
+  "installCommand": "npm install",
   "framework": "nextjs",
   "regions": ["iad1"],
   "crons": [

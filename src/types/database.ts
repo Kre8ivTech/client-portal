@@ -867,9 +867,6 @@ export type Database = {
         Row: {
           branding_config: Json | null
           created_at: string | null
-          custom_domain: string | null
-          custom_domain_verified: boolean | null
-          custom_domain_verified_at: string | null
           description: string | null
           id: string
           name: string
@@ -883,9 +880,6 @@ export type Database = {
         Insert: {
           branding_config?: Json | null
           created_at?: string | null
-          custom_domain?: string | null
-          custom_domain_verified?: boolean | null
-          custom_domain_verified_at?: string | null
           description?: string | null
           id?: string
           name: string
@@ -899,9 +893,6 @@ export type Database = {
         Update: {
           branding_config?: Json | null
           created_at?: string | null
-          custom_domain?: string | null
-          custom_domain_verified?: boolean | null
-          custom_domain_verified_at?: string | null
           description?: string | null
           id?: string
           name?: string

@@ -34,7 +34,7 @@ export default async function ClientOrgPage({
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('id, name, slug, type, status, parent_org_id, custom_domain, branding_config, settings, created_at, updated_at')
+    .select('id, name, slug, type, status, parent_org_id, custom_domain, custom_domain_verified, branding_config, settings, created_at, updated_at')
     .eq('id', orgId)
     .single()
 
@@ -265,10 +265,17 @@ export default async function ClientOrgPage({
                       <span className="font-medium">{org.settings.contact_phone}</span>
                     </div>
                   )}
-                  {org.custom_domain && (
+                  {org.type === 'partner' && org.custom_domain && (
                     <div className="flex justify-between py-2 border-b border-slate-100">
                       <span className="text-slate-500">Custom Domain</span>
-                      <span className="font-mono text-slate-700">{org.custom_domain}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-slate-700">{org.custom_domain}</span>
+                        {org.custom_domain_verified && (
+                          <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50 text-xs">
+                            Verified
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   )}
                   <div className="flex justify-between py-2">

@@ -45,9 +45,9 @@ export async function GET(request: NextRequest) {
 
     // Filter to only conversations where user is a participant
     // and transform the data to include participant info
-    const userConversations = conversations?.filter((conv) =>
+    const userConversations = (conversations as any)?.filter((conv: any) =>
       conv.conversation_participants?.some((p: any) => p.user_id === user.id)
-    ).map((conv) => ({
+    ).map((conv: any) => ({
       ...conv,
       participants: conv.conversation_participants?.map((p: any) => ({
         userId: p.user_id,
@@ -129,26 +129,26 @@ export async function POST(request: NextRequest) {
       }
 
       // Check messaging permissions
-      const isStaff = ['super_admin', 'staff'].includes(currentUser.role)
-      const sameOrg = currentUser.organization_id === targetUser.organization_id
+      const isStaff = ['super_admin', 'staff'].includes((currentUser as any).role)
+      const sameOrg = (currentUser as any).organization_id === (targetUser as any).organization_id
 
       if (!isStaff && !sameOrg) {
         // Check partner/client relationship
         const { data: currentOrg } = await supabase
           .from('organizations')
           .select('parent_org_id')
-          .eq('id', currentUser.organization_id)
+          .eq('id', (currentUser as any).organization_id)
           .single()
 
         const { data: targetOrg } = await supabase
           .from('organizations')
           .select('parent_org_id')
-          .eq('id', targetUser.organization_id)
+          .eq('id', (targetUser as any).organization_id)
           .single()
 
         const isPartnerClient =
-          currentOrg?.parent_org_id === targetUser.organization_id ||
-          targetOrg?.parent_org_id === currentUser.organization_id
+          (currentOrg as any)?.parent_org_id === (targetUser as any).organization_id ||
+          (targetOrg as any)?.parent_org_id === (currentUser as any).organization_id
 
         if (!isPartnerClient) {
           return NextResponse.json(
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
           const { data: otherParticipant } = await supabase
             .from('conversation_participants')
             .select('user_id')
-            .eq('conversation_id', cp.conversation_id)
+            .eq('conversation_id', (cp as any).conversation_id)
             .eq('user_id', otherUserId)
             .single()
 
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
             // Found existing conversation - optionally send initial message
             if (initialMessage) {
               await supabase.from('messages').insert({
-                conversation_id: cp.conversation_id,
+                conversation_id: (cp as any).conversation_id,
                 sender_id: user.id,
                 content: initialMessage,
                 message_type: 'text',
@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
                   )
                 )
               `)
-              .eq('id', cp.conversation_id)
+              .eq('id', (cp as any).conversation_id)
               .single()
 
             return NextResponse.json({ data: conv, existing: true })

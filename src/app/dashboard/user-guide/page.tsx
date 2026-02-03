@@ -707,7 +707,11 @@ export default async function UserGuidePage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary">•</span>
+<<<<<<< HEAD
                     <span>View client&apos;s active tickets and requests</span>
+=======
+                    <span>View client's active tickets and requests</span>
+>>>>>>> origin/cursor/admin-staff-user-guide-be97
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary">•</span>
@@ -1481,11 +1485,7 @@ export default async function UserGuidePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-<<<<<<< HEAD
                     <h3 className="font-semibold mb-2">What&apos;s Logged?</h3>
-=======
-                    <h3 className="font-semibold mb-2">What's Logged?</h3>
->>>>>>> origin/cursor/admin-staff-user-guide-be97
                     <p className="text-sm text-muted-foreground mb-3">
                       The audit log tracks all sensitive actions:
                     </p>

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { createClient } from "@/lib/supabase/client";
 import { Clock, Code, Calendar, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { formatHoursMinutes, calculateBillableHours } from "@/lib/utils";
 import { format } from "date-fns";
 
 type TimeEntry = {
@@ -131,15 +132,15 @@ export function TimeUsageHistory({ planAssignmentId, initialEntries = [] }: Time
         {/* Summary */}
         <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-slate-50 rounded-lg">
           <div className="text-center">
-            <div className="text-2xl font-bold text-slate-900">{totalHours.toFixed(1)}</div>
-            <div className="text-xs text-slate-500 uppercase tracking-wide">Total Hours</div>
+            <div className="text-2xl font-bold text-slate-900">{formatHoursMinutes(totalHours)}</div>
+            <div className="text-xs text-slate-500 uppercase tracking-wide">Total Time</div>
           </div>
           <div className="text-center border-x border-slate-200">
-            <div className="text-2xl font-bold text-blue-600">{supportHours.toFixed(1)}</div>
+            <div className="text-2xl font-bold text-blue-600">{formatHoursMinutes(supportHours)}</div>
             <div className="text-xs text-slate-500 uppercase tracking-wide">Support</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-indigo-600">{devHours.toFixed(1)}</div>
+            <div className="text-2xl font-bold text-indigo-600">{formatHoursMinutes(devHours)}</div>
             <div className="text-xs text-slate-500 uppercase tracking-wide">Development</div>
           </div>
         </div>
@@ -164,7 +165,8 @@ export function TimeUsageHistory({ planAssignmentId, initialEntries = [] }: Time
                     <TableHead>Type</TableHead>
                     <TableHead>Description</TableHead>
                     <TableHead>Ticket</TableHead>
-                    <TableHead className="text-right">Hours</TableHead>
+                    <TableHead className="text-right">Time</TableHead>
+                    <TableHead className="text-right">Billed</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -203,9 +205,11 @@ export function TimeUsageHistory({ planAssignmentId, initialEntries = [] }: Time
                         )}
                       </TableCell>
                       <TableCell className="text-right font-semibold">
-                        {entry.hours.toFixed(2)}
-                        {!entry.billable && (
-                          <span className="ml-1 text-xs text-muted-foreground">(non-billable)</span>
+                        {formatHoursMinutes(entry.hours)}
+                      </TableCell>
+                      <TableCell className="text-right text-muted-foreground">
+                        {entry.billable ? `${calculateBillableHours(entry.hours)}h` : (
+                          <span className="text-xs">(non-billable)</span>
                         )}
                       </TableCell>
                     </TableRow>

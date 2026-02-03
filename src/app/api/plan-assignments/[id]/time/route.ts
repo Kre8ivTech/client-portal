@@ -23,11 +23,18 @@ type AssignmentRow = {
 // Schema for logging time against a plan assignment
 const logTimeSchema = z.object({
   description: z.string().min(1).max(2000),
-  hours: z.number().positive().max(24),
+  hours: z.number().min(0).max(24).default(0),
+  minutes: z.number().min(0).max(59).default(0),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD").optional(),
   work_type: z.enum(["support", "dev"]).default("support"),
   ticket_id: z.string().uuid().optional(),
   billable: z.boolean().default(true),
+}).refine((data) => data.hours > 0 || data.minutes > 0, {
+  message: "Please enter at least 1 minute",
+  path: ["hours"],
+}).refine((data) => data.hours + (data.minutes / 60) <= 24, {
+  message: "Total time cannot exceed 24 hours",
+  path: ["hours"],
 });
 
 export type LogTimeInput = z.infer<typeof logTimeSchema>;
@@ -118,6 +125,11 @@ export async function POST(
     const input = result.data;
     const entryDate = input.entry_date || new Date().toISOString().split("T")[0];
 
+    // Calculate total hours from hours and minutes
+    const totalHours = input.hours + (input.minutes / 60);
+    // Calculate billable hours (rounded up to nearest hour)
+    const billableHours = Math.ceil(totalHours);
+
     // Calculate if this will cause overage
     const plan = assignment.plans as any;
     const currentUsed = input.work_type === "support"
@@ -127,9 +139,9 @@ export async function POST(
       ? plan?.support_hours_included ?? 0
       : plan?.dev_hours_included ?? 0;
 
-    const willExceed = currentUsed + input.hours > included;
+    const willExceed = currentUsed + totalHours > included;
     const overageHours = willExceed
-      ? currentUsed + input.hours - included
+      ? currentUsed + totalHours - included
       : 0;
 
     // Create the time entry
@@ -141,7 +153,7 @@ export async function POST(
         plan_assignment_id: planAssignmentId,
         ticket_id: input.ticket_id || null,
         description: input.description,
-        hours: input.hours,
+        hours: totalHours,
         entry_date: entryDate,
         work_type: input.work_type,
         billable: input.billable,
@@ -166,7 +178,8 @@ export async function POST(
       entity_id: timeEntry.id,
       new_values: {
         plan_assignment_id: planAssignmentId,
-        hours: input.hours,
+        hours: totalHours,
+        billable_hours: billableHours,
         work_type: input.work_type,
         billable: input.billable,
       },
@@ -190,7 +203,10 @@ export async function POST(
 
     return NextResponse.json({
       data: {
-        time_entry: timeEntry,
+        time_entry: {
+          ...timeEntry,
+          billable_hours: billableHours,
+        },
         hours_summary: {
           support_hours_used: updatedAssignment?.support_hours_used ?? 0,
           dev_hours_used: updatedAssignment?.dev_hours_used ?? 0,

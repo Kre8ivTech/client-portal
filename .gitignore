@@ -43,3 +43,6 @@ AGENTS.db
 optimizer/
 .ruvector/intelligence.json
 .blackboxcli/
+
+# Claude Flow MCP generated files
+.claude-flow/metrics/

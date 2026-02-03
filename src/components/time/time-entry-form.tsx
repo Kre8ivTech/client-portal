@@ -124,17 +124,39 @@ export function TimeEntryForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="hours">Hours</Label>
-        <Input
-          id="hours"
-          name="hours"
-          type="number"
-          step="0.25"
-          min="0.25"
-          max="24"
-          placeholder="1.5"
-          required
-        />
+        <Label>Time Worked</Label>
+        <div className="flex gap-2 items-center">
+          <div className="flex-1">
+            <Input
+              id="hours"
+              name="hours"
+              type="number"
+              min="0"
+              max="24"
+              placeholder="0"
+              defaultValue="0"
+              className="text-center"
+            />
+            <p className="text-xs text-muted-foreground text-center mt-1">Hours</p>
+          </div>
+          <span className="text-muted-foreground font-medium">:</span>
+          <div className="flex-1">
+            <Input
+              id="minutes"
+              name="minutes"
+              type="number"
+              min="0"
+              max="59"
+              placeholder="0"
+              defaultValue="0"
+              className="text-center"
+            />
+            <p className="text-xs text-muted-foreground text-center mt-1">Minutes</p>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          For billing, time is rounded up to the nearest hour.
+        </p>
       </div>
 
       <div className="space-y-2">

@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { createTimeEntry } from "@/lib/actions/time-entries";
 import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
+import { cn, calculateBillableHours } from "@/lib/utils";
 
 interface WorkTimerButtonProps {
   organizationId: string;
@@ -96,9 +96,13 @@ export function WorkTimerButton({
 
     const form = e.currentTarget;
     const formData = new FormData(form);
-    
-    const hours = elapsedSeconds / 3600;
-    formData.set("hours", hours.toFixed(2));
+
+    // Convert elapsed seconds to hours and minutes
+    const totalMinutes = Math.floor(elapsedSeconds / 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    formData.set("hours", hours.toString());
+    formData.set("minutes", minutes.toString());
 
     try {
       const result = await createTimeEntry(formData);
@@ -158,8 +162,9 @@ export function WorkTimerButton({
             <DialogHeader>
               <DialogTitle>Log Time Entry</DialogTitle>
               <DialogDescription>
-                You worked for {formatTime(elapsedSeconds)} ({(elapsedSeconds / 3600).toFixed(2)}{" "}
-                hours). Enter the details below.
+                You worked for {formatTime(elapsedSeconds)}.
+                {" "}Billable: {calculateBillableHours(elapsedSeconds / 3600)} hour{calculateBillableHours(elapsedSeconds / 3600) !== 1 ? "s" : ""}.
+                {" "}Enter the details below.
               </DialogDescription>
             </DialogHeader>
 

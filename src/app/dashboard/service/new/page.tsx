@@ -57,7 +57,7 @@ export default async function NewServiceRequestPage() {
     .order('name', { ascending: true })
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       {/* Header */}
       <div>
         <Link

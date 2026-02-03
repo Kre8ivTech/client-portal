@@ -14,6 +14,7 @@ import { Database } from '@/types/database'
 import { TICKET_CATEGORIES } from '@/lib/validators/ticket'
 import { DeliverableList } from './deliverable-list'
 import { DeliverableForm } from './deliverable-form'
+import { CloseTicketDialog } from './close-ticket-dialog'
 
 type Ticket = Database['public']['Tables']['tickets']['Row'] & {
   creator?: {
@@ -100,6 +101,13 @@ export function TicketDetail({ ticket: initialTicket, userId, userRole, delivera
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{ticket.subject}</h1>
         </div>
+        {isStaff && ticket.status !== 'closed' && (
+          <CloseTicketDialog
+            ticketId={ticket.id}
+            ticketNumber={ticket.ticket_number}
+            onClose={() => setTicket({ ...ticket, status: 'closed' })}
+          />
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

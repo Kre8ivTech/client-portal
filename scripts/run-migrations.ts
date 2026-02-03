@@ -78,9 +78,10 @@ function checkEnvironment() {
     log('   2. Add the missing variables for production', 'yellow')
     log('   3. Redeploy the application', 'yellow')
 
-    // Don't fail the build, just skip migrations
-    log('\n⚠️  Skipping migrations due to missing credentials', 'yellow')
-    process.exit(0)
+    // In production, skipping migrations can leave the app in a broken state
+    // (code expects schema changes that were never applied).
+    log('\n❌ Aborting deployment: migrations cannot run without credentials', 'red')
+    process.exit(1)
   }
 
   log('✅ All required environment variables present', 'green')

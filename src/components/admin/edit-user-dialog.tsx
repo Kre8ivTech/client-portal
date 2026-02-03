@@ -23,6 +23,7 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess }: EditUser
   
   // Form state
   const [name, setName] = useState(user.user_profiles[0]?.name || '')
+  const [email, setEmail] = useState(user.email || '')
   const [role, setRole] = useState(user.role || 'client')
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,6 +33,7 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess }: EditUser
     try {
       const result = await updateUser(user.id, {
         name,
+        email,
         role
       })
 
@@ -64,6 +66,23 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess }: EditUser
               onChange={(e) => setName(e.target.value)} 
               placeholder="User's full name"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="user@company.com"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+            <p className="text-xs text-muted-foreground">
+              Updating email changes the user&apos;s login email immediately.
+            </p>
           </div>
           
           <div className="space-y-2">

@@ -220,7 +220,10 @@ export async function deleteUser(userId: string) {
   }
 }
 
-export async function updateUser(userId: string, data: { name?: string; role?: string; organization_id?: string | null }) {
+export async function updateUser(
+  userId: string,
+  data: { name?: string; role?: string; organization_id?: string | null; email?: string }
+) {
   await requireRole(['super_admin', 'staff'])
   
   const supabase = await createServerSupabaseClient()
@@ -231,13 +234,91 @@ export async function updateUser(userId: string, data: { name?: string; role?: s
   }
 
   try {
-    // 1. Update public.users (role, organization)
+    const supabaseAdmin = getSupabaseAdmin()
+
+    // Get admin profile
+    const { data: adminProfileData, error: adminProfileError } = await (supabase as any)
+      .from('users')
+      .select('id, email, role, organization_id')
+      .eq('id', currentUser.id)
+      .single()
+
+    if (adminProfileError || !adminProfileData) {
+      return { success: false, error: 'User profile not found' }
+    }
+
+    const adminProfile = adminProfileData as { id: string; email: string; role: string; organization_id: string | null }
+
+    // Get target user (use admin client to bypass RLS safely)
+    const { data: targetUserData, error: targetUserError } = await (supabaseAdmin as any)
+      .from('users')
+      .select('id, email, organization_id')
+      .eq('id', userId)
+      .single()
+
+    if (targetUserError || !targetUserData) {
+      return { success: false, error: 'User not found' }
+    }
+
+    const targetUser = targetUserData as { id: string; email: string; organization_id: string | null }
+
+    // Enforce organization scoping for non-super admins
+    if (adminProfile.role !== 'super_admin') {
+      if (targetUser.organization_id !== adminProfile.organization_id) {
+        return { success: false, error: 'Forbidden - Can only manage users in your organization' }
+      }
+    }
+
+    // 1. Update email (Supabase Auth + public.users)
+    const normalizedEmail = data.email ? String(data.email).trim().toLowerCase() : undefined
+    if (normalizedEmail && normalizedEmail !== targetUser.email) {
+      // Ensure unique email
+      const { data: existingUser } = await (supabaseAdmin as any)
+        .from('users')
+        .select('id, email')
+        .eq('email', normalizedEmail)
+        .maybeSingle()
+
+      if (existingUser && existingUser.id !== userId) {
+        return { success: false, error: 'A user with this email already exists' }
+      }
+
+      // Update Auth user email (confirm immediately to avoid blocking login)
+      const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+        email: normalizedEmail,
+        email_confirm: true as any,
+      })
+
+      if (authUpdateError) {
+        return { success: false, error: authUpdateError.message || 'Failed to update user email' }
+      }
+
+      // Update public.users email (rollback auth email if this fails)
+      const { error: usersEmailError } = await (supabaseAdmin as any)
+        .from('users')
+        .update({ email: normalizedEmail })
+        .eq('id', userId)
+
+      if (usersEmailError) {
+        try {
+          await supabaseAdmin.auth.admin.updateUserById(userId, {
+            email: targetUser.email,
+            email_confirm: true as any,
+          })
+        } catch {
+          // best-effort rollback
+        }
+        return { success: false, error: 'Failed to update user email' }
+      }
+    }
+
+    // 2. Update public.users (role, organization)
     if (data.role || data.organization_id !== undefined) {
       const updates: any = {}
       if (data.role) updates.role = data.role
       if (data.organization_id !== undefined) updates.organization_id = data.organization_id
 
-      const { error: userError } = await (supabase as any)
+      const { error: userError } = await (supabaseAdmin as any)
         .from('users')
         .update(updates)
         .eq('id', userId)
@@ -245,9 +326,9 @@ export async function updateUser(userId: string, data: { name?: string; role?: s
       if (userError) throw userError
     }
 
-    // 2. Update public.profiles (name)
-    if (data.name) {
-      const { error: profileError } = await (supabase as any)
+    // 3. Update public.profiles (name)
+    if (data.name !== undefined) {
+      const { error: profileError } = await (supabaseAdmin as any)
         .from('profiles')
         .update({ name: data.name })
         .eq('user_id', userId)
@@ -259,7 +340,17 @@ export async function updateUser(userId: string, data: { name?: string; role?: s
       action: 'user.update',
       entity_type: 'user',
       entity_id: userId,
-      new_values: data
+      old_values: {
+        email: targetUser.email,
+      },
+      new_values: {
+        ...data,
+        ...(normalizedEmail ? { email: normalizedEmail } : {}),
+      },
+      details: {
+        updated_by: currentUser.id,
+        updated_by_email: adminProfile.email,
+      },
     })
 
     revalidatePath('/dashboard/users')

@@ -19,8 +19,29 @@ export default async function StaffManagementPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'super_admin') {
+  if (!profile) {
     redirect('/dashboard')
+  }
+
+  const isSuperAdmin = profile.role === 'super_admin'
+  const isStaff = profile.role === 'staff'
+
+  // Staff users can access this page only if they are an active project manager for at least one org.
+  let managedOrganizationIds: string[] | null = null
+  if (!isSuperAdmin) {
+    if (!isStaff) redirect('/dashboard')
+
+    const { data: pmAssignments } = await (supabase as any)
+      .from('staff_organization_assignments')
+      .select('organization_id')
+      .eq('staff_user_id', user.id)
+      .eq('is_active', true)
+      .eq('assignment_role', 'project_manager')
+
+    managedOrganizationIds = (pmAssignments ?? []).map((a: any) => a.organization_id)
+    if (managedOrganizationIds.length === 0) {
+      redirect('/dashboard')
+    }
   }
 
   // Fetch all staff members
@@ -30,22 +51,30 @@ export default async function StaffManagementPage() {
     .in('role', ['super_admin', 'staff'])
     .order('email')
 
-  // Fetch all organizations
-  const { data: organizations } = await (supabase as any)
+  // Fetch organizations (super_admin sees all; staff project managers see managed orgs only)
+  const orgQuery = (supabase as any)
     .from('organizations')
     .select('id, name, type')
     .order('name')
+  const { data: organizations } = managedOrganizationIds
+    ? await orgQuery.in('id', managedOrganizationIds)
+    : await orgQuery
 
   // Fetch existing staff assignments
-  const { data: staffAssignments } = await (supabase as any)
+  const assignmentsQuery = (supabase as any)
     .from('staff_organization_assignments')
-    .select(`
+    .select(
+      `
       *,
       organizations(id, name),
       users!staff_user_id(id, email, profiles(name))
-    `)
+    `
+    )
     .eq('is_active', true)
     .order('assigned_at', { ascending: false })
+  const { data: staffAssignments } = managedOrganizationIds
+    ? await assignmentsQuery.in('organization_id', managedOrganizationIds)
+    : await assignmentsQuery
 
   return (
     <div className="container mx-auto py-6 space-y-6">

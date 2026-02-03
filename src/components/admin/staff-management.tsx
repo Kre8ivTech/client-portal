@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -28,10 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { UserPlus, X, CheckCircle, AlertCircle, Users, Building } from 'lucide-react'
+import { UserPlus, X, CheckCircle, AlertCircle, Users, Building, Pencil } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 
@@ -65,6 +64,13 @@ interface StaffManagementProps {
   initialAssignments: StaffAssignment[]
 }
 
+const ASSIGNMENT_ROLE_OPTIONS = [
+  { value: 'project_manager', label: 'Project Manager' },
+  { value: 'account_manager', label: 'Account Manager' },
+  { value: 'technical_lead', label: 'Technical Lead' },
+  { value: 'support_specialist', label: 'Support Specialist' },
+] as const
+
 export function StaffManagement({
   staffMembers,
   organizations,
@@ -73,13 +79,23 @@ export function StaffManagement({
   const router = useRouter()
   const [assignments, setAssignments] = useState(initialAssignments)
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Form state
   const [selectedStaff, setSelectedStaff] = useState<string>('')
   const [selectedOrg, setSelectedOrg] = useState<string>('')
   const [assignmentRole, setAssignmentRole] = useState<string>('project_manager')
+
+  // Edit state
+  const [editingAssignment, setEditingAssignment] = useState<StaffAssignment | null>(null)
+  const [editAssignmentRole, setEditAssignmentRole] = useState<string>('project_manager')
+
+  useEffect(() => {
+    setAssignments(initialAssignments)
+  }, [initialAssignments])
 
   const handleAddAssignment = async () => {
     if (!selectedStaff || !selectedOrg) {
@@ -108,6 +124,9 @@ export function StaffManagement({
       }
 
       toast.success('Staff member assigned successfully')
+      if (data?.data) {
+        setAssignments((prev) => [data.data as StaffAssignment, ...prev])
+      }
       setIsAddDialogOpen(false)
       setSelectedStaff('')
       setSelectedOrg('')
@@ -118,6 +137,51 @@ export function StaffManagement({
       toast.error(err.message)
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const openEditDialog = (assignment: StaffAssignment) => {
+    setEditingAssignment(assignment)
+    setEditAssignmentRole(assignment.assignment_role || 'project_manager')
+    setError(null)
+    setIsEditDialogOpen(true)
+  }
+
+  const handleUpdateAssignment = async () => {
+    if (!editingAssignment) return
+
+    setIsUpdating(true)
+    setError(null)
+
+    try {
+      const response = await fetch(`/api/admin/staff-assignments/${editingAssignment.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignment_role: editAssignmentRole,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update assignment')
+      }
+
+      toast.success('Assignment updated successfully')
+      if (data?.data) {
+        const updated = data.data as StaffAssignment
+        setAssignments((prev) => prev.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)))
+      }
+
+      setIsEditDialogOpen(false)
+      setEditingAssignment(null)
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message)
+      toast.error(err.message)
+    } finally {
+      setIsUpdating(false)
     }
   }
 
@@ -136,21 +200,24 @@ export function StaffManagement({
       }
 
       toast.success('Assignment removed successfully')
+      setAssignments((prev) => prev.filter((a) => a.id !== assignmentId))
       router.refresh()
     } catch (err: any) {
       toast.error(err.message)
     }
   }
 
-  // Group assignments by staff member
-  const assignmentsByStaff = assignments.reduce((acc, assignment) => {
-    const staffId = assignment.staff_user_id
-    if (!acc[staffId]) {
-      acc[staffId] = []
-    }
-    acc[staffId].push(assignment)
-    return acc
-  }, {} as Record<string, StaffAssignment[]>)
+  const assignmentsByStaff = useMemo(() => {
+    // Group assignments by staff member
+    return assignments.reduce((acc, assignment) => {
+      const staffId = assignment.staff_user_id
+      if (!acc[staffId]) {
+        acc[staffId] = []
+      }
+      acc[staffId].push(assignment)
+      return acc
+    }, {} as Record<string, StaffAssignment[]>)
+  }, [assignments])
 
   return (
     <div className="space-y-6">
@@ -274,10 +341,11 @@ export function StaffManagement({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="project_manager">Project Manager</SelectItem>
-                        <SelectItem value="account_manager">Account Manager</SelectItem>
-                        <SelectItem value="technical_lead">Technical Lead</SelectItem>
-                        <SelectItem value="support_specialist">Support Specialist</SelectItem>
+                        {ASSIGNMENT_ROLE_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -358,6 +426,13 @@ export function StaffManagement({
                                   </span>
                                 )}
                                 <button
+                                  onClick={() => openEditDialog(assignment)}
+                                  className="ml-1 hover:text-primary"
+                                  title="Edit assignment"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </button>
+                                <button
                                   onClick={() => handleRemoveAssignment(assignment.id)}
                                   className="ml-1 hover:text-destructive"
                                   title="Remove assignment"
@@ -382,6 +457,65 @@ export function StaffManagement({
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Assignment Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Staff Assignment</DialogTitle>
+            <DialogDescription>
+              Update the assignment role for this staff member.
+            </DialogDescription>
+          </DialogHeader>
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="space-y-4 py-4">
+            <div className="text-sm">
+              <div className="font-medium">
+                {editingAssignment?.users?.profiles?.name || editingAssignment?.users?.email}
+              </div>
+              <div className="text-muted-foreground">
+                {editingAssignment?.organizations?.name}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-role-select">Assignment Role</Label>
+              <Select value={editAssignmentRole} onValueChange={setEditAssignmentRole}>
+                <SelectTrigger id="edit-role-select">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ASSIGNMENT_ROLE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+              disabled={isUpdating}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateAssignment} disabled={isUpdating || !editingAssignment}>
+              {isUpdating ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

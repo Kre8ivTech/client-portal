@@ -9,6 +9,36 @@ const createAssignmentSchema = z.object({
   assignment_role: z.string().optional(),
 })
 
+async function canManageStaffOrgAssignments(
+  supabase: any,
+  userId: string,
+  organizationId: string
+) {
+  const { data: profile } = await (supabase as any)
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single()
+
+  if (!profile) return { ok: false as const, status: 403, error: 'Forbidden' }
+  if (profile.role === 'super_admin') return { ok: true as const }
+
+  // Staff users can manage assignments only for orgs where they are an active project manager.
+  if (profile.role !== 'staff') return { ok: false as const, status: 403, error: 'Forbidden' }
+
+  const { data: pmAssignment } = await (supabase as any)
+    .from('staff_organization_assignments')
+    .select('id')
+    .eq('staff_user_id', userId)
+    .eq('organization_id', organizationId)
+    .eq('assignment_role', 'project_manager')
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (!pmAssignment) return { ok: false as const, status: 403, error: 'Forbidden' }
+  return { ok: true as const }
+}
+
 /**
  * GET /api/admin/staff-assignments
  * List all staff organization assignments
@@ -66,7 +96,7 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient()
 
-    // Check if user is super_admin
+    // Check auth
     const {
       data: { user },
       error: authError,
@@ -74,16 +104,6 @@ export async function POST(request: NextRequest) {
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: profile } = await (supabase as any)
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile || profile.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Validate request body
@@ -98,6 +118,12 @@ export async function POST(request: NextRequest) {
     }
 
     const { staff_user_id, organization_id, assignment_role } = result.data
+
+    // Authorization: super_admin OR staff project manager for org
+    const authz = await canManageStaffOrgAssignments(supabase, user.id, organization_id)
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status })
+    }
 
     // Verify the user is actually a staff member
     const { data: staffUser } = await (supabase as any)

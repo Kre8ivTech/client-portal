@@ -101,7 +101,11 @@ export function WorkTimerButton({
     formData.set("hours", hours.toFixed(2));
 
     try {
-      await createTimeEntry(formData);
+      const result = await createTimeEntry(formData);
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
       setShowDialog(false);
       setElapsedSeconds(0);
       setWorkType("support");

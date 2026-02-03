@@ -42,7 +42,11 @@ export function TimeEntryForm({
     const form = e.currentTarget;
     const formData = new FormData(form);
     try {
-      await createTimeEntry(formData);
+      const result = await createTimeEntry(formData);
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
       form.reset();
       setWorkType("support");
       router.refresh();

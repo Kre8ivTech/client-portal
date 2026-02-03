@@ -10,6 +10,7 @@ export const serviceSchema = z.object({
   estimated_hours: z.number().min(0).max(10000).optional().nullable(),
   requires_approval: z.boolean().default(true),
   is_active: z.boolean().default(true),
+  is_global: z.boolean().default(false),
   display_order: z.number().int().min(0).default(0),
 })
 

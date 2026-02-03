@@ -40,6 +40,7 @@ export function ServiceForm({ initialData }: ServiceFormProps) {
     defaultValues: initialData || {
       requires_approval: true,
       is_active: true,
+      is_global: false,
       display_order: 0,
       rate_type: 'fixed',
     },
@@ -237,6 +238,19 @@ export function ServiceForm({ initialData }: ServiceFormProps) {
             <Switch
               checked={requiresApproval}
               onCheckedChange={(checked) => setValue('requires_approval', checked)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Global Service</Label>
+              <p className="text-sm text-slate-500">
+                Make service visible to all organizations
+              </p>
+            </div>
+            <Switch
+              checked={watch('is_global')}
+              onCheckedChange={(checked) => setValue('is_global', checked)}
             />
           </div>
 

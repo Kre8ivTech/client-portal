@@ -22,10 +22,17 @@ import {
   Target,
   Settings,
   AlertTriangle,
+  LayoutGrid,
+  Flag,
+  Receipt,
 } from 'lucide-react'
 import { ProjectMembersPanel } from '@/components/projects/project-members-panel'
 import { ProjectOrganizationsPanel } from '@/components/projects/project-organizations-panel'
 import { ProjectSettingsForm } from '@/components/projects/project-settings-form'
+import { ProjectBoard } from '@/components/projects/project-board'
+import { ProjectTimeline } from '@/components/projects/project-timeline'
+import { ProjectTimeTracking } from '@/components/projects/project-time-tracking'
+import { ProjectInvoices } from '@/components/projects/project-invoices'
 
 function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'outline' | 'destructive' {
   switch (status) {
@@ -184,6 +191,26 @@ export default async function ProjectDetailPage({
   const memberCount = project.project_members?.filter((m: any) => m.is_active).length ?? 0
   const orgCount = project.project_organizations?.filter((o: any) => o.is_active).length ?? 0
 
+  // Fetch milestones for the project
+  const { data: milestones } = await supabase
+    .from('project_milestones')
+    .select('id, name, due_date')
+    .eq('project_id', projectId)
+    .order('due_date', { ascending: true })
+
+  // Fetch tasks for time tracking (just id, title, task_number)
+  const { data: tasks } = await supabase
+    .from('project_tasks')
+    .select('id, title, task_number')
+    .eq('project_id', projectId)
+    .order('task_number', { ascending: true })
+
+  // Check if user is a project member (for time logging permission)
+  const isProjectMember =
+    isSuperAdmin ||
+    isStaff ||
+    project.project_members?.some((m: any) => m.user_id === user.id && m.is_active)
+
   return (
     <div className="space-y-6">
       <Link
@@ -283,8 +310,24 @@ export default async function ProjectDetailPage({
       </div>
 
       {/* Tabbed Content */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
+      <Tabs defaultValue="board" className="space-y-4">
+        <TabsList className="flex-wrap h-auto gap-1">
+          <TabsTrigger value="board" className="gap-2">
+            <LayoutGrid className="h-4 w-4" />
+            Board
+          </TabsTrigger>
+          <TabsTrigger value="timeline" className="gap-2">
+            <Flag className="h-4 w-4" />
+            Timeline
+          </TabsTrigger>
+          <TabsTrigger value="time" className="gap-2">
+            <Clock className="h-4 w-4" />
+            Time
+          </TabsTrigger>
+          <TabsTrigger value="invoices" className="gap-2">
+            <Receipt className="h-4 w-4" />
+            Invoices
+          </TabsTrigger>
           <TabsTrigger value="overview" className="gap-2">
             <FolderKanban className="h-4 w-4" />
             Overview
@@ -304,6 +347,33 @@ export default async function ProjectDetailPage({
             </TabsTrigger>
           )}
         </TabsList>
+
+        <TabsContent value="board">
+          <ProjectBoard
+            projectId={project.id}
+            members={project.project_members ?? []}
+            milestones={milestones ?? []}
+            canEdit={canEdit}
+          />
+        </TabsContent>
+
+        <TabsContent value="timeline">
+          <ProjectTimeline projectId={project.id} canEdit={canEdit} />
+        </TabsContent>
+
+        <TabsContent value="time">
+          <ProjectTimeTracking
+            projectId={project.id}
+            tasks={tasks ?? []}
+            canEdit={canEdit}
+            canLogTime={isProjectMember}
+            defaultHourlyRate={project.default_hourly_rate}
+          />
+        </TabsContent>
+
+        <TabsContent value="invoices">
+          <ProjectInvoices projectId={project.id} canCreateInvoice={canEdit} />
+        </TabsContent>
 
         <TabsContent value="overview" className="space-y-4">
           <Card>

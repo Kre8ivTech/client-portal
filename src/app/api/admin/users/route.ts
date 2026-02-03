@@ -268,17 +268,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create user record in public.users table
+    // Ensure user record exists in public.users table.
+    // Note: DB trigger `on_auth_user_created` already inserts a row into `public.users`,
+    // so we must upsert (not insert) to avoid duplicate PK errors.
     const { error: createUserError } = await (supabaseAdmin as any)
       .from("users")
-      .insert({
+      .upsert({
         id: newAuthUser.user.id,
         email: data.email,
         role: data.role,
         organization_id: data.organization_id,
         is_account_manager: data.is_account_manager,
         status: "active",
-      });
+      }, { onConflict: "id" });
 
     if (createUserError) {
       console.error("Error creating user record:", createUserError);
@@ -290,13 +292,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create profile record
+    // Ensure profile record exists (trigger usually creates it)
     const { error: createProfileError } = await (supabaseAdmin as any)
       .from("profiles")
-      .insert({
+      .upsert({
         user_id: newAuthUser.user.id,
         name: data.name,
-      });
+      }, { onConflict: "user_id" });
 
     if (createProfileError) {
       console.error("Error creating profile:", createProfileError);

@@ -42,7 +42,8 @@ export default async function EditServicePage({ params }: EditServicePageProps) 
     .select('*')
     .eq('id', id)
 
-  if (p.organization_id) {
+  // Staff are scoped to their org; super admins can edit across orgs.
+  if (p.role !== 'super_admin' && p.organization_id) {
     serviceQuery.eq('organization_id', p.organization_id)
   }
 

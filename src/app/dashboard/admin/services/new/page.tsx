@@ -30,6 +30,16 @@ export default async function NewServicePage() {
     return <div>Forbidden - Admin access required</div>
   }
 
+  // Super admins can create services for any organization
+  let organizations: Array<{ id: string; name: string }> = []
+  if (p.role === 'super_admin') {
+    const { data: orgs } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .order('name', { ascending: true })
+    organizations = (orgs as any) || []
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
@@ -46,7 +56,11 @@ export default async function NewServicePage() {
       </div>
 
       {/* Form */}
-      <ServiceForm />
+      <ServiceForm
+        canSelectOrganization={p.role === 'super_admin'}
+        organizations={organizations}
+        defaultOrganizationId={p.organization_id}
+      />
     </div>
   )
 }

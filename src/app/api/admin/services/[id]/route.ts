@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { serviceSchema } from '@/lib/validators/service'
 
+function isMissingColumnSchemaCacheError(message: string | undefined, column: string) {
+  if (!message) return false
+  const m = message.toLowerCase()
+  return (
+    m.includes('schema cache') &&
+    (m.includes(`'${column.toLowerCase()}'`) || m.includes(`"${column.toLowerCase()}"`))
+  )
+}
+
 // PATCH /api/admin/services/[id] - Update service
 export async function PATCH(
   request: NextRequest,
@@ -48,19 +57,40 @@ export async function PATCH(
       )
     }
 
+    // Non-super-admins cannot change organization ownership
+    const updateData: any = { ...result.data }
+    if (p.role !== 'super_admin') {
+      delete updateData.organization_id
+    }
+
     // Update service
     const updateQuery = (supabase as any)
       .from('services')
-      .update(result.data)
+      .update(updateData)
       .eq('id', id)
     
-    if (p.organization_id) {
+    // Staff scoped to their org, super_admin can update across orgs
+    if (p.role !== 'super_admin' && p.organization_id) {
       updateQuery.eq('organization_id', p.organization_id)
     }
     
-    const { data: service, error } = await updateQuery
-      .select()
-      .single()
+    let service: any = null
+    let error: any = null
+    ;({ data: service, error } = await updateQuery.select().single())
+
+    // Backwards-compat: retry without is_global if column doesn't exist yet.
+    if (error && isMissingColumnSchemaCacheError(error.message, 'is_global')) {
+      const retryData = { ...updateData }
+      delete retryData.is_global
+      const retryQuery = (supabase as any)
+        .from('services')
+        .update(retryData)
+        .eq('id', id)
+      if (p.role !== 'super_admin' && p.organization_id) {
+        retryQuery.eq('organization_id', p.organization_id)
+      }
+      ;({ data: service, error } = await retryQuery.select().single())
+    }
 
     if (error) {
       console.error('Error updating service:', error)
@@ -132,7 +162,8 @@ export async function DELETE(
       .delete()
       .eq('id', id)
     
-    if (p.organization_id) {
+    // Staff scoped to their org, super_admin can delete across orgs
+    if (p.role !== 'super_admin' && p.organization_id) {
       deleteQuery.eq('organization_id', p.organization_id)
     }
     

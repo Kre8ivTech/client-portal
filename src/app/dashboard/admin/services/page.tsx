@@ -36,7 +36,8 @@ export default async function AdminServicesPage() {
     .from('services')
     .select('*, created_by_user:users!created_by(id, profiles(name))')
   
-  if (p.organization_id) {
+  // Staff are scoped to their org; super admins can view across orgs.
+  if (p.role !== 'super_admin' && p.organization_id) {
     servicesQuery.eq('organization_id', p.organization_id)
   }
   

@@ -14,10 +14,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user's notifications using the view
+    // Get user's notifications
     const { data: notifications, error } = await supabase
-      .from('user_notifications' as any)
-      .select('*')
+      .from('notifications')
+      .select(`
+        *,
+        notification_reads!left(read_at, dismissed_at)
+      `)
       .order('created_at', { ascending: false })
 
     if (error) {

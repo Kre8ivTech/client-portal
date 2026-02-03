@@ -46,18 +46,18 @@ export function NotificationBox() {
 
   async function loadNotifications() {
     try {
-      const { data, error } = await supabase
-        .from('user_notifications' as any)
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10)
+      const response = await fetch('/api/notifications')
+      if (!response.ok) throw new Error('Failed to fetch notifications')
 
-      if (error) throw error
-      
-      setNotifications(data as UserNotification[] || [])
-      
-      // Count unread
-      const unread = (data as UserNotification[] || []).filter(n => !n.is_read && !n.is_dismissed).length
+      const { data } = await response.json()
+
+      setNotifications(data || [])
+
+      // Count unread (notifications without read_at in notification_reads)
+      const unread = (data || []).filter((n: any) =>
+        !n.notification_reads?.[0]?.read_at &&
+        !n.notification_reads?.[0]?.dismissed_at
+      ).length
       setUnreadCount(unread)
     } catch (error) {
       console.error('Error loading notifications:', error)

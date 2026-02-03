@@ -7,7 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { FolderKanban, Clock, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { FolderKanban, Clock, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react'
 import { ProjectList } from '@/components/projects/project-list'
 import { CreateProjectDialog } from '@/components/projects/create-project-dialog'
 
@@ -37,103 +38,48 @@ export default async function ProjectsPage() {
 
   // Fetch projects based on role
   let projects: any[] = []
+  let projectsTableMissing = false
   let stats = { total: 0, active: 0, completed: 0, onHold: 0 }
 
-  if (role === 'super_admin' || role === 'staff') {
-    // Staff/admin can see all projects
-    const { data } = await supabase
-      .from('projects')
-      .select(`
+  // RLS policies handle visibility per-role; we can use one query for all roles.
+  const { data, error } = await supabase
+    .from('projects')
+    .select(`
+      id,
+      project_number,
+      name,
+      description,
+      status,
+      priority,
+      start_date,
+      target_end_date,
+      created_at,
+      created_by,
+      organization:organizations!projects_organization_id_fkey(id, name),
+      project_members(
         id,
-        project_number,
-        name,
-        description,
-        status,
-        priority,
-        start_date,
-        target_end_date,
-        created_at,
-        created_by,
-        organization:organizations!projects_organization_id_fkey(id, name),
-        project_members(
-          id,
-          user_id,
-          role,
-          user:users!project_members_user_id_fkey(id, email, profiles:profiles(name, avatar_url))
-        ),
-        project_organizations(
-          id,
-          organization_id,
-          role,
-          organization:organizations!project_organizations_organization_id_fkey(id, name)
-        )
-      `)
-      .order('created_at', { ascending: false })
-
-    projects = data ?? []
-  } else if (role === 'partner' || role === 'partner_staff') {
-    // Partners see their org's projects and projects with their clients assigned
-    const { data } = await supabase
-      .from('projects')
-      .select(`
+        user_id,
+        role,
+        user:users!project_members_user_id_fkey(id, email, profiles:profiles(name, avatar_url))
+      ),
+      project_organizations(
         id,
-        project_number,
-        name,
-        description,
-        status,
-        priority,
-        start_date,
-        target_end_date,
-        created_at,
-        created_by,
-        organization:organizations!projects_organization_id_fkey(id, name),
-        project_members(
-          id,
-          user_id,
-          role,
-          user:users!project_members_user_id_fkey(id, email, profiles:profiles(name, avatar_url))
-        ),
-        project_organizations(
-          id,
-          organization_id,
-          role,
-          organization:organizations!project_organizations_organization_id_fkey(id, name)
-        )
-      `)
-      .order('created_at', { ascending: false })
+        organization_id,
+        role,
+        organization:organizations!project_organizations_organization_id_fkey(id, name)
+      )
+    `)
+    .order('created_at', { ascending: false })
 
-    projects = data ?? []
+  if (error) {
+    if ((error as any).code === 'PGRST205') {
+      // Table doesn't exist yet - migrations need to run
+      projectsTableMissing = true
+      console.warn('projects table not found - migrations pending')
+    } else {
+      console.error('Error fetching projects:', error)
+    }
   } else {
-    // Clients see only projects where their org is assigned
-    const { data } = await supabase
-      .from('projects')
-      .select(`
-        id,
-        project_number,
-        name,
-        description,
-        status,
-        priority,
-        start_date,
-        target_end_date,
-        created_at,
-        created_by,
-        organization:organizations!projects_organization_id_fkey(id, name),
-        project_members(
-          id,
-          user_id,
-          role,
-          user:users!project_members_user_id_fkey(id, email, profiles:profiles(name, avatar_url))
-        ),
-        project_organizations(
-          id,
-          organization_id,
-          role,
-          organization:organizations!project_organizations_organization_id_fkey(id, name)
-        )
-      `)
-      .order('created_at', { ascending: false })
-
     projects = data ?? []
   }
 
@@ -181,6 +127,18 @@ export default async function ProjectsPage() {
 
   return (
     <div className="space-y-6">
+      {projectsTableMissing && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Projects system is not available yet</AlertTitle>
+          <AlertDescription>
+            The database table <span className="font-mono">public.projects</span> was not found
+            (Supabase error <span className="font-mono">PGRST205</span>). This usually means
+            production migrations haven&apos;t been applied yet.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-slate-900">
@@ -190,7 +148,7 @@ export default async function ProjectsPage() {
             Manage and track your projects and service requests.
           </p>
         </div>
-        {canCreateProject && (
+        {canCreateProject && !projectsTableMissing && (
           <CreateProjectDialog
             staffUsers={staffUsers}
             organizations={clientOrganizations}

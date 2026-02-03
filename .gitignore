@@ -46,3 +46,5 @@ optimizer/
 
 # Claude Flow MCP generated files
 .claude-flow/metrics/
+.claude-flow/daemon-state.json
+.claude-flow/daemon.pid

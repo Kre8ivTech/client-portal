@@ -105,11 +105,8 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/forms", icon: FileEdit, label: "Forms" },
       { href: "/dashboard/admin/services", icon: Wrench, label: "Manage Services" },
       { href: "/dashboard/admin/contracts", icon: ClipboardList, label: "Manage Contracts" },
-<<<<<<< HEAD
       { href: "/dashboard/admin/notifications", icon: Bell, label: "Notifications" },
-=======
       { href: "/dashboard/admin/settings/sla", icon: Clock, label: "SLA Settings" },
->>>>>>> origin/cursor/support-ticket-management-6945
       { href: "/dashboard/audit", icon: History, label: "Audit Log" },
     ],
   },

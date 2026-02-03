@@ -707,11 +707,7 @@ export default async function UserGuidePage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary">•</span>
-<<<<<<< HEAD
                     <span>View client&apos;s active tickets and requests</span>
-=======
-                    <span>View client's active tickets and requests</span>
->>>>>>> origin/cursor/admin-staff-user-guide-be97
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-primary">•</span>
@@ -1215,11 +1211,7 @@ export default async function UserGuidePage() {
                 <h3 className="font-semibold mb-2">How to Log Time</h3>
                 <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
                   <li>Navigate to Time Tracking</li>
-<<<<<<< HEAD
                   <li>Click &quot;Log Time&quot; or use the quick entry widget</li>
-=======
-                  <li>Click "Log Time" or use the quick entry widget</li>
->>>>>>> origin/cursor/admin-staff-user-guide-be97
                   <li>Select the ticket, project, or task</li>
                   <li>Enter hours worked</li>
                   <li>Add a brief description of work done</li>

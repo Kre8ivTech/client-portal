@@ -18,11 +18,7 @@ export async function POST(
     }
 
     // Get webhook details
-<<<<<<< HEAD
-    const { data: webhook, error } = await supabase
-=======
     const { data: webhook, error: webhookError } = await supabase
->>>>>>> origin/cursor/zapier-webhook-test-route-error-b5e1
       .from("zapier_webhooks")
       .select("*")
       .eq("id", params.id)

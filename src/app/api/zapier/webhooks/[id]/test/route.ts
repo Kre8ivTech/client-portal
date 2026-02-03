@@ -5,9 +5,10 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 // POST: Test a webhook by sending a sample payload
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  props: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await props.params;
     const supabase = await createServerSupabaseClient();
     const {
       data: { user },

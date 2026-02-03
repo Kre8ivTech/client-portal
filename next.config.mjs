@@ -7,6 +7,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   serverExternalPackages: ['docusign-esign'],
+  experimental: {
+    // Ensures `instrumentation.ts` is picked up across Next versions.
+    instrumentationHook: true,
+  },
 
   // Temporary: Skip type checking during build until database types are fixed
   typescript: {

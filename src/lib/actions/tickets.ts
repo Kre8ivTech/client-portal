@@ -131,3 +131,96 @@ export async function updateTicket(
     return { success: false, error: err.message || "Failed to update ticket" };
   }
 }
+
+/**
+ * Close a ticket with an optional resolution note
+ */
+export async function closeTicketWithNote(
+  ticketId: string,
+  options: { note?: string; isInternal?: boolean } = {}
+) {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // Get user's profile to check role and organization
+    const { data: userData } = await supabase
+      .from("user_profiles")
+      .select("organization_id, role")
+      .eq("id", user.id)
+      .single();
+
+    if (!userData?.organization_id) {
+      return { success: false, error: "Organization not found" };
+    }
+
+    // Check if user has permission to close tickets (staff or admin)
+    const canClose =
+      userData.role === "super_admin" ||
+      userData.role === "staff" ||
+      userData.role === "partner" ||
+      userData.role === "partner_staff";
+
+    if (!canClose) {
+      return { success: false, error: "You do not have permission to close tickets" };
+    }
+
+    // Get current ticket to verify it exists and check status
+    const { data: currentTicket } = await supabase
+      .from("tickets")
+      .select("*")
+      .eq("id", ticketId)
+      .single();
+
+    if (!currentTicket) {
+      return { success: false, error: "Ticket not found" };
+    }
+
+    if (currentTicket.status === "closed") {
+      return { success: false, error: "Ticket is already closed" };
+    }
+
+    // Update ticket status to closed
+    const { data: ticket, error: updateError } = await supabase
+      .from("tickets")
+      .update({
+        status: "closed",
+        resolved_at: new Date().toISOString(),
+      })
+      .eq("id", ticketId)
+      .select()
+      .single();
+
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+
+    // Add resolution note as a comment if provided
+    if (options.note?.trim()) {
+      const { error: commentError } = await supabase.from("ticket_comments").insert({
+        ticket_id: ticketId,
+        author_id: user.id,
+        content: `[Ticket Closed] ${options.note.trim()}`,
+        is_internal: options.isInternal ?? false,
+      });
+
+      if (commentError) {
+        console.error("Failed to add closing note:", commentError);
+        // Don't fail the whole operation if comment fails
+      }
+    }
+
+    // Trigger webhook for ticket closed
+    triggerWebhooks("ticket.closed", userData.organization_id, ticket);
+
+    return { success: true, data: ticket };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to close ticket" };
+  }
+}

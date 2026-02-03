@@ -1,8 +1,10 @@
 /**
  * Email Notification Provider (Resend)
+ * Supports customizable email templates from database
  */
 
 import { NotificationResult } from '../index'
+import type { EmailTemplateType } from '@/lib/actions/email-templates'
 
 interface EmailOptions {
   to: string
@@ -10,6 +12,14 @@ interface EmailOptions {
   message: string
   ticketNumber?: number
   ticketId?: string
+  appUrl?: string
+}
+
+interface TemplatedEmailOptions {
+  to: string
+  templateType: EmailTemplateType
+  variables: Record<string, string>
+  organizationId?: string | null
   appUrl?: string
 }
 
@@ -79,6 +89,210 @@ export async function sendEmail({
       provider: 'resend',
     }
   }
+}
+
+/**
+ * Send email using a template from the database
+ */
+export async function sendTemplatedEmail({
+  to,
+  templateType,
+  variables,
+  organizationId,
+  appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
+}: TemplatedEmailOptions): Promise<NotificationResult> {
+  try {
+    const apiKey = process.env.RESEND_API_KEY
+
+    if (!apiKey) {
+      console.error('[Notifications] RESEND_API_KEY not configured')
+      return {
+        success: false,
+        error: 'Email service not configured',
+      }
+    }
+
+    // Fetch the template from the database
+    const template = await getEffectiveEmailTemplate(templateType, organizationId)
+
+    if (!template) {
+      console.warn(`[Notifications] No template found for type: ${templateType}, using fallback`)
+      // Fall back to simple email
+      return sendEmail({
+        to,
+        subject: variables.subject || 'Notification',
+        message: variables.message || 'You have a new notification.',
+        appUrl,
+      })
+    }
+
+    // Render the template with variables
+    let renderedSubject = template.subject
+    let renderedHtml = template.body_html
+    let renderedText = template.body_text || ''
+
+    // Add default variables
+    const allVariables: Record<string, string> = {
+      portal_name: 'KT-Portal',
+      unsubscribe_url: `${appUrl}/dashboard/settings/notifications`,
+      ...variables,
+    }
+
+    // Replace all variable placeholders
+    for (const [key, value] of Object.entries(allVariables)) {
+      const placeholder = `{{${key}}}`
+      const regex = new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g')
+      renderedSubject = renderedSubject.replace(regex, value)
+      renderedHtml = renderedHtml.replace(regex, value)
+      renderedText = renderedText.replace(regex, value)
+    }
+
+    // Determine from address
+    const fromName = template.from_name || 'KT-Portal Support'
+    const fromEmail = template.from_email || 'support@ktportal.app'
+    const from = `${fromName} <${fromEmail}>`
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject: renderedSubject,
+        html: renderedHtml,
+        text: renderedText || undefined,
+        reply_to: template.reply_to || undefined,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('[Notifications] Email send failed:', error)
+      return {
+        success: false,
+        error: `Failed to send email: ${response.statusText}`,
+        provider: 'resend',
+      }
+    }
+
+    const data = await response.json()
+
+    return {
+      success: true,
+      messageId: data.id,
+      provider: 'resend',
+      templateId: template.id,
+    }
+  } catch (error) {
+    console.error('[Notifications] Templated email error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      provider: 'resend',
+    }
+  }
+}
+
+/**
+ * Get the effective template for a type and organization
+ * Priority: org-specific default > org-specific any > system default > system any
+ */
+async function getEffectiveEmailTemplate(
+  templateType: EmailTemplateType,
+  organizationId?: string | null
+): Promise<EmailTemplateRecord | null> {
+  try {
+    // Dynamic import to avoid circular dependencies
+    const { createClient } = await import('@supabase/supabase-js')
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('[Notifications] Supabase not configured for template lookup')
+      return null
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // First try org-specific default
+    if (organizationId) {
+      const { data: orgDefault } = await supabase
+        .from('email_templates')
+        .select('*')
+        .eq('template_type', templateType)
+        .eq('organization_id', organizationId)
+        .eq('is_default', true)
+        .eq('is_active', true)
+        .single()
+
+      if (orgDefault) return orgDefault as EmailTemplateRecord
+
+      // Then try any org template
+      const { data: orgTemplate } = await supabase
+        .from('email_templates')
+        .select('*')
+        .eq('template_type', templateType)
+        .eq('organization_id', organizationId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      if (orgTemplate) return orgTemplate as EmailTemplateRecord
+    }
+
+    // Fall back to system default
+    const { data: systemDefault } = await supabase
+      .from('email_templates')
+      .select('*')
+      .eq('template_type', templateType)
+      .is('organization_id', null)
+      .eq('is_default', true)
+      .eq('is_active', true)
+      .single()
+
+    if (systemDefault) return systemDefault as EmailTemplateRecord
+
+    // Last resort: any system template
+    const { data: systemTemplate } = await supabase
+      .from('email_templates')
+      .select('*')
+      .eq('template_type', templateType)
+      .is('organization_id', null)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    return systemTemplate as EmailTemplateRecord | null
+  } catch (error) {
+    console.error('[Notifications] Error fetching email template:', error)
+    return null
+  }
+}
+
+interface EmailTemplateRecord {
+  id: string
+  organization_id: string | null
+  template_type: string
+  name: string
+  description: string | null
+  subject: string
+  body_html: string
+  body_text: string | null
+  from_name: string | null
+  from_email: string | null
+  reply_to: string | null
+  variables: Array<{ name: string; label: string; required?: boolean; default?: string }>
+  is_active: boolean
+  is_default: boolean
+  created_by: string | null
+  created_at: string
+  updated_at: string
 }
 
 /**

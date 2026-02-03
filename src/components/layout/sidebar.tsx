@@ -33,6 +33,7 @@ import {
   FolderKanban,
   HelpCircle,
   HardDrive,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -86,6 +87,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/settings/white-label", icon: Palette, label: "White Label" },
       { href: "/dashboard/settings/security", icon: Shield, label: "Security" },
       { href: "/dashboard/settings/notifications", icon: Bell, label: "Notifications" },
+      { href: "/dashboard/settings/email-templates", icon: Mail, label: "Email Templates" },
       { href: "/dashboard/settings/file-storage", icon: HardDrive, label: "File Storage" },
       { href: "/dashboard/integrations", icon: Plug, label: "Integrations" },
     ],
@@ -174,6 +176,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/capacity",
         ...accountBase,
         whiteLabel,
+        "/dashboard/settings/email-templates",
         "/dashboard/integrations",
         "/dashboard/clients",
         "/dashboard/projects",
@@ -195,6 +198,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         userGuide,
         "/dashboard/capacity",
         ...(isAccountManager ? accountBase : accountBaseNoInvoices),
+        "/dashboard/settings/email-templates",
         "/dashboard/projects",
         ...adminStaff,
         "/dashboard/admin/staff-management",

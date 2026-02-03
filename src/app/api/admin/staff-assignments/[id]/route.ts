@@ -1,5 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+
+const updateAssignmentSchema = z.object({
+  assignment_role: z.string().nullable().optional(),
+  is_active: z.boolean().optional(),
+})
+
+async function canManageAssignmentId(supabase: any, userId: string, assignmentId: string) {
+  const { data: profile } = await (supabase as any)
+    .from('users')
+    .select('role')
+    .eq('id', userId)
+    .single()
+
+  if (!profile) return { ok: false as const, status: 403, error: 'Forbidden' }
+  if (profile.role === 'super_admin') return { ok: true as const }
+  if (profile.role !== 'staff') return { ok: false as const, status: 403, error: 'Forbidden' }
+
+  const { data: assignment } = await (supabase as any)
+    .from('staff_organization_assignments')
+    .select('id, organization_id')
+    .eq('id', assignmentId)
+    .maybeSingle()
+
+  if (!assignment) return { ok: false as const, status: 404, error: 'Not found' }
+
+  const { data: pmAssignment } = await (supabase as any)
+    .from('staff_organization_assignments')
+    .select('id')
+    .eq('staff_user_id', userId)
+    .eq('organization_id', assignment.organization_id)
+    .eq('assignment_role', 'project_manager')
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (!pmAssignment) return { ok: false as const, status: 403, error: 'Forbidden' }
+  return { ok: true as const }
+}
 
 /**
  * DELETE /api/admin/staff-assignments/[id]
@@ -14,7 +52,7 @@ export async function DELETE(
     const supabase = await createServerSupabaseClient()
     const { id } = params
 
-    // Check if user is super_admin
+    // Check auth
     const {
       data: { user },
       error: authError,
@@ -24,14 +62,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: profile } = await (supabase as any)
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile || profile.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const authz = await canManageAssignmentId(supabase, user.id, id)
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status })
     }
 
     // Soft delete by setting is_active = false and unassigned_at
@@ -71,7 +104,7 @@ export async function PATCH(
     const supabase = await createServerSupabaseClient()
     const { id } = params
 
-    // Check if user is super_admin
+    // Check auth
     const {
       data: { user },
       error: authError,
@@ -81,18 +114,21 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: profile } = await (supabase as any)
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile || profile.role !== 'super_admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    const authz = await canManageAssignmentId(supabase, user.id, id)
+    if (!authz.ok) {
+      return NextResponse.json({ error: authz.error }, { status: authz.status })
     }
 
     const body = await request.json()
-    const { assignment_role, is_active } = body
+    const parsed = updateAssignmentSchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.format() },
+        { status: 400 }
+      )
+    }
+
+    const { assignment_role, is_active } = parsed.data
 
     const updates: any = {}
     if (assignment_role !== undefined) updates.assignment_role = assignment_role

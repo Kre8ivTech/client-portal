@@ -197,6 +197,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         ...(isAccountManager ? accountBase : accountBaseNoInvoices),
         "/dashboard/projects",
         ...adminStaff,
+        "/dashboard/admin/staff-management",
         "/dashboard/admin/services",
         "/dashboard/admin/contracts",
         "/dashboard/admin/notifications",

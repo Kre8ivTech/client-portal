@@ -162,7 +162,8 @@ function runMigrations() {
           ? `supabase db push --db-url "${dbUrl}"`
           : 'supabase db push',
         {
-          stdio: 'inherit',
+          stdio: ['ignore', 'pipe', 'pipe'], // Capture output to detect errors
+          encoding: 'utf-8',
           env: {
             ...process.env,
             SUPABASE_ACCESS_TOKEN: process.env.SUPABASE_ACCESS_TOKEN,
@@ -174,7 +175,16 @@ function runMigrations() {
       log('\n✅ Migrations applied successfully!', 'green')
       return true
     } catch (pushError: any) {
-      const errorOutput = pushError.stderr?.toString() || pushError.stdout?.toString() || pushError.message
+      // Capture both stdout and stderr
+      const errorOutput = (pushError.stdout || '') + (pushError.stderr || '') + (pushError.message || '')
+
+      // Log the error for debugging
+      if (pushError.stdout) {
+        console.log(pushError.stdout)
+      }
+      if (pushError.stderr) {
+        console.error(pushError.stderr)
+      }
 
       // Check if error is about duplicate keys (migrations already applied)
       if (errorOutput.includes('duplicate key') && errorOutput.includes('schema_migrations')) {
@@ -183,7 +193,7 @@ function runMigrations() {
       }
 
       // Check if the error is about history mismatch which can be resolved with --include-all
-      if (errorOutput.includes('include-all') || errorOutput.includes('history table')) {
+      if (errorOutput.includes('include-all') || errorOutput.includes('history table') || errorOutput.includes('Found local migration files')) {
         log('⚠️  Migration history mismatch detected. Will retry with --include-all...', 'yellow')
         needsIncludeAll = true
       } else {
@@ -201,7 +211,7 @@ function runMigrations() {
             ? `supabase db push --include-all --db-url "${dbUrl}"`
             : 'supabase db push --include-all',
           {
-            stdio: 'inherit',
+            stdio: 'inherit', // Show output for --include-all
             env: {
               ...process.env,
               SUPABASE_ACCESS_TOKEN: process.env.SUPABASE_ACCESS_TOKEN,
@@ -213,7 +223,7 @@ function runMigrations() {
         log('\n✅ Migrations applied successfully!', 'green')
         return true
       } catch (includeAllError: any) {
-        const errorOutput = includeAllError.stderr?.toString() || includeAllError.stdout?.toString() || includeAllError.message
+        const errorOutput = (includeAllError.stdout || '') + (includeAllError.stderr || '') + (includeAllError.message || '')
 
         // Check again for duplicate keys (migrations already applied via --include-all)
         if (errorOutput.includes('duplicate key') && errorOutput.includes('schema_migrations')) {

@@ -1,10 +1,97 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
+import OpenAI from 'openai'
 import Anthropic from '@anthropic-ai/sdk'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
-})
+// Helper to get system settings (privileged)
+async function getSystemSettings() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return null
+  }
+  
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  )
+  
+  const { data } = await supabaseAdmin
+    .from('app_settings')
+    .select('*')
+    .eq('id', '00000000-0000-0000-0000-000000000001')
+    .single()
+    
+  return data
+}
+
+// Initialize clients with dynamic keys
+function getOpenRouterClient(apiKey: string) {
+  return new OpenAI({
+    baseURL: 'https://openrouter.ai/api/v1',
+    apiKey,
+  })
+}
+
+function getAnthropicClient(apiKey: string) {
+  return new Anthropic({
+    apiKey,
+  })
+}
+
+function getOpenAIClient(apiKey: string) {
+  return new OpenAI({
+    apiKey,
+  })
+}
+
+async function getOpenRouterResponse(messages: any[], systemPrompt: string, apiKey: string) {
+  console.log('Attempting OpenRouter...')
+  const client = getOpenRouterClient(apiKey)
+  const response = await client.chat.completions.create({
+    model: 'anthropic/claude-3.5-sonnet',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...messages
+    ],
+    extra_headers: {
+      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://client-portal.com",
+      "X-Title": "Client Portal AI",
+    },
+  })
+  return response.choices[0]?.message?.content
+}
+
+async function getAnthropicResponse(messages: any[], systemPrompt: string, apiKey: string) {
+  console.log('Attempting Anthropic fallback...')
+  const client = getAnthropicClient(apiKey)
+  // Convert messages to Anthropic format (no system role in messages array)
+  const anthropicMessages = messages.map(m => ({
+    role: m.role === 'user' ? 'user' : 'assistant',
+    content: m.content
+  })) as Anthropic.MessageParam[]
+
+  const response = await client.messages.create({
+    model: 'claude-3-5-sonnet-20241022',
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: anthropicMessages,
+  })
+
+  return response.content[0].type === 'text' ? response.content[0].text : null
+}
+
+async function getOpenAIResponse(messages: any[], systemPrompt: string, apiKey: string) {
+  console.log('Attempting OpenAI fallback...')
+  const client = getOpenAIClient(apiKey)
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...messages
+    ],
+  })
+  return response.choices[0]?.message?.content
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,12 +116,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Fetch conversation context, documents, rules, and AI configs in parallel
+    // Fetch context data
     const [
       { data: conversationMessages },
       { data: orgDocuments },
       { data: orgRules },
       { data: aiConfigs },
+      appSettings
     ] = await Promise.all([
       supabase
         .from('ai_messages')
@@ -60,55 +148,89 @@ export async function POST(request: NextRequest) {
         .from('ai_configs')
         .select('system_prompt, model_params')
         .is('organization_id', null)
-        .maybeSingle()
+        .single(),
+        
+      getSystemSettings()
     ])
 
-    // Build system prompt
+    // Resolve Keys (DB > Env)
+    const openRouterKey = appSettings?.openrouter_api_key || process.env.OPENROUTER_API_KEY
+    const anthropicKey = appSettings?.anthropic_api_key || process.env.ANTHROPIC_API_KEY
+    const openaiKey = appSettings?.openai_api_key || process.env.OPENAI_API_KEY
+    const primaryProvider = appSettings?.ai_provider_primary || 'openrouter'
+
     let systemPrompt = 'You are a helpful AI assistant for a client portal.'
 
-    if (aiConfigs?.system_prompt) {
-      systemPrompt = aiConfigs.system_prompt
+    if (aiConfigs) {
+      systemPrompt = aiConfigs.system_prompt || systemPrompt
     }
 
     if (orgRules && orgRules.length > 0) {
       systemPrompt += '\n\nIMPORTANT RULES TO FOLLOW:\n'
-      orgRules.forEach((rule) => {
+      orgRules.forEach((rule: any) => {
         systemPrompt += `- ${rule.rule_name}: ${rule.rule_content}\n`
       })
     }
 
     if (orgDocuments && orgDocuments.length > 0) {
       systemPrompt += '\n\nRELEVANT KNOWLEDGE BASE:\n'
-      orgDocuments.forEach((doc) => {
+      orgDocuments.forEach((doc: any) => {
         systemPrompt += `\n[${doc.document_type.toUpperCase()}] ${doc.title}:\n${doc.content}\n`
       })
     }
 
-    // Format conversation history for Anthropic API
-    const conversationHistory = (conversationMessages || [])
-      .map((msg: any) => ({
-        role: msg.role === 'assistant' ? ('assistant' as const) : ('user' as const),
-        content: msg.content,
-      }))
-      .filter((msg: any) => msg.role === 'user' || msg.role === 'assistant')
+    const conversationHistory = (conversationMessages || []).map((msg: any) => ({
+      role: msg.role === 'assistant' ? 'assistant' : 'user',
+      content: msg.content,
+    }))
 
-    // Call Anthropic API
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [
-        ...conversationHistory,
-        {
-          role: 'user',
-          content: message,
-        },
-      ],
-    })
+    // Current message
+    const messages = [
+      ...conversationHistory,
+      { role: 'user', content: message }
+    ]
 
-    const assistantMessage = response.content[0].type === 'text'
-      ? response.content[0].text
-      : 'I apologize, but I encountered an error processing your request.'
+    let assistantMessage: string | null | undefined = null
+    let errorDetails: any = {}
+
+    // Execution Order based on Primary Provider
+    const providers = []
+    
+    // Add primary first
+    if (primaryProvider === 'openrouter') providers.push('openrouter')
+    else if (primaryProvider === 'anthropic') providers.push('anthropic')
+    else if (primaryProvider === 'openai') providers.push('openai')
+    
+    // Add backups (avoid duplicates)
+    if (!providers.includes('openrouter')) providers.push('openrouter')
+    if (!providers.includes('anthropic')) providers.push('anthropic')
+    if (!providers.includes('openai')) providers.push('openai')
+
+    // Execute
+    for (const provider of providers) {
+      if (assistantMessage) break // Stop if success
+
+      try {
+        if (provider === 'openrouter' && openRouterKey) {
+          assistantMessage = await getOpenRouterResponse(messages, systemPrompt, openRouterKey)
+        } else if (provider === 'anthropic' && anthropicKey) {
+          assistantMessage = await getAnthropicResponse(messages, systemPrompt, anthropicKey)
+        } else if (provider === 'openai' && openaiKey) {
+          assistantMessage = await getOpenAIResponse(messages, systemPrompt, openaiKey)
+        }
+      } catch (e: any) {
+        console.error(`${provider} failed:`, e.message)
+        errorDetails[provider] = e.message
+      }
+    }
+
+    if (!assistantMessage) {
+      console.error('All AI providers failed', errorDetails)
+      return NextResponse.json(
+        { error: 'AI service unavailable. All providers failed.' },
+        { status: 503 }
+      )
+    }
 
     return NextResponse.json({
       message: assistantMessage,

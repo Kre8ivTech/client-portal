@@ -2,18 +2,22 @@ import { createBrowserClient } from '@supabase/ssr'
 import { Database } from '@/types/database'
 
 export function createClient() {
+  const isBrowser = typeof document !== 'undefined'
+
   return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
+          if (!isBrowser) return undefined
           return document.cookie
             .split('; ')
             .find((row) => row.startsWith(`${name}=`))
             ?.split('=')[1]
         },
         set(name: string, value: string, options: any) {
+          if (!isBrowser) return
           try {
             document.cookie = `${name}=${value}; path=${options?.path || '/'}; ${
               options?.maxAge ? `max-age=${options.maxAge}` : ''
@@ -23,6 +27,7 @@ export function createClient() {
           }
         },
         remove(name: string, options: any) {
+          if (!isBrowser) return
           try {
             document.cookie = `${name}=; path=${options?.path || '/'}; max-age=0`
           } catch (error) {

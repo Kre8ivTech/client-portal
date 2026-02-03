@@ -43,9 +43,6 @@ import {
   AlertCircle,
   TestTube,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-
-const supabase = createClient();
 
 const eventTypes = [
   { value: "ticket.created", label: "Ticket Created" },

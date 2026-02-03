@@ -149,7 +149,7 @@ export default function ProfilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <EmailChangeForm currentEmail={user?.email || ''} />
+            <EmailChangeForm currentEmail={user?.email || ''} role={profile?.role} />
           </CardContent>
         </Card>
 

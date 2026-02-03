@@ -9,14 +9,16 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 
 interface EmailChangeFormProps {
   currentEmail: string;
+  role?: string | null;
 }
 
-export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
+export function EmailChangeForm({ currentEmail, role }: EmailChangeFormProps) {
   const [newEmail, setNewEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const isSuperAdmin = role === "super_admin";
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -27,7 +29,7 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
     e.preventDefault();
     
     // Validation
-    if (!newEmail || !password) {
+    if (!newEmail || (!isSuperAdmin && !password)) {
       toast({
         title: "Error",
         description: "All fields are required",
@@ -56,10 +58,13 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
 
     setLoading(true);
     try {
+      const payload: any = { newEmail };
+      if (!isSuperAdmin) payload.password = password;
+
       const response = await fetch("/api/user/email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newEmail, password }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -69,8 +74,12 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
       }
 
       toast({
-        title: "Verification Email Sent",
-        description: data.message || "Please check your inbox to verify your new email",
+        title: isSuperAdmin ? "Email Updated" : "Verification Email Sent",
+        description:
+          data.message ||
+          (isSuperAdmin
+            ? "Your email was updated successfully."
+            : "Please check your inbox to verify your new email"),
       });
 
       // Reset form
@@ -115,26 +124,28 @@ export function EmailChangeForm({ currentEmail }: EmailChangeFormProps) {
         </p>
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="password">Confirm Password</Label>
-        <div className="relative">
-          <Input
-            id="password"
-            type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            disabled={loading}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
-          >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
+      {!isSuperAdmin && (
+        <div className="space-y-2">
+          <Label htmlFor="password">Confirm Password</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              disabled={loading}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       <Button type="submit" disabled={loading} className="w-full">
         {loading ? (

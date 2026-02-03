@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button'
 export default async function UserPermissionsPage({
   params,
 }: {
-  params: { userId: string }
+  params: Promise<{ userId: string }>
 }) {
   const supabase = await createServerSupabaseClient()
-  const { userId } = params
+  const { userId } = await params
 
   const {
     data: { user },

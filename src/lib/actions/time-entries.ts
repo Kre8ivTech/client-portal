@@ -43,6 +43,7 @@ export async function createTimeEntry(formData: FormData): Promise<CreateTimeEnt
 
     const description = formData.get("description") as string;
     const hoursStr = formData.get("hours") as string;
+    const minutesStr = formData.get("minutes") as string;
     const entryDate = formData.get("entry_date") as string;
     const ticketId = (formData.get("ticket_id") as string) || null;
     const planAssignmentId = (formData.get("plan_assignment_id") as string) || null;
@@ -50,9 +51,29 @@ export async function createTimeEntry(formData: FormData): Promise<CreateTimeEnt
     const billable =
       formData.get("billable") === "true" || formData.get("billable") === "on";
 
-    const hours = parseFloat(hoursStr);
-    if (isNaN(hours) || hours <= 0 || hours > 24) {
+    // Parse hours and minutes, defaulting to 0 if not provided
+    const hoursInput = parseFloat(hoursStr) || 0;
+    const minutesInput = parseFloat(minutesStr) || 0;
+
+    // Validate hours and minutes ranges
+    if (hoursInput < 0 || hoursInput > 24) {
       return { success: false, error: "Hours must be between 0 and 24" };
+    }
+    if (minutesInput < 0 || minutesInput > 59) {
+      return { success: false, error: "Minutes must be between 0 and 59" };
+    }
+
+    // Calculate total hours (decimal)
+    const hours = hoursInput + (minutesInput / 60);
+
+    // Ensure at least 1 minute is logged
+    if (hours <= 0) {
+      return { success: false, error: "Please enter at least 1 minute" };
+    }
+
+    // Ensure total doesn't exceed 24 hours
+    if (hours > 24) {
+      return { success: false, error: "Total time cannot exceed 24 hours" };
     }
 
     // Validate work_type
@@ -96,6 +117,9 @@ export async function createTimeEntry(formData: FormData): Promise<CreateTimeEnt
 
     if (error) return { success: false, error: error.message };
 
+    // Calculate billable hours (rounded up to nearest hour)
+    const billableHours = Math.ceil(hours);
+
     await writeAuditLog({
       action: "time_entry.create",
       entity_type: "time_entry",
@@ -103,6 +127,7 @@ export async function createTimeEntry(formData: FormData): Promise<CreateTimeEnt
       details: {
         description,
         hours,
+        billable_hours: billableHours,
         ticket_id: ticketId,
         plan_assignment_id: planAssignmentId,
         work_type: workType,

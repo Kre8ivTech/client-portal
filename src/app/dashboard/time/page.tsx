@@ -17,8 +17,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Plus } from "lucide-react";
+import { Clock, Plus, DollarSign } from "lucide-react";
 import { TimeEntryDeleteButton } from "@/components/time/time-entry-delete-button";
+import { formatHoursMinutes, calculateBillableHours } from "@/lib/utils";
 
 export default async function TimeTrackingPage() {
   const { user, profile } = await requireRole(["super_admin", "staff"]);
@@ -45,6 +46,7 @@ export default async function TimeTrackingPage() {
     : { data: [] };
 
   const totalHours = (entries ?? []).reduce((s: number, e: { hours: number }) => s + e.hours, 0);
+  const totalBillableHours = (entries ?? []).reduce((s: number, e: { hours: number }) => s + calculateBillableHours(e.hours), 0);
 
   return (
     <div className="space-y-6">
@@ -55,7 +57,7 @@ export default async function TimeTrackingPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Your Entries</CardTitle>
@@ -68,12 +70,22 @@ export default async function TimeTrackingPage() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
+            <CardTitle className="text-sm font-medium">Actual Time</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalHours.toFixed(1)}</div>
-            <p className="text-xs text-muted-foreground">From listed entries</p>
+            <div className="text-2xl font-bold">{formatHoursMinutes(totalHours)}</div>
+            <p className="text-xs text-muted-foreground">Time worked</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Billable Hours</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalBillableHours}h</div>
+            <p className="text-xs text-muted-foreground">Rounded up per entry</p>
           </CardContent>
         </Card>
       </div>
@@ -101,7 +113,8 @@ export default async function TimeTrackingPage() {
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead>Description</TableHead>
-                      <TableHead>Hours</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Billed</TableHead>
                       <TableHead>Ticket</TableHead>
                       <TableHead>Billable</TableHead>
                       <TableHead className="w-[80px]" />
@@ -114,7 +127,8 @@ export default async function TimeTrackingPage() {
                           {new Date(e.entry_date).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="font-medium max-w-[200px] truncate">{e.description}</TableCell>
-                        <TableCell>{e.hours}</TableCell>
+                        <TableCell>{formatHoursMinutes(e.hours)}</TableCell>
+                        <TableCell className="text-muted-foreground">{calculateBillableHours(e.hours)}h</TableCell>
                         <TableCell className="font-mono text-xs">
                           {e.ticket_id ? `${e.ticket_id.slice(0, 8)}…` : "—"}
                         </TableCell>

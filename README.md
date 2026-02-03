@@ -140,6 +140,15 @@ supabase migration new <name>
 supabase db push            # Push migrations to remote
 ```
 
+### Production migrations on Vercel
+
+This repo runs `npm run migrate` **as part of** `npm run build` (see `package.json`). That applies SQL files in `supabase/migrations` to the **production** database during Vercel deploys.
+
+To avoid shipping features that depend on tables/views that don’t exist yet (e.g. PostgREST `PGRST205`), ensure one of these is set in Vercel **Production** environment variables:
+
+- **Option A (preferred)**: `POSTGRES_URL_NON_POOLING` (direct DB URL)
+- **Option B**: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, and `SUPABASE_DB_PASSWORD`
+
 ### Test Accounts
 
 For local development and testing, seed the database with test users:

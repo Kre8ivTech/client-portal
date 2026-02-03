@@ -18,14 +18,18 @@ export async function POST(
     }
 
     // Get webhook details
+<<<<<<< HEAD
     const { data: webhook, error } = await supabase
+=======
+    const { data: webhook, error: webhookError } = await supabase
+>>>>>>> origin/cursor/zapier-webhook-test-route-error-b5e1
       .from("zapier_webhooks")
       .select("*")
       .eq("id", params.id)
       .eq("user_id", user.id)
       .single();
 
-    if (error || !webhook) {
+    if (webhookError || !webhook) {
       return NextResponse.json({ error: "Webhook not found" }, { status: 404 });
     }
 

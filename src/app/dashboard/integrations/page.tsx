@@ -66,7 +66,7 @@ export default async function IntegrationsPage() {
         </p>
       </div>
 
-      <div className="grid gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Stripe Integration */}
         <StripeSettingsForm initialSettings={appSettings} />
 
@@ -252,15 +252,22 @@ export default async function IntegrationsPage() {
         </Card>
 
         {/* Zapier Integration */}
-        <div>
-          <div className="mb-4">
-            <h3 className="text-xl font-semibold">Automation</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Connect with Zapier to automate workflows and integrate with thousands of apps
-            </p>
-          </div>
-          <ZapierIntegration />
-        </div>
+        <Card className="border-border shadow-sm overflow-hidden">
+          <CardHeader className="bg-muted/30 border-b">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-500/10 rounded-lg">
+                <Bot className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-semibold">Automation</CardTitle>
+                <CardDescription>Connect with Zapier to automate workflows and integrate with thousands of apps</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <ZapierIntegration />
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

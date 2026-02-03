@@ -3,6 +3,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { triggerWebhooks } from '@/lib/zapier/webhooks'
 
 export type CreateInvoiceData = {
   organization_id: string
@@ -76,6 +77,9 @@ export async function createInvoice(data: CreateInvoiceData) {
     // Should probably delete the invoice if this fails, or leave it incomplete
     return { error: itemsError.message }
   }
+
+  // Trigger webhook for invoice creation
+  triggerWebhooks('invoice.created', data.organization_id, invoice)
 
   revalidatePath('/dashboard/admin/invoices')
   return { success: true, id: invoice.id }

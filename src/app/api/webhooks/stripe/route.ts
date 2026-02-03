@@ -3,6 +3,8 @@ import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { getStripeClient, getStripeConfig } from '@/lib/stripe'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { triggerWebhooks } from '@/lib/zapier/webhooks'
+import { supabaseAdmin } from '@/lib/supabase/admin'
 
 export const runtime = 'nodejs' // Required for webhook signature verification
 
@@ -125,6 +127,17 @@ async function handleCheckoutSessionCompleted(
     })
   }
 
+  // Trigger webhook for invoice paid
+  const { data: invoiceData } = await (supabaseAdmin as any)
+    .from('invoices')
+    .select('id, invoice_number, total, organization_id, status')
+    .eq('id', invoiceId)
+    .single()
+  
+  if (invoiceData) {
+    triggerWebhooks('invoice.paid', invoiceData.organization_id, invoiceData)
+  }
+
   console.log(`Invoice ${invoiceId} marked as paid via checkout session ${session.id}`)
 }
 
@@ -209,6 +222,17 @@ async function handleInvoicePaid(
     throw error
   }
 
+  // Trigger webhook for invoice paid
+  const { data: invoiceData } = await (supabaseAdmin as any)
+    .from('invoices')
+    .select('id, invoice_number, total, organization_id, status')
+    .eq('id', invoiceId)
+    .single()
+  
+  if (invoiceData) {
+    triggerWebhooks('invoice.paid', invoiceData.organization_id, invoiceData)
+  }
+
   console.log(`Invoice ${invoiceId} marked as paid via Stripe invoice ${invoice.id}`)
 }
 
@@ -234,4 +258,15 @@ async function handleInvoicePaymentFailed(
       },
     })
     .eq('id', invoiceId)
+
+  // Trigger webhook for invoice overdue
+  const { data: invoiceData } = await (supabaseAdmin as any)
+    .from('invoices')
+    .select('id, invoice_number, total, organization_id, status')
+    .eq('id', invoiceId)
+    .single()
+  
+  if (invoiceData) {
+    triggerWebhooks('invoice.overdue', invoiceData.organization_id, invoiceData)
+  }
 }

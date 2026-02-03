@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { writeAuditLog } from '@/lib/audit'
 import { escapeHtml, sanitizeHtml } from '@/lib/security'
+import { triggerWebhooks } from '@/lib/zapier/webhooks'
 
 type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'expired' | 'cancelled'
 
@@ -118,6 +119,9 @@ export async function createContractFromTemplate(
         status: 'draft'
       }
     })
+
+    // Trigger webhook for contract creation
+    triggerWebhooks('contract.created', profile.organization_id, contract)
 
     revalidatePath('/dashboard/contracts')
     return { success: true, data: contract }

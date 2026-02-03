@@ -168,13 +168,20 @@ function runMigrations() {
     
     log('📋 Migration preview:', 'blue')
     console.log(output)
+
+    const needsIncludeAll =
+      output.includes(
+        'Found local migration files to be inserted before the last migration on remote database.'
+      ) || output.includes('--include-all')
+
+    const applyCommand = dbUrl
+      ? `supabase db push ${needsIncludeAll ? '--include-all ' : ''}--db-url "${dbUrl}"`
+      : `supabase db push ${needsIncludeAll ? '--include-all' : ''}`.trim()
     
     // Actually run migrations
     log('\n▶️  Applying migrations...', 'blue')
     execSync(
-      dbUrl
-        ? `supabase db push --db-url "${dbUrl}"`
-        : 'supabase db push',
+      applyCommand,
       { 
         stdio: 'inherit',
         env: {

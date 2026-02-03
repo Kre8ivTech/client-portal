@@ -900,8 +900,8 @@ export default async function UserGuidePage() {
                   <h3 className="font-semibold mb-2">Creating Invoices</h3>
                   <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
                     <li>Navigate to Admin → Manage Invoices</li>
-                    <li>Click &quot;New Invoice&quot;</li>
-                    <li>Select client/organization</li>
+                  <li>Click &quot;New Invoice&quot;</li>
+                  <li>Select client/organization</li>
                     <li>Add line items with descriptions and amounts</li>
                     <li>Apply taxes and discounts if needed</li>
                     <li>Set payment terms (Net 15, 30, 45, etc.)</li>
@@ -1211,7 +1211,11 @@ export default async function UserGuidePage() {
                 <h3 className="font-semibold mb-2">How to Log Time</h3>
                 <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
                   <li>Navigate to Time Tracking</li>
+<<<<<<< HEAD
                   <li>Click &quot;Log Time&quot; or use the quick entry widget</li>
+=======
+                  <li>Click "Log Time" or use the quick entry widget</li>
+>>>>>>> origin/cursor/admin-staff-user-guide-be97
                   <li>Select the ticket, project, or task</li>
                   <li>Enter hours worked</li>
                   <li>Add a brief description of work done</li>
@@ -1477,7 +1481,11 @@ export default async function UserGuidePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
+<<<<<<< HEAD
                     <h3 className="font-semibold mb-2">What&apos;s Logged?</h3>
+=======
+                    <h3 className="font-semibold mb-2">What's Logged?</h3>
+>>>>>>> origin/cursor/admin-staff-user-guide-be97
                     <p className="text-sm text-muted-foreground mb-3">
                       The audit log tracks all sensitive actions:
                     </p>

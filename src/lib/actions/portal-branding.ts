@@ -6,6 +6,15 @@ import { validateImageUrl, validateHexColor, validateOpacity } from "@/lib/secur
 
 const PORTAL_BRANDING_ID = "00000000-0000-0000-0000-000000000001";
 
+function isMissingColumnError(error: unknown): boolean {
+  const err = error as { code?: string; message?: string } | null;
+  return (
+    err?.code === "42703" ||
+    /column .* does not exist/i.test(err?.message ?? "") ||
+    /unknown column/i.test(err?.message ?? "")
+  );
+}
+
 export type PortalBrandingInput = {
   app_name: string;
   tagline: string | null;
@@ -98,20 +107,39 @@ export async function updatePortalBranding(formData: FormData): Promise<{
     primary_color = hexToHsl(primary_color);
   }
 
-  const payload = {
+  // Always update core branding fields (these exist in all deployed schemas).
+  const basePayload = {
     app_name,
     tagline,
     logo_url,
     favicon_url,
     primary_color,
+  };
+
+  const { error: baseError } = await supabase
+    .from("portal_branding")
+    .update(basePayload)
+    .eq("id", PORTAL_BRANDING_ID);
+
+  if (baseError) {
+    return { success: false, error: baseError.message };
+  }
+
+  // Best-effort update for optional login customization fields.
+  // Some environments may not have these columns yet; we silently ignore missing-column errors.
+  const loginPayload = {
     login_bg_color,
     login_bg_image_url,
     login_bg_overlay_opacity,
   };
-  const { error } = await supabase.from("portal_branding").update(payload).eq("id", PORTAL_BRANDING_ID);
 
-  if (error) {
-    return { success: false, error: error.message };
+  const { error: loginError } = await supabase
+    .from("portal_branding")
+    .update(loginPayload)
+    .eq("id", PORTAL_BRANDING_ID);
+
+  if (loginError && !isMissingColumnError(loginError)) {
+    return { success: false, error: loginError.message };
   }
 
   revalidatePath("/dashboard/settings");
@@ -135,7 +163,8 @@ export async function getPortalBranding(): Promise<PortalBrandingResult> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
     .from("portal_branding")
-    .select("app_name, tagline, logo_url, primary_color, favicon_url, login_bg_color, login_bg_image_url, login_bg_overlay_opacity")
+    // Avoid enumerating columns so missing optional columns don't throw a 400.
+    .select("*")
     .eq("id", PORTAL_BRANDING_ID)
     .single();
 
@@ -152,24 +181,15 @@ export async function getPortalBranding(): Promise<PortalBrandingResult> {
     };
   }
 
-  const row = data as {
-    app_name: string;
-    tagline: string | null;
-    logo_url: string | null;
-    primary_color: string;
-    favicon_url: string | null;
-    login_bg_color: string | null;
-    login_bg_image_url: string | null;
-    login_bg_overlay_opacity: number | null;
-  };
+  const row = data as Record<string, unknown>;
   return {
-    app_name: row.app_name,
-    tagline: row.tagline ?? "Client Portal",
-    logo_url: row.logo_url ?? null,
-    primary_color: row.primary_color ?? "231 48% 58%",
-    favicon_url: row.favicon_url ?? null,
-    login_bg_color: row.login_bg_color ?? null,
-    login_bg_image_url: row.login_bg_image_url ?? null,
-    login_bg_overlay_opacity: row.login_bg_overlay_opacity ?? 0.5,
+    app_name: (row.app_name as string) ?? "KT-Portal",
+    tagline: (row.tagline as string | null) ?? "Client Portal",
+    logo_url: (row.logo_url as string | null) ?? null,
+    primary_color: (row.primary_color as string | null) ?? "231 48% 58%",
+    favicon_url: (row.favicon_url as string | null) ?? null,
+    login_bg_color: (row.login_bg_color as string | null) ?? null,
+    login_bg_image_url: (row.login_bg_image_url as string | null) ?? null,
+    login_bg_overlay_opacity: (row.login_bg_overlay_opacity as number | null) ?? 0.5,
   };
 }

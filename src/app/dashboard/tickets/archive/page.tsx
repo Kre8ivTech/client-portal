@@ -18,7 +18,7 @@ export default async function TicketsArchivePage() {
     .from("tickets")
     .select(`
       *,
-      organization:organizations(id, name, is_priority_client)
+      organization:organizations!organization_id(id, name, is_priority_client)
     `)
     .in("status", ["resolved", "closed", "cancelled"])
     .order("updated_at", { ascending: false });

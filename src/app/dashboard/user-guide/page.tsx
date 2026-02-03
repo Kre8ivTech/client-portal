@@ -71,7 +71,7 @@ export default async function UserGuidePage() {
   const isSuperAdmin = role === "super_admin";
 
   return (
-    <div className="container max-w-7xl mx-auto p-4 md:p-6 lg:p-8 space-y-6">
+    <div className="container w-full p-4 md:p-6 lg:p-8 space-y-6">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Admin & Staff User Guide</h1>
         <p className="text-muted-foreground text-lg">

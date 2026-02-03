@@ -21,7 +21,7 @@ export default async function ContractsPage() {
     .order('created_at', { ascending: false })
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 py-8 px-4">
+    <div className="w-full space-y-8 py-8 px-4">
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Your Contracts</h1>
         <p className="text-slate-500 mt-2">

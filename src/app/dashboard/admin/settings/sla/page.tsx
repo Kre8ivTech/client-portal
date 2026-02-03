@@ -27,7 +27,7 @@ export default async function AdminSLASettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <div className="flex items-center gap-2 mb-2">
           <Shield className="h-6 w-6 text-primary" />

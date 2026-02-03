@@ -24,15 +24,29 @@ export default async function ContractTemplatesPage() {
     return <div className="p-8 text-center text-destructive">Forbidden</div>
   }
 
-  // Fetch templates
-  let query = (supabase as any).from('contract_templates').select('*')
-  if (p.role !== 'super_admin' && p.organization_id) {
-    query = query.or(`organization_id.eq.${p.organization_id},organization_id.is.null`)
+  // Fetch templates (with error handling for missing table)
+  let templates = []
+  try {
+    let query = (supabase as any).from('contract_templates').select('*')
+    if (p.role !== 'super_admin' && p.organization_id) {
+      query = query.or(`organization_id.eq.${p.organization_id},organization_id.is.null`)
+    }
+    const { data, error } = await query.order('name')
+
+    if (error && error.code === 'PGRST205') {
+      // Table doesn't exist yet - migrations need to run
+      console.warn('contract_templates table not found - migrations pending')
+    } else if (error) {
+      throw error
+    } else {
+      templates = data || []
+    }
+  } catch (err) {
+    console.error('Error fetching templates:', err)
   }
-  const { data: templates } = await query.order('name')
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 px-4 py-8">
+    <div className="w-full space-y-6 px-4 py-8">
       <Link 
         href="/dashboard/admin/contracts" 
         className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors mb-4 w-fit"

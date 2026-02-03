@@ -57,7 +57,7 @@ export default async function AdminContractsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 px-4 py-8">
+    <div className="w-full space-y-6 px-4 py-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -157,7 +157,7 @@ export default async function AdminContractsPage() {
               <FileText className="h-8 w-8 text-slate-300" />
             </div>
             <h3 className="text-lg font-bold text-slate-900">No contracts found</h3>
-            <p className="text-slate-500 max-w-xs mx-auto mt-2">
+            <p className="text-slate-500 w-full mt-2">
               Start by creating a new contract or setting up a contract template.
             </p>
             <div className="mt-8 flex justify-center gap-3">

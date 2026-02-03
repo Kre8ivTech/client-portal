@@ -8,6 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Search, MessageSquare, PenSquare } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { useRealtimeConversations } from '@/hooks/use-realtime-messages'
+import { cn } from '@/lib/cn'
 
 interface ConversationParticipant {
   user_id: string
@@ -35,6 +37,9 @@ interface ConversationListProps {
 
 export function ConversationList({ conversations, activeId, onSelect, userId, onNewConversation }: ConversationListProps) {
   const [search, setSearch] = useState('')
+
+  // Subscribe to real-time conversation updates
+  useRealtimeConversations()
 
   const filteredConversations = conversations.filter(conv => {
     const title = getConversationTitle(conv, userId).toLowerCase()

@@ -13,6 +13,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { cn } from '@/lib/cn'
 import type { Database } from '@/types/database'
 import { useStaffAssignments, useAvailableStaff } from '@/hooks/use-staff-assignments'
+import { useRealtimeMessages } from '@/hooks/use-realtime-messages'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,6 +42,9 @@ interface MessageThreadProps {
 export function MessageThread({ conversation, messages, userId, onSendMessage }: MessageThreadProps) {
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Subscribe to real-time message updates for this conversation
+  useRealtimeMessages(conversation?.id)
 
   // Staff assignments
   const {

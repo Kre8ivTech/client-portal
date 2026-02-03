@@ -9,6 +9,10 @@
     {
       "path": "/api/cron/file-sync",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/notifications/sla-check",
+      "schedule": "0 8 * * *"
     }
   ]
 }

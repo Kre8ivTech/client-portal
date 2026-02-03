@@ -44,7 +44,10 @@ export function CreateTenantForm() {
         .insert({
           name: formData.name,
           slug: formData.slug,
-          description: formData.description
+          description: formData.description,
+          // organizations.type is required by schema
+          type: 'client',
+          status: 'active',
         })
         .select()
         .single()

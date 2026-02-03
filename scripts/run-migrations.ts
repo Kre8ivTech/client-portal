@@ -4,20 +4,23 @@
  * Run Supabase migrations
  * This script runs during Vercel deployment to apply pending migrations
  * 
- * Environment variables required:
- * - SUPABASE_ACCESS_TOKEN: Supabase access token for CLI
- * - SUPABASE_PROJECT_REF: Project reference ID
- * - SUPABASE_DB_PASSWORD: Database password
+ * Environment variables supported:
+ * - POSTGRES_URL_NON_POOLING | POSTGRES_PRISMA_URL | POSTGRES_URL: direct DB URL
+ * - POSTGRES_PASSWORD: DB password (fallback for SUPABASE_DB_PASSWORD)
+ * - SUPABASE_URL: used to derive project ref if needed
+ * - SUPABASE_ACCESS_TOKEN: Supabase access token for CLI (optional if using DB URL)
+ * - SUPABASE_PROJECT_REF: Project reference ID (optional if SUPABASE_URL provided)
+ * - SUPABASE_DB_PASSWORD: Database password (optional if POSTGRES_PASSWORD provided)
  */
 
 import { execSync } from 'child_process'
 import { existsSync } from 'fs'
 import { join } from 'path'
 
-const REQUIRED_ENV_VARS = [
-  'SUPABASE_ACCESS_TOKEN',
-  'SUPABASE_PROJECT_REF',
-  'SUPABASE_DB_PASSWORD',
+const DB_URL_ENV_VARS = [
+  'POSTGRES_URL_NON_POOLING',
+  'POSTGRES_PRISMA_URL',
+  'POSTGRES_URL',
 ]
 
 // Colors for console output
@@ -33,11 +36,40 @@ function log(message: string, color: keyof typeof colors = 'reset') {
   console.log(`${colors[color]}${message}${colors.reset}`)
 }
 
+function getDbUrl() {
+  return (
+    process.env.POSTGRES_URL_NON_POOLING ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL
+  )
+}
+
+function deriveProjectRef() {
+  const supabaseUrl = process.env.SUPABASE_URL
+  if (!supabaseUrl) return undefined
+
+  const match = supabaseUrl.match(/^https:\/\/([^.]+)\.supabase\.co/)
+  return match?.[1]
+}
+
 function checkEnvironment() {
   log('🔍 Checking environment variables...', 'blue')
   
-  const missing = REQUIRED_ENV_VARS.filter(varName => !process.env[varName])
-  
+  const dbUrl = getDbUrl()
+  if (dbUrl) {
+    log('✅ Using database URL from Vercel environment', 'green')
+    return
+  }
+
+  const projectRef = process.env.SUPABASE_PROJECT_REF || deriveProjectRef()
+  const accessToken = process.env.SUPABASE_ACCESS_TOKEN
+  const dbPassword = process.env.SUPABASE_DB_PASSWORD || process.env.POSTGRES_PASSWORD
+
+  const missing: string[] = []
+  if (!accessToken) missing.push('SUPABASE_ACCESS_TOKEN')
+  if (!projectRef) missing.push('SUPABASE_PROJECT_REF or SUPABASE_URL')
+  if (!dbPassword) missing.push('SUPABASE_DB_PASSWORD or POSTGRES_PASSWORD')
+
   if (missing.length > 0) {
     log(`❌ Missing required environment variables:`, 'red')
     missing.forEach(varName => log(`   - ${varName}`, 'red'))
@@ -45,12 +77,12 @@ function checkEnvironment() {
     log('   1. Go to Vercel Dashboard > Settings > Environment Variables', 'yellow')
     log('   2. Add the missing variables for production', 'yellow')
     log('   3. Redeploy the application', 'yellow')
-    
+
     // Don't fail the build, just skip migrations
     log('\n⚠️  Skipping migrations due to missing credentials', 'yellow')
     process.exit(0)
   }
-  
+
   log('✅ All required environment variables present', 'green')
 }
 
@@ -86,7 +118,11 @@ function checkMigrations() {
 function linkSupabaseProject() {
   log('\n🔗 Linking Supabase project...', 'blue')
   
-  const projectRef = process.env.SUPABASE_PROJECT_REF!
+  const projectRef = process.env.SUPABASE_PROJECT_REF || deriveProjectRef()
+  if (!projectRef) {
+    log('❌ Missing project reference for linking', 'red')
+    return false
+  }
   
   try {
     // Link to remote project
@@ -113,14 +149,19 @@ function runMigrations() {
   log('\n🚀 Running migrations...', 'blue')
   
   try {
+    const dbUrl = getDbUrl()
+    const dbPassword = process.env.SUPABASE_DB_PASSWORD || process.env.POSTGRES_PASSWORD
+
     const output = execSync(
-      'supabase db push --dry-run',
+      dbUrl
+        ? `supabase db push --dry-run --db-url "${dbUrl}"`
+        : 'supabase db push --dry-run',
       { 
         encoding: 'utf-8',
         env: {
           ...process.env,
           SUPABASE_ACCESS_TOKEN: process.env.SUPABASE_ACCESS_TOKEN,
-          SUPABASE_DB_PASSWORD: process.env.SUPABASE_DB_PASSWORD,
+          SUPABASE_DB_PASSWORD: dbPassword,
         }
       }
     )
@@ -131,13 +172,15 @@ function runMigrations() {
     // Actually run migrations
     log('\n▶️  Applying migrations...', 'blue')
     execSync(
-      'supabase db push',
+      dbUrl
+        ? `supabase db push --db-url "${dbUrl}"`
+        : 'supabase db push',
       { 
         stdio: 'inherit',
         env: {
           ...process.env,
           SUPABASE_ACCESS_TOKEN: process.env.SUPABASE_ACCESS_TOKEN,
-          SUPABASE_DB_PASSWORD: process.env.SUPABASE_DB_PASSWORD,
+          SUPABASE_DB_PASSWORD: dbPassword,
         }
       }
     )
@@ -180,10 +223,13 @@ function main() {
     process.exit(0)
   }
   
-  // Link project
-  if (!linkSupabaseProject()) {
-    log('\n❌ Cannot proceed without project link', 'red')
-    process.exit(1)
+  const dbUrl = getDbUrl()
+  if (!dbUrl) {
+    // Link project (only needed without direct DB URL)
+    if (!linkSupabaseProject()) {
+      log('\n❌ Cannot proceed without project link', 'red')
+      process.exit(1)
+    }
   }
   
   // Run migrations

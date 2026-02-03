@@ -69,7 +69,7 @@ export default async function ClientsPage() {
         </div>
         {isPartner && (
           <Button className="gap-2" asChild>
-            <Link href="/dashboard/settings">
+            <Link href="/dashboard/clients/new">
               <Plus size={18} />
               Add Organization
             </Link>

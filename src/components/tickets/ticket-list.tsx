@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/tooltip'
 
 type Ticket = Database['public']['Tables']['tickets']['Row'] & {
+  first_response_due_at?: string | null
   organization?: {
     id: string
     name: string
@@ -84,15 +85,22 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
   const [clientFilter, setClientFilter] = useState('all')
   const [slaFilter, setSlaFilter] = useState('all')
 
+  const ticketSelect = organizations && organizations.length > 0
+    ? `
+        *,
+        organization:organizations(id, name, is_priority_client)
+      `
+    : `
+        *,
+        organization:organizations(id, name)
+      `
+
   const { data: tickets, isError, error } = useQuery({
     queryKey: ['tickets'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('tickets')
-        .select(`
-          *,
-          organization:organizations(id, name, is_priority_client)
-        `)
+        .select(ticketSelect)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -128,7 +136,7 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
       if (slaFilter !== 'all') {
         const slaStatus = getCombinedSLAStatus(
           ticket.created_at,
-          ticket.first_response_due_at,
+          ticket.first_response_due_at ?? null,
           ticket.first_response_at,
           ticket.sla_due_at,
           ticket.resolved_at,
@@ -278,7 +286,7 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
               filteredTickets.map((ticket) => {
                 const slaStatus = getCombinedSLAStatus(
                   ticket.created_at,
-                  ticket.first_response_due_at,
+                  ticket.first_response_due_at ?? null,
                   ticket.first_response_at,
                   ticket.sla_due_at,
                   ticket.resolved_at,

@@ -17,7 +17,7 @@ export default [
   ...compat.extends("next/core-web-vitals"),
   {
     // Tooling / agent directories are not part of the shipped app.
-    ignores: [".claude/**", ".claude-flow/**", ".swarm/**"],
+    ignores: [".claude/**", ".claude-flow/**", ".swarm/**", ".next/**"],
   },
   {
     rules: {

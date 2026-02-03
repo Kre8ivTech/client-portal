@@ -11,6 +11,10 @@ export type AppSettings = {
   stripe_live_webhook_secret: string | null;
   stripe_test_secret_key: string | null;
   stripe_test_webhook_secret: string | null;
+  ai_provider_primary: string | null;
+  openrouter_api_key: string | null;
+  anthropic_api_key: string | null;
+  openai_api_key: string | null;
 };
 
 export async function getAppSettings(): Promise<AppSettings> {
@@ -28,19 +32,17 @@ export async function getAppSettings(): Promise<AppSettings> {
       stripe_live_webhook_secret: null,
       stripe_test_secret_key: null,
       stripe_test_webhook_secret: null,
+      ai_provider_primary: "openrouter",
+      openrouter_api_key: null,
+      anthropic_api_key: null,
+      openai_api_key: null,
     };
   }
 
   return data as AppSettings;
 }
 
-export async function updateStripeSettings(payload: {
-  stripe_mode?: "test" | "live";
-  stripe_live_secret_key?: string | null;
-  stripe_live_webhook_secret?: string | null;
-  stripe_test_secret_key?: string | null;
-  stripe_test_webhook_secret?: string | null;
-}): Promise<{ success: boolean; error?: string }> {
+export async function updateAppSettings(payload: Partial<AppSettings>): Promise<{ success: boolean; error?: string }> {
   const supabase = await createServerSupabaseClient();
 
   const {
@@ -70,6 +72,12 @@ export async function updateStripeSettings(payload: {
     return { success: false, error: error.message };
   }
 
-  revalidatePath("/dashboard/integrations");
+  revalidatePath("/dashboard/settings/ai");
+  revalidatePath("/dashboard/settings/integrations");
   return { success: true };
+}
+
+// Keep backward compatibility for existing calls
+export async function updateStripeSettings(payload: Partial<AppSettings>) {
+  return updateAppSettings(payload);
 }

@@ -5,8 +5,7 @@ function isMissingColumnSchemaCacheError(message: string | undefined, column: st
   if (!message) return false;
   const m = message.toLowerCase();
   return (
-    m.includes("schema cache") &&
-    (m.includes(`'${column.toLowerCase()}'`) || m.includes(`"${column.toLowerCase()}"`))
+    m.includes("schema cache") && (m.includes(`'${column.toLowerCase()}'`) || m.includes(`"${column.toLowerCase()}"`))
   );
 }
 
@@ -44,11 +43,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from("services")
-<<<<<<< Updated upstream
       .select(selectWithGlobal)
-=======
-      .select("id, name, description, category, base_rate, rate_type, estimated_hours, is_active, display_order")
->>>>>>> Stashed changes
       .eq("is_active", true) // Only show active services to clients
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: false });

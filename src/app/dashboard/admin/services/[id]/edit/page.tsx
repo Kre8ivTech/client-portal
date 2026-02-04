@@ -35,14 +35,9 @@ export default async function EditServicePage({ params }: EditServicePageProps) 
   // Fetch the service
   const serviceQuery = (supabase as any).from("services").select("*").eq("id", id);
 
-<<<<<<< Updated upstream
   // Staff are scoped to their org; super admins can edit across orgs.
-  if (p.role !== 'super_admin' && p.organization_id) {
-    serviceQuery.eq('organization_id', p.organization_id)
-=======
-  if (p.organization_id) {
+  if (p.role !== "super_admin" && p.organization_id) {
     serviceQuery.eq("organization_id", p.organization_id);
->>>>>>> Stashed changes
   }
 
   const { data: service, error } = await serviceQuery.single();

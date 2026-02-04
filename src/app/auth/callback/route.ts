@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const next = searchParams.get('next') ?? '/dashboard'
 
   if (code) {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const redirectResponse = NextResponse.redirect(`${origin}${next}`)
 
     const supabase = createServerClient<Database>(
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (user) {
-          const headersList = headers()
+          const headersList = await headers()
           const userAgent = headersList.get('user-agent') || 'unknown'
           const forwardedFor = headersList.get('x-forwarded-for')
           const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown'

@@ -277,16 +277,77 @@ export class QuickBooksClient {
 }
 
 /**
- * Helper to get QuickBooks config from environment variables
+ * Helper to get QuickBooks config from database or environment variables
+ * Tries database first, falls back to environment variables
  */
-export function getQuickBooksConfig(): QuickBooksConfig {
-  const clientId = process.env.QUICKBOOKS_CLIENT_ID;
-  const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
-  const redirectUri = process.env.QUICKBOOKS_REDIRECT_URI || `${process.env.NEXT_PUBLIC_APP_URL}/api/quickbooks/callback`;
-  const environment = (process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox') as 'sandbox' | 'production';
+export async function getQuickBooksConfig(
+  supabase?: any,
+  organizationId?: string
+): Promise<QuickBooksConfig> {
+  let clientId: string | undefined;
+  let clientSecret: string | undefined;
+  let environment: 'sandbox' | 'production' = 'sandbox';
+
+  // Try to get from database if supabase client provided
+  if (supabase) {
+    try {
+      const { data: config } = await supabase.rpc('get_quickbooks_app_config', {
+        p_organization_id: organizationId || null,
+      });
+
+      if (config && config.length > 0) {
+        const dbConfig = config[0];
+        clientId = dbConfig.client_id;
+        clientSecret = dbConfig.client_secret;
+        environment = dbConfig.environment as 'sandbox' | 'production';
+      }
+    } catch (error) {
+      console.warn('Failed to fetch QB config from database, falling back to env vars:', error);
+    }
+  }
+
+  // Fall back to environment variables if not found in database
+  if (!clientId || !clientSecret) {
+    clientId = process.env.QUICKBOOKS_CLIENT_ID;
+    clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
+    const envEnvironment = process.env.QUICKBOOKS_ENVIRONMENT;
+    if (envEnvironment === 'production' || envEnvironment === 'sandbox') {
+      environment = envEnvironment;
+    }
+  }
 
   if (!clientId || !clientSecret) {
-    throw new Error('QuickBooks credentials not configured');
+    throw new Error('QuickBooks credentials not configured in database or environment variables');
+  }
+
+  const redirectUri =
+    process.env.QUICKBOOKS_REDIRECT_URI ||
+    `${process.env.NEXT_PUBLIC_APP_URL}/api/quickbooks/callback`;
+
+  return {
+    clientId,
+    clientSecret,
+    redirectUri,
+    environment,
+  };
+}
+
+/**
+ * Synchronous helper to get QuickBooks config from environment variables only
+ * Used when database access is not available
+ */
+export function getQuickBooksConfigFromEnv(): QuickBooksConfig {
+  const clientId = process.env.QUICKBOOKS_CLIENT_ID;
+  const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
+  const redirectUri =
+    process.env.QUICKBOOKS_REDIRECT_URI ||
+    `${process.env.NEXT_PUBLIC_APP_URL}/api/quickbooks/callback`;
+  const environment = (process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox') as
+    | 'sandbox'
+    | 'production';
+
+  if (!clientId || !clientSecret) {
+    throw new Error('QuickBooks credentials not configured in environment variables');
   }
 
   return {

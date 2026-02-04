@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Exchange authorization code for tokens
-    const config = getQuickBooksConfig();
+    const config = await getQuickBooksConfig(supabase, oauthState.organization_id);
     const tokens = await QuickBooksClient.getTokens(config, code);
 
     // Calculate token expiry timestamps

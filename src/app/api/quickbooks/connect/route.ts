@@ -58,8 +58,8 @@ export async function GET(request: NextRequest) {
       expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes
     });
 
-    // Get QuickBooks config
-    const config = getQuickBooksConfig();
+    // Get QuickBooks config (from database or env)
+    const config = await getQuickBooksConfig(supabase, profile.organization_id);
 
     // Generate authorization URL
     const authUrl = QuickBooksClient.getAuthorizationUrl(config, state);

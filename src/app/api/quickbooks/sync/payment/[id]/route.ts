@@ -128,7 +128,7 @@ export async function POST(
     let accessToken = integration.access_token;
 
     if (tokenExpiresAt <= now) {
-      const config = getQuickBooksConfig();
+      const config = await getQuickBooksConfig(supabase, payment.invoice.organization_id);
       const newTokens = await QuickBooksClient.refreshToken(
         config,
         integration.refresh_token
@@ -149,7 +149,7 @@ export async function POST(
     }
 
     // Initialize QuickBooks client
-    const config = getQuickBooksConfig();
+    const config = await getQuickBooksConfig(supabase, payment.invoice.organization_id);
     const qbClient = new QuickBooksClient(
       config,
       integration.realm_id,

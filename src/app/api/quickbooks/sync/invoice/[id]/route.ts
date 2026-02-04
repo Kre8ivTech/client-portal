@@ -104,7 +104,7 @@ export async function POST(
 
     if (tokenExpiresAt <= now) {
       // Token expired, refresh it
-      const config = getQuickBooksConfig();
+      const config = await getQuickBooksConfig(supabase, invoice.organization_id);
       const newTokens = await QuickBooksClient.refreshToken(
         config,
         integration.refresh_token
@@ -126,7 +126,7 @@ export async function POST(
     }
 
     // Initialize QuickBooks client
-    const config = getQuickBooksConfig();
+    const config = await getQuickBooksConfig(supabase, invoice.organization_id);
     const qbClient = new QuickBooksClient(
       config,
       integration.realm_id,

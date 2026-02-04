@@ -131,7 +131,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     let stripePriceId = existingPlan.stripe_price_id
 
     // Sync with Stripe if enabled and configured
-    const shouldSyncStripe = sync_to_stripe !== false && isStripeConfigured && stripeProductId
+    const shouldSyncStripe = sync_to_stripe !== false && isStripeConfigured() && stripeProductId
 
     if (shouldSyncStripe && stripeProductId) {
       try {
@@ -260,7 +260,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Archive in Stripe if configured and product exists
-    if (isStripeConfigured && existingPlan.stripe_product_id) {
+    if (isStripeConfigured() && existingPlan.stripe_product_id) {
       try {
         await archiveStripeProduct(existingPlan.stripe_product_id)
       } catch (stripeError) {

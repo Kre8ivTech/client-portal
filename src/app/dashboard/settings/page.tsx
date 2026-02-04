@@ -15,12 +15,18 @@ export default async function SettingsPage() {
 
   const { data: userData } = await supabase
     .from("users")
-    .select("id, role, organization_id")
+    .select("id, role, organization_id, timezone")
     .eq("id", user.id)
     .single();
 
-  const userRow = userData as { id: string; role: string; organization_id: string | null } | null;
+  const userRow = userData as {
+    id: string;
+    role: string;
+    organization_id: string | null;
+    timezone?: string | null;
+  } | null;
   const role = userRow?.role ?? "client";
+  const userTimezone = userRow?.timezone ?? null;
   const isStaffOrAdmin = role === "staff" || role === "super_admin";
   const isSuperAdmin = role === "super_admin";
 
@@ -30,9 +36,7 @@ export default async function SettingsPage() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h2 className="text-3xl font-bold tracking-tight border-b pb-4">General Settings</h2>
-        <p className="text-muted-foreground mt-2">
-          Manage your general account and system settings.
-        </p>
+        <p className="text-muted-foreground mt-2">Manage your general account and system settings.</p>
       </div>
 
       <div className="grid gap-8">
@@ -43,7 +47,11 @@ export default async function SettingsPage() {
         {isStaffOrAdmin && <CalendarOfficeHours profileId={user.id} />}
 
         {/* General preferences */}
-        <GeneralPreferences initialTimezone={appSettings.timezone} isSuperAdmin={isSuperAdmin} />
+        <GeneralPreferences
+          initialTimezone={appSettings.timezone}
+          userTimezone={userTimezone}
+          isSuperAdmin={isSuperAdmin}
+        />
       </div>
     </div>
   );

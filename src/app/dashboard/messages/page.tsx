@@ -67,7 +67,7 @@ export default function MessagesPage() {
         .select(
           `
           *,
-          conversation_participants(
+          conversation_participants!conversation_participants_conversation_id_fkey(
             user_id,
             last_read_at,
             is_muted,

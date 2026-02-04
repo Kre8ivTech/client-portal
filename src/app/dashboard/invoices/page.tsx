@@ -1,13 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireInvoiceAccess } from "@/lib/require-role";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Download, Plus, FileText, Eye, Send } from "lucide-react";
 import Link from "next/link";
@@ -61,11 +55,13 @@ export default async function InvoicesPage() {
   // Fetch invoices with organization details
   const { data: invoices, error } = await supabase
     .from("invoices")
-    .select(`
+    .select(
+      `
       *,
       organization:organizations(name),
       line_items:invoice_line_items(count)
-    `)
+    `,
+    )
     .order("created_at", { ascending: false })
     .limit(50);
 
@@ -110,13 +106,9 @@ export default async function InvoicesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-            Invoices
-          </h2>
+          <h2 className="text-3xl font-bold tracking-tight text-slate-900">Invoices</h2>
           <p className="text-slate-500">
-            {canManage
-              ? "Create, manage, and track client invoices."
-              : "View your billing history and payment status."}
+            {canManage ? "Create, manage, and track client invoices." : "View your billing history and payment status."}
           </p>
         </div>
         <div className="flex gap-2">
@@ -125,9 +117,11 @@ export default async function InvoicesPage() {
             Export CSV
           </Button>
           {canManage && (
-            <Button className="gap-2" disabled>
-              <Plus size={18} />
-              New Invoice
+            <Button className="gap-2" asChild>
+              <Link href="/dashboard/admin/invoices/new">
+                <Plus size={18} />
+                New Invoice
+              </Link>
             </Button>
           )}
         </div>
@@ -144,9 +138,7 @@ export default async function InvoicesPage() {
         <CardHeader>
           <CardTitle>Billing History</CardTitle>
           <CardDescription>
-            {canManage
-              ? "All invoices across your managed organizations."
-              : "Your organization's invoice history."}
+            {canManage ? "All invoices across your managed organizations." : "Your organization's invoice history."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -156,9 +148,7 @@ export default async function InvoicesPage() {
                 <thead>
                   <tr className="border-b text-left text-sm text-slate-500">
                     <th className="pb-3 font-medium">Invoice #</th>
-                    {(role === "super_admin" || role === "staff") && (
-                      <th className="pb-3 font-medium">Organization</th>
-                    )}
+                    {(role === "super_admin" || role === "staff") && <th className="pb-3 font-medium">Organization</th>}
                     <th className="pb-3 font-medium">Status</th>
                     <th className="pb-3 font-medium">Issue Date</th>
                     <th className="pb-3 font-medium">Due Date</th>
@@ -172,16 +162,12 @@ export default async function InvoicesPage() {
                     <tr key={invoice.id} className="hover:bg-slate-50">
                       <td className="py-4 font-medium">{invoice.invoice_number}</td>
                       {(role === "super_admin" || role === "staff") && (
-                        <td className="py-4 text-slate-600">
-                          {invoice.organization?.name ?? "-"}
-                        </td>
+                        <td className="py-4 text-slate-600">{invoice.organization?.name ?? "-"}</td>
                       )}
                       <td className="py-4">{getStatusBadge(invoice.status)}</td>
                       <td className="py-4 text-slate-600">{formatDate(invoice.issue_date)}</td>
                       <td className="py-4 text-slate-600">{formatDate(invoice.due_date)}</td>
-                      <td className="py-4 text-right font-medium">
-                        {formatCurrency(invoice.total, invoice.currency)}
-                      </td>
+                      <td className="py-4 text-right font-medium">{formatCurrency(invoice.total, invoice.currency)}</td>
                       <td className="py-4 text-right">
                         {invoice.balance_due > 0 ? (
                           <span className="font-medium text-red-600">
@@ -192,9 +178,7 @@ export default async function InvoicesPage() {
                         )}
                       </td>
                       <td className="py-4 text-right">
-                        <span className="text-slate-400 text-sm">
-                          No actions available
-                        </span>
+                        <span className="text-slate-400 text-sm">No actions available</span>
                       </td>
                     </tr>
                   ))}
@@ -212,7 +196,7 @@ export default async function InvoicesPage() {
               </p>
               {canManage && (
                 <Button className="mt-4 gap-2" asChild>
-                  <Link href="/dashboard/invoices/new">
+                  <Link href="/dashboard/admin/invoices/new">
                     <Plus size={18} />
                     Create Invoice
                   </Link>
@@ -226,24 +210,14 @@ export default async function InvoicesPage() {
   );
 }
 
-function StatsCard({
-  title,
-  value,
-  highlight = false,
-}: {
-  title: string;
-  value: string;
-  highlight?: boolean;
-}) {
+function StatsCard({ title, value, highlight = false }: { title: string; value: string; highlight?: boolean }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className={`text-2xl font-bold ${highlight ? "text-red-600" : ""}`}>
-          {value}
-        </div>
+        <div className={`text-2xl font-bold ${highlight ? "text-red-600" : ""}`}>{value}</div>
       </CardContent>
     </Card>
   );

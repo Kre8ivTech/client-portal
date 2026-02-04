@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       .select(
         `
         *,
-        conversation_participants!inner(
+        conversation_participants!conversation_participants_conversation_id_fkey!inner(
           user_id,
           last_read_at,
           is_muted,
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
               .select(
                 `
                 *,
-                conversation_participants(
+                conversation_participants!conversation_participants_conversation_id_fkey(
                   user_id,
                   last_read_at,
                   is_muted,
@@ -264,7 +264,7 @@ export async function POST(request: NextRequest) {
       .select(
         `
         *,
-        conversation_participants(
+        conversation_participants!conversation_participants_conversation_id_fkey(
           user_id,
           last_read_at,
           is_muted,

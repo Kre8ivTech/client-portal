@@ -8,12 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Search, Loader2 } from 'lucide-react'
 import type { Database } from '@/types/database'
 
-type Service = Database['public']['Tables']['services']['Row'] & {
-  created_by_user?: {
-    id: string
-    profiles: { name: string | null } | null
-  } | null
-}
+type Service = Database['public']['Tables']['services']['Row']
 
 interface ServiceListProps {
   initialServices: Service[]

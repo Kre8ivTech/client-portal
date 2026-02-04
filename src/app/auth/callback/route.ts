@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import type { Database } from '@/types/database'
 
 export async function GET(request: Request) {
@@ -32,6 +32,40 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
+      // Log successful login
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const headersList = await headers()
+          const userAgent = headersList.get('user-agent') || 'unknown'
+          const forwardedFor = headersList.get('x-forwarded-for')
+          const ip = forwardedFor ? forwardedFor.split(',')[0].trim() : 'unknown'
+
+          // Get user's organization_id
+          const { data: profile } = await supabase
+            .from('users')
+            .select('organization_id')
+            .eq('id', user.id)
+            .single()
+
+          await (supabase as any).from('audit_logs').insert({
+            organization_id: (profile as { organization_id?: string } | null)?.organization_id ?? null,
+            user_id: user.id,
+            action: 'user.login',
+            entity_type: 'user',
+            entity_id: user.id,
+            details: {
+              method: 'oauth_or_magic_link',
+              email: user.email,
+              ip_address: ip,
+              user_agent: userAgent,
+            },
+          })
+        }
+      } catch {
+        // Audit logging is best-effort, don't block login
+      }
+
       return redirectResponse
     }
   }

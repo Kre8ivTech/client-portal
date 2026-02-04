@@ -135,7 +135,12 @@ export default function LoginPage() {
           return;
         }
 
-        // No MFA required, redirect to dashboard
+        // No MFA required, log the login and redirect to dashboard
+        fetch('/api/audit/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method: 'password' }),
+        }).catch(() => {});
         window.location.href = "/dashboard";
       } else {
         const { error } = await supabase.auth.signInWithOtp({
@@ -164,6 +169,12 @@ export default function LoginPage() {
   };
 
   const handleMFASuccess = () => {
+    // Log the login with MFA
+    fetch('/api/audit/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ method: 'password_with_mfa' }),
+    }).catch(() => {});
     window.location.href = "/dashboard";
   };
 

@@ -10,7 +10,7 @@ export const runtime = 'nodejs' // Required for webhook signature verification
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
-  const headersList = await headers()
+  const headersList = headers()
   const signature = headersList.get('stripe-signature')
 
   if (!signature) {

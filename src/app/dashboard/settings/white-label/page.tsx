@@ -59,8 +59,8 @@ export default async function WhiteLabelSettingsPage() {
   const role = profile?.role ?? "client";
   const isSuperAdmin = role === "super_admin";
   const isStaffOrAdmin = role === "staff" || role === "super_admin";
-  const isPartner = role === "partner" || role === "partner_staff";
-  const canSeeBranding = isStaffOrAdmin || isPartner;
+  const isPartnerOrPartnerStaff = role === "partner" || role === "partner_staff";
+  const canSeeBranding = isStaffOrAdmin || isPartnerOrPartnerStaff;
 
   // Fetch all organizations for staff/admin to edit
   let allOrganizations: OrganizationRow[] = [];
@@ -98,7 +98,7 @@ export default async function WhiteLabelSettingsPage() {
         )}
 
         {/* Organization branding - partners can edit their own branding */}
-        {isPartner && organization && (
+        {isPartnerOrPartnerStaff && organization && (
           <OrganizationBrandingForm
             organization={organization}
             canEdit={true}

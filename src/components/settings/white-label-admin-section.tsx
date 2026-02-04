@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,6 +26,15 @@ export function WhiteLabelAdminSection({ organizations }: WhiteLabelAdminSection
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(
     organizations.length > 0 ? organizations[0].id : null
   );
+
+  // Reset selected org if organizations list changes or becomes empty
+  useEffect(() => {
+    if (organizations.length === 0) {
+      setSelectedOrgId(null);
+    } else if (!organizations.find((org) => org.id === selectedOrgId)) {
+      setSelectedOrgId(organizations[0].id);
+    }
+  }, [organizations, selectedOrgId]);
 
   const selectedOrg = organizations.find((org) => org.id === selectedOrgId);
 

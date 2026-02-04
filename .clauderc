@@ -1,0 +1,45 @@
+# Claude Code Configuration for KT-Portal
+# Reduces agent descriptions from ~20.8k to ~8-10k tokens
+
+[task_tool]
+agent_filter = "essential"
+description_mode = "compact"
+lazy_load = true
+max_description_tokens = 50
+
+# Essential agents for Next.js + Supabase multi-tenant SaaS
+allowed_agents = [
+  # Core Development
+  "coder",
+  "reviewer",
+  "tester",
+  "researcher",
+  "planner",
+
+  # Frontend (React/Next.js)
+  "frontend-developer",
+  "react-specialist",
+  "nextjs-developer",
+  "ui-designer",
+  "typescript-pro",
+
+  # Backend (Next.js API + Supabase)
+  "backend-developer",
+  "api-designer",
+
+  # Database (PostgreSQL/Supabase)
+  "postgres-pro",
+  "database-optimizer",
+
+  # Testing & QA
+  "qa-expert",
+  "test-automator",
+
+  # Debugging
+  "debugger",
+  "error-detective",
+
+  # Architecture
+  "system-architect",
+  "architect-reviewer"
+]

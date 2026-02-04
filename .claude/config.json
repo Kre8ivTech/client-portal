@@ -1,0 +1,30 @@
+{
+  "task_tool": {
+    "agent_filter": "essential",
+    "description_mode": "compact",
+    "lazy_load": true,
+    "allowed_agents": [
+      "coder",
+      "reviewer",
+      "tester",
+      "researcher",
+      "planner",
+      "frontend-developer",
+      "react-specialist",
+      "ui-designer",
+      "backend-developer",
+      "api-designer",
+      "postgres-pro",
+      "database-optimizer",
+      "qa-expert",
+      "test-automator",
+      "debugger",
+      "error-detective",
+      "system-architect",
+      "architect-reviewer",
+      "nextjs-developer",
+      "typescript-pro"
+    ]
+  },
+  "comment": "Essential agent types for KT-Portal (Next.js + Supabase multi-tenant SaaS). Reduces agent descriptions from ~20.8k to ~8-10k tokens."
+}

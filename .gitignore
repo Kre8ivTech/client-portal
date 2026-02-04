@@ -36,6 +36,7 @@ private/
 # Claude Code configuration (development-specific)
 .claude/
 .clauderc
+.claude-flow/
 
 # Session templates (not committed)
 examples/sessions/*.tmp
@@ -47,6 +48,3 @@ AGENTS.db
 optimizer/
 .ruvector/intelligence.json
 .blackboxcli/
-
-# Claude Flow MCP generated files
-.claude-flow/metrics/

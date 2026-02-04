@@ -197,6 +197,73 @@ export async function sendTemplatedEmail({
 }
 
 /**
+ * Send raw HTML email (for testing or custom needs)
+ */
+export async function sendRawEmail({
+  to,
+  subject,
+  html,
+  text,
+}: {
+  to: string
+  subject: string
+  html: string
+  text?: string
+}): Promise<NotificationResult> {
+  try {
+    const apiKey = process.env.RESEND_API_KEY
+
+    if (!apiKey) {
+      console.error('[Notifications] RESEND_API_KEY not configured')
+      return {
+        success: false,
+        error: 'Email service not configured',
+      }
+    }
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        from: 'KT-Portal Support <support@ktportal.app>',
+        to: [to],
+        subject,
+        html,
+        text,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('[Notifications] Raw email send failed:', error)
+      return {
+        success: false,
+        error: `Failed to send email: ${response.statusText}`,
+        provider: 'resend',
+      }
+    }
+
+    const data = await response.json()
+
+    return {
+      success: true,
+      messageId: data.id,
+      provider: 'resend',
+    }
+  } catch (error) {
+    console.error('[Notifications] Raw email error:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      provider: 'resend',
+    }
+  }
+}
+
+/**
  * Get the effective template for a type and organization
  * Priority: org-specific default > org-specific any > system default > system any
  */

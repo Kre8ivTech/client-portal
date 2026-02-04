@@ -37,6 +37,7 @@ export interface NotificationResult {
   messageId?: string
   error?: string
   provider?: string
+  templateId?: string
 }
 
 export interface NotificationPreferences {

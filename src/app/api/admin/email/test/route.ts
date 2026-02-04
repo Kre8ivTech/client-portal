@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { sendEmail } from '@/lib/email'
+import { sendRawEmail } from '@/lib/notifications/providers/email'
 import { requireRole } from '@/lib/require-role'
 
 export async function POST(request: NextRequest) {
@@ -13,13 +13,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Check permissions
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('users')
       .select('role')
       .eq('id', user.id)
       .single()
 
-    if (profile?.role !== 'super_admin' && profile?.role !== 'staff') {
+    if (profileError || !profile) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const userProfile = profile as { role: string }
+
+    if (userProfile.role !== 'super_admin' && userProfile.role !== 'staff') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -29,7 +35,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email address is required' }, { status: 400 })
     }
 
-    const result = await sendEmail({
+    const result = await sendRawEmail({
       to: email,
       subject: subject || 'Test Email from Client Portal',
       html: template || `
@@ -41,7 +47,8 @@ export async function POST(request: NextRequest) {
           <p>Sent by: ${user.email}</p>
           <p>Time: ${new Date().toLocaleString()}</p>
         </div>
-      `
+      `,
+      text: 'This is a test email from Client Portal. Please view in an HTML-compatible email client.'
     })
 
     if (!result.success) {

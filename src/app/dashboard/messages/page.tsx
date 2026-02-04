@@ -190,7 +190,7 @@ export default function MessagesPage() {
         onConversationCreated={handleConversationCreated}
       />
 
-      <div className="max-w-7xl mx-auto h-[calc(100vh-10rem)] border border-slate-200 rounded-3xl overflow-hidden shadow-2xl bg-white flex">
+      <div className="max-w-7xl mx-auto h-[calc(100vh-10rem)] overflow-hidden bg-white flex">
         <div className="w-80 shrink-0 h-full border-r bg-slate-50/50">
           <ConversationList
             conversations={conversations}

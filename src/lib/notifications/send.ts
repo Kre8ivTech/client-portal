@@ -285,3 +285,144 @@ export async function buildTicketNotificationPayloads(
 
   return payloads
 }
+
+/**
+ * Build notification payloads for a task event (service request or project request)
+ */
+export async function buildTaskNotificationPayloads(
+  taskId: string,
+  taskType: 'service_request' | 'project_request',
+  notificationType: NotificationPayload['type'],
+  context?: Record<string, any>
+): Promise<NotificationPayload[]> {
+  const tableName = taskType === 'service_request' ? 'service_requests' : 'project_requests'
+
+  // Get task details
+  const { data: task, error: taskError } = await supabaseAdmin
+    .from(tableName)
+    .select(`
+      *,
+      organization:organizations(id, name, notification_preferences),
+      requested_by_user:profiles!${tableName}_requested_by_fkey(id, email, name, role)
+    `)
+    .eq('id', taskId)
+    .single()
+
+  if (taskError || !task) {
+    console.error('[Notifications] Failed to get task:', taskError)
+    return []
+  }
+
+  const payloads: NotificationPayload[] = []
+  const recipients = new Map<string, any>() // Map of userId -> user details
+
+  // Get assigned staff for this task
+  const { data: assignments } = await supabaseAdmin
+    .from('staff_assignments')
+    .select(`
+      staff_user_id,
+      role,
+      staff_user:profiles!staff_assignments_staff_user_id_fkey(
+        id,
+        email,
+        name,
+        role
+      )
+    `)
+    .eq('assignable_type', taskType)
+    .eq('assignable_id', taskId)
+    .is('unassigned_at', null) // Only active assignments
+
+  // Add assigned staff to recipients
+  if (assignments) {
+    for (const assignment of assignments) {
+      if (assignment.staff_user) {
+        recipients.set(assignment.staff_user.id, assignment.staff_user)
+      }
+    }
+  }
+
+  // Get all admins and staff from the organization for 'created' notifications
+  if (notificationType === 'service_request_created' || notificationType === 'project_request_created') {
+    const { data: staffUsers } = await supabaseAdmin
+      .from('profiles')
+      .select('id, email, name, role')
+      .eq('organization_id', task.organization_id)
+      .in('role', ['super_admin', 'staff', 'partner', 'partner_staff'])
+
+    if (staffUsers) {
+      for (const user of staffUsers) {
+        if (!recipients.has(user.id)) {
+          recipients.set(user.id, user)
+        }
+      }
+    }
+  }
+
+  // Create acknowledgement tokens for each recipient
+  const acknowledgementTokens = new Map<string, string>()
+
+  for (const [userId, user] of recipients) {
+    // Create acknowledgement record (acknowledged_at will be null until acknowledged)
+    const { data: ack, error: ackError } = await supabaseAdmin
+      .from('task_acknowledgements')
+      .insert({
+        organization_id: task.organization_id,
+        task_type: taskType,
+        task_id: taskId,
+        acknowledged_by: userId,
+      })
+      .select('acknowledgement_token')
+      .single()
+
+    if (!ackError && ack) {
+      acknowledgementTokens.set(userId, ack.acknowledgement_token)
+    }
+  }
+
+  // Build payloads for each recipient
+  for (const [userId, user] of recipients) {
+    if (!user.email) continue
+
+    const acknowledgementToken = acknowledgementTokens.get(userId)
+    if (!acknowledgementToken) continue
+
+    // Build acknowledgement URL
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+    const acknowledgementUrl = `${appUrl}/api/tasks/acknowledge?token=${acknowledgementToken}`
+
+    // Build request URL
+    const requestPath = taskType === 'service_request' ? 'service-requests' : 'project-requests'
+    const requestUrl = `${appUrl}/${requestPath}/${taskId}`
+
+    payloads.push({
+      type: notificationType,
+      channel: 'email',
+      recipient: user.email,
+      organizationId: task.organization_id,
+      userId: user.id,
+      ...(taskType === 'service_request' ? { serviceRequestId: taskId } : { projectRequestId: taskId }),
+      subject: context?.subject,
+      message: context?.message,
+      metadata: {
+        requestNumber: task.request_number,
+        taskType,
+        taskId,
+        acknowledgementUrl,
+        acknowledgementToken,
+        requestUrl,
+        recipientName: user.name || user.email,
+        clientName: task.requested_by_user?.name || 'Unknown',
+        organizationName: task.organization?.name || 'Unknown',
+        priority: task.priority || 'medium',
+        status: task.status,
+        ...(taskType === 'service_request' && { serviceName: task.service_id }),
+        ...(taskType === 'project_request' && { projectTitle: task.title }),
+        currentYear: new Date().getFullYear(),
+        ...context,
+      },
+    })
+  }
+
+  return payloads
+}

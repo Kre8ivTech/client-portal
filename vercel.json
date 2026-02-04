@@ -15,6 +15,10 @@
     {
       "path": "/api/notifications/sla-check",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/task-acknowledgement-check",
+      "schedule": "0 * * * *"
     }
   ]
 }

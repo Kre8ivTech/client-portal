@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { serviceRequestSchema } from '@/lib/validators/service'
+import { notifyServiceRequestCreated } from '@/lib/actions/task-notifications'
 
 export async function GET(request: NextRequest) {
   try {
@@ -159,6 +160,33 @@ export async function POST(request: NextRequest) {
       console.error('Failed to create service request:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    // Get client info for notification
+    const { data: clientProfile } = await supabase
+      .from('users')
+      .select('profiles(name)')
+      .eq('id', user.id)
+      .single()
+
+    const { data: organization } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', p.organization_id)
+      .single()
+
+    // Trigger notification to admin and assigned staff
+    // This will create acknowledgement tokens and send emails
+    notifyServiceRequestCreated(
+      serviceRequest.id,
+      serviceRequest.request_number || 'N/A',
+      serviceRequest.service?.name || 'Service',
+      (clientProfile as any)?.profiles?.name || user.email || 'Client',
+      organization?.name || 'Organization',
+      serviceRequest.priority || 'medium'
+    ).catch((err) => {
+      // Log error but don't fail the request
+      console.error('Failed to send service request notifications:', err)
+    })
 
     return NextResponse.json({ data: serviceRequest }, { status: 201 })
   } catch (err) {

@@ -56,6 +56,8 @@ function getPriorityBadgeClass(priority: string): string {
   }
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function ProjectDetailPage({
   params,
 }: {

@@ -9,14 +9,32 @@
 ALTER TABLE staff_calendar_integrations 
   DROP CONSTRAINT IF EXISTS staff_calendar_integrations_profile_id_fkey;
 
--- Rename profile_id to user_id
-ALTER TABLE staff_calendar_integrations 
-  RENAME COLUMN profile_id TO user_id;
+-- Rename profile_id to user_id (only if profile_id exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'staff_calendar_integrations' 
+    AND column_name = 'profile_id'
+  ) THEN
+    ALTER TABLE staff_calendar_integrations RENAME COLUMN profile_id TO user_id;
+  END IF;
+END $$;
 
--- Add new foreign key to users table
-ALTER TABLE staff_calendar_integrations 
-  ADD CONSTRAINT staff_calendar_integrations_user_id_fkey 
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+-- Add new foreign key to users table (only if not exists)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'staff_calendar_integrations_user_id_fkey'
+    AND table_name = 'staff_calendar_integrations'
+  ) THEN
+    ALTER TABLE staff_calendar_integrations 
+      ADD CONSTRAINT staff_calendar_integrations_user_id_fkey 
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 -- Update indexes
 DROP INDEX IF EXISTS idx_staff_calendar_integrations_profile;
@@ -26,9 +44,19 @@ CREATE INDEX IF NOT EXISTS idx_staff_calendar_integrations_user
 -- Update unique constraint
 ALTER TABLE staff_calendar_integrations 
   DROP CONSTRAINT IF EXISTS staff_calendar_integrations_profile_id_provider_key;
-ALTER TABLE staff_calendar_integrations 
-  ADD CONSTRAINT staff_calendar_integrations_user_id_provider_key 
-  UNIQUE (user_id, provider);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'staff_calendar_integrations_user_id_provider_key'
+    AND table_name = 'staff_calendar_integrations'
+  ) THEN
+    ALTER TABLE staff_calendar_integrations 
+      ADD CONSTRAINT staff_calendar_integrations_user_id_provider_key 
+      UNIQUE (user_id, provider);
+  END IF;
+END $$;
 
 -- =============================================================================
 -- 2. Update office_hours table
@@ -38,14 +66,32 @@ ALTER TABLE staff_calendar_integrations
 ALTER TABLE office_hours 
   DROP CONSTRAINT IF EXISTS office_hours_profile_id_fkey;
 
--- Rename profile_id to user_id
-ALTER TABLE office_hours 
-  RENAME COLUMN profile_id TO user_id;
+-- Rename profile_id to user_id (only if profile_id exists)
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_schema = 'public' 
+    AND table_name = 'office_hours' 
+    AND column_name = 'profile_id'
+  ) THEN
+    ALTER TABLE office_hours RENAME COLUMN profile_id TO user_id;
+  END IF;
+END $$;
 
--- Add new foreign key to users table
-ALTER TABLE office_hours 
-  ADD CONSTRAINT office_hours_user_id_fkey 
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+-- Add new foreign key to users table (only if not exists)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'office_hours_user_id_fkey'
+    AND table_name = 'office_hours'
+  ) THEN
+    ALTER TABLE office_hours 
+      ADD CONSTRAINT office_hours_user_id_fkey 
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+  END IF;
+END $$;
 
 -- Update indexes
 DROP INDEX IF EXISTS idx_office_hours_profile;
@@ -58,9 +104,19 @@ CREATE INDEX IF NOT EXISTS idx_office_hours_user_day
 -- Update unique constraint
 ALTER TABLE office_hours 
   DROP CONSTRAINT IF EXISTS office_hours_profile_id_day_of_week_start_time_key;
-ALTER TABLE office_hours 
-  ADD CONSTRAINT office_hours_user_id_day_of_week_start_time_key 
-  UNIQUE (user_id, day_of_week, start_time);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints 
+    WHERE constraint_name = 'office_hours_user_id_day_of_week_start_time_key'
+    AND table_name = 'office_hours'
+  ) THEN
+    ALTER TABLE office_hours 
+      ADD CONSTRAINT office_hours_user_id_day_of_week_start_time_key 
+      UNIQUE (user_id, day_of_week, start_time);
+  END IF;
+END $$;
 
 -- =============================================================================
 -- 3. Update RLS helper function to use users table

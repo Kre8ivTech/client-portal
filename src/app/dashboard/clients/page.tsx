@@ -36,9 +36,31 @@ export default async function ClientsPage() {
   const organizationId = profile?.organization_id ?? null
   const role = profile?.role ?? 'client'
 
-  const isSuperAdminOrStaff = role === 'super_admin' || role === 'staff'
+  const isSuperAdmin = role === 'super_admin'
+  const isStaff = role === 'staff'
+  const isSuperAdminOrStaff = isSuperAdmin || isStaff
   const isPartner = role === 'partner' || role === 'partner_staff'
-  const canManageOrgs = isSuperAdminOrStaff || isPartner
+
+  // Check if staff has organization assignments (account_manager or project_manager)
+  let staffAssignedOrgIds: string[] = []
+  let isAssignedStaff = false
+
+  if (isStaff && !isSuperAdmin) {
+    const { data: staffAssignments } = await supabase
+      .from('staff_organization_assignments')
+      .select('organization_id, assignment_role')
+      .eq('staff_user_id', user.id)
+      .eq('is_active', true)
+      .in('assignment_role', ['account_manager', 'project_manager'])
+
+    if (staffAssignments && staffAssignments.length > 0) {
+      staffAssignedOrgIds = staffAssignments.map((a: any) => a.organization_id)
+      isAssignedStaff = true
+    }
+  }
+
+  const canViewAllOrgs = isSuperAdmin
+  const canManageOrgs = isSuperAdminOrStaff || isPartner || isAssignedStaff
 
   let ownOrg: Organization | null = null
   let directClients: Organization[] = []
@@ -49,7 +71,7 @@ export default async function ClientsPage() {
   let totalTenantPartners = 0
   let totalTenantClients = 0
 
-  if (isSuperAdminOrStaff) {
+  if (canViewAllOrgs) {
     // Super admin/staff can see all organizations
     const { data: allOrgs } = await supabase
       .from('organizations')
@@ -74,6 +96,52 @@ export default async function ClientsPage() {
     // Map each partner to include their child clients
     tenantPartners = partners.map((partner) => {
       const clients = orgs.filter((o) => o.parent_org_id === partner.id)
+      totalTenantClients += clients.length
+      return { ...partner, clients }
+    })
+  } else if (isAssignedStaff && staffAssignedOrgIds.length > 0) {
+    // Staff with organization assignments (account_manager/project_manager) can see assigned orgs
+    const { data: assignedOrgs } = await supabase
+      .from('organizations')
+      .select('id, name, slug, type, status, parent_org_id, custom_domain')
+      .in('id', staffAssignedOrgIds)
+      .order('name', { ascending: true })
+
+    const orgs = (assignedOrgs ?? []) as Organization[]
+
+    // Get user's own organization
+    if (organizationId) {
+      const { data: ownOrgData } = await supabase
+        .from('organizations')
+        .select('id, name, slug, type, status, parent_org_id, custom_domain')
+        .eq('id', organizationId)
+        .single()
+      ownOrg = ownOrgData ?? null
+    }
+
+    // Also get child organizations of any assigned partner orgs
+    const partnerOrgIds = orgs.filter(o => o.type === 'partner').map(o => o.id)
+    let childOrgs: Organization[] = []
+    if (partnerOrgIds.length > 0) {
+      const { data: children } = await supabase
+        .from('organizations')
+        .select('id, name, slug, type, status, parent_org_id, custom_domain')
+        .in('parent_org_id', partnerOrgIds)
+        .order('name', { ascending: true })
+      childOrgs = (children ?? []) as Organization[]
+    }
+
+    // Direct clients: assigned orgs that are type='client' with no parent_org_id
+    directClients = orgs.filter((o) => o.type === 'client' && !o.parent_org_id)
+    totalDirectClients = directClients.length
+
+    // Tenant partners: assigned orgs that are type='partner'
+    const partners = orgs.filter((o) => o.type === 'partner')
+    totalTenantPartners = partners.length
+
+    // Map each partner to include their child clients
+    tenantPartners = partners.map((partner) => {
+      const clients = childOrgs.filter((o) => o.parent_org_id === partner.id)
       totalTenantClients += clients.length
       return { ...partner, clients }
     })
@@ -117,14 +185,16 @@ export default async function ClientsPage() {
             Clients
           </h2>
           <p className="text-slate-500">
-            {isSuperAdminOrStaff
+            {canViewAllOrgs
               ? 'Manage all client organizations and white-label tenant partners.'
+              : isAssignedStaff
+              ? 'View and manage your assigned client organizations.'
               : isPartner
               ? 'Manage your client organizations.'
               : 'Your organization details.'}
           </p>
         </div>
-        {canManageOrgs && (
+        {(canViewAllOrgs || isPartner) && (
           <Button className="gap-2" asChild>
             <Link href="/dashboard/clients/new">
               <Plus size={18} />
@@ -136,18 +206,18 @@ export default async function ClientsPage() {
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        {isSuperAdminOrStaff && (
+        {(canViewAllOrgs || isAssignedStaff) && (
           <>
             <StatsCard
               title="Direct Clients"
               value={String(totalDirectClients)}
-              description="Kre8ivTech clients"
+              description={canViewAllOrgs ? "Kre8ivTech clients" : "Assigned clients"}
               icon={<Users className="text-slate-400" size={20} />}
             />
             <StatsCard
               title="Tenant Partners"
               value={String(totalTenantPartners)}
-              description="White-label partners"
+              description={canViewAllOrgs ? "White-label partners" : "Assigned partners"}
               icon={<Globe className="text-slate-400" size={20} />}
             />
             <StatsCard
@@ -159,12 +229,12 @@ export default async function ClientsPage() {
             <StatsCard
               title="Total Organizations"
               value={String(totalDirectClients + totalTenantPartners + totalTenantClients)}
-              description="All organizations"
+              description={canViewAllOrgs ? "All organizations" : "Assigned organizations"}
               icon={<Building2 className="text-slate-400" size={20} />}
             />
           </>
         )}
-        {isPartner && !isSuperAdminOrStaff && (
+        {isPartner && !canViewAllOrgs && !isAssignedStaff && (
           <>
             <StatsCard
               title="Your Clients"
@@ -190,8 +260,8 @@ export default async function ClientsPage() {
         )}
       </div>
 
-      {/* Direct Clients Section - Only for super_admin/staff */}
-      {isSuperAdminOrStaff && (
+      {/* Direct Clients Section - For super_admin, staff, and assigned staff */}
+      {(canViewAllOrgs || isAssignedStaff) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -199,7 +269,9 @@ export default async function ClientsPage() {
               Direct Clients
             </CardTitle>
             <CardDescription>
-              Client organizations directly managed by Kre8ivTech (no white-label partner).
+              {canViewAllOrgs
+                ? 'Client organizations directly managed by Kre8ivTech (no white-label partner).'
+                : 'Client organizations you are assigned to manage.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -243,16 +315,18 @@ export default async function ClientsPage() {
       )}
 
       {/* Tenant Partners Section */}
-      {canManageOrgs && (
+      {canManageOrgs && tenantPartners.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
-              {isSuperAdminOrStaff ? 'Tenant Partners (White-label)' : 'Your Organization'}
+              {(canViewAllOrgs || isAssignedStaff) ? 'Tenant Partners (White-label)' : 'Your Organization'}
             </CardTitle>
             <CardDescription>
-              {isSuperAdminOrStaff
+              {canViewAllOrgs
                 ? 'White-label partner organizations and their client organizations.'
+                : isAssignedStaff
+                ? 'Partner organizations you are assigned to manage and their clients.'
                 : 'Your organization and client organizations under your management.'}
             </CardDescription>
           </CardHeader>
@@ -335,7 +409,7 @@ export default async function ClientsPage() {
               </div>
             ) : (
               <div className="h-[100px] flex items-center justify-center text-slate-400 border-2 border-dashed rounded-lg">
-                {isSuperAdminOrStaff ? 'No tenant partner organizations yet.' : 'No organization found.'}
+                {canViewAllOrgs ? 'No tenant partner organizations yet.' : 'No organization found.'}
               </div>
             )}
           </CardContent>

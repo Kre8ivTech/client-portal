@@ -33,6 +33,10 @@ tsconfig.tsbuildinfo
 personal/
 private/
 
+# Claude Code configuration (development-specific)
+.claude/
+.clauderc
+
 # Session templates (not committed)
 examples/sessions/*.tmp
 docs/sessions/*.tmp

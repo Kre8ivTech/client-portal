@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 export type Json =
   | string
   | number
@@ -2148,3 +2149,7 @@ export const Constants = {
   },
 } as const
 
+=======
+failed to inspect service: Cannot connect to the Docker daemon at unix:///Users/jlaptop/.docker/run/docker.sock. Is the docker daemon running?
+Docker Desktop is a prerequisite for local development. Follow the official docs to install: https://docs.docker.com/desktop
+>>>>>>> Stashed changes

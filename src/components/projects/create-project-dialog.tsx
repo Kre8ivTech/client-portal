@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -14,31 +14,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Calendar } from '@/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Plus, Loader2 } from 'lucide-react'
+} from "@/components/ui/dialog";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Plus, Loader2 } from "lucide-react";
 import {
   createProjectSchema,
   CreateProjectInput,
@@ -46,110 +30,102 @@ import {
   PROJECT_PRIORITY_OPTIONS,
   PROJECT_MEMBER_ROLE_OPTIONS,
   PROJECT_ORG_ROLE_OPTIONS,
-} from '@/lib/validators/project'
+} from "@/lib/validators/project";
 
 type StaffUser = {
-  id: string
-  email: string
-  role: string
-  profiles: { name: string | null; avatar_url: string | null } | null
-}
+  id: string;
+  email: string;
+  role: string;
+  profiles: { name: string | null; avatar_url: string | null } | null;
+};
 
 type Organization = {
-  id: string
-  name: string
-  type: string
-  status: string
-}
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+};
 
 interface CreateProjectDialogProps {
-  staffUsers: StaffUser[]
-  organizations: Organization[]
-  userOrganizationId: string | null
+  staffUsers: StaffUser[];
+  organizations: Organization[];
+  userOrganizationId: string | null;
 }
 
 type MemberSelection = {
-  userId: string
-  role: string
-}
+  userId: string;
+  role: string;
+};
 
 type OrgSelection = {
-  organizationId: string
-  role: string
-}
+  organizationId: string;
+  role: string;
+};
 
-export function CreateProjectDialog({
-  staffUsers,
-  organizations,
-  userOrganizationId,
-}: CreateProjectDialogProps) {
-  const [open, setOpen] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [selectedMembers, setSelectedMembers] = useState<MemberSelection[]>([])
-  const [selectedOrgs, setSelectedOrgs] = useState<OrgSelection[]>([])
-  const router = useRouter()
-  const supabase = createClient()
+export function CreateProjectDialog({ staffUsers, organizations, userOrganizationId }: CreateProjectDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedMembers, setSelectedMembers] = useState<MemberSelection[]>([]);
+  const [selectedOrgs, setSelectedOrgs] = useState<OrgSelection[]>([]);
+  const router = useRouter();
+  const supabase = createClient();
 
   const form = useForm<CreateProjectInput>({
     resolver: zodResolver(createProjectSchema),
     defaultValues: {
-      name: '',
-      description: '',
-      status: 'planning',
-      priority: 'medium',
+      name: "",
+      description: "",
+      status: "planning",
+      priority: "medium",
       start_date: null,
       target_end_date: null,
       tags: [],
     },
-  })
+  });
 
   const toggleMember = (userId: string) => {
     setSelectedMembers((prev) => {
-      const existing = prev.find((m) => m.userId === userId)
+      const existing = prev.find((m) => m.userId === userId);
       if (existing) {
-        return prev.filter((m) => m.userId !== userId)
+        return prev.filter((m) => m.userId !== userId);
       }
-      return [...prev, { userId, role: 'team_member' }]
-    })
-  }
+      return [...prev, { userId, role: "team_member" }];
+    });
+  };
 
   const updateMemberRole = (userId: string, role: string) => {
-    setSelectedMembers((prev) =>
-      prev.map((m) => (m.userId === userId ? { ...m, role } : m))
-    )
-  }
+    setSelectedMembers((prev) => prev.map((m) => (m.userId === userId ? { ...m, role } : m)));
+  };
 
   const toggleOrg = (organizationId: string) => {
     setSelectedOrgs((prev) => {
-      const existing = prev.find((o) => o.organizationId === organizationId)
+      const existing = prev.find((o) => o.organizationId === organizationId);
       if (existing) {
-        return prev.filter((o) => o.organizationId !== organizationId)
+        return prev.filter((o) => o.organizationId !== organizationId);
       }
-      return [...prev, { organizationId, role: 'client' }]
-    })
-  }
+      return [...prev, { organizationId, role: "client" }];
+    });
+  };
 
   const updateOrgRole = (organizationId: string, role: string) => {
-    setSelectedOrgs((prev) =>
-      prev.map((o) => (o.organizationId === organizationId ? { ...o, role } : o))
-    )
-  }
+    setSelectedOrgs((prev) => prev.map((o) => (o.organizationId === organizationId ? { ...o, role } : o)));
+  };
 
   async function onSubmit(values: CreateProjectInput) {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
       const {
         data: { user },
-      } = await supabase.auth.getUser()
+      } = await supabase.auth.getUser();
 
       if (!user) {
-        throw new Error('Not authenticated')
+        throw new Error("Not authenticated");
       }
 
       // Create the project
       const { data: project, error: projectError } = await supabase
-        .from('projects')
+        .from("projects")
         .insert({
           name: values.name,
           description: values.description || null,
@@ -161,10 +137,10 @@ export function CreateProjectDialog({
           organization_id: userOrganizationId,
           created_by: user.id,
         })
-        .select('id')
-        .single()
+        .select("id")
+        .single();
 
-      if (projectError) throw projectError
+      if (projectError) throw projectError;
 
       // Add team members
       if (selectedMembers.length > 0) {
@@ -173,14 +149,12 @@ export function CreateProjectDialog({
           user_id: m.userId,
           role: m.role,
           assigned_by: user.id,
-        }))
+        }));
 
-        const { error: membersError } = await supabase
-          .from('project_members')
-          .insert(memberInserts)
+        const { error: membersError } = await supabase.from("project_members").insert(memberInserts);
 
         if (membersError) {
-          console.error('Error adding members:', membersError)
+          console.error("Error adding members:", membersError);
         }
       }
 
@@ -191,27 +165,25 @@ export function CreateProjectDialog({
           organization_id: o.organizationId,
           role: o.role,
           assigned_by: user.id,
-        }))
+        }));
 
-        const { error: orgsError } = await supabase
-          .from('project_organizations')
-          .insert(orgInserts)
+        const { error: orgsError } = await supabase.from("project_organizations").insert(orgInserts);
 
         if (orgsError) {
-          console.error('Error adding organizations:', orgsError)
+          console.error("Error adding organizations:", orgsError);
         }
       }
 
-      setOpen(false)
-      form.reset()
-      setSelectedMembers([])
-      setSelectedOrgs([])
-      router.refresh()
-      router.push(`/dashboard/projects/${project.id}`)
+      setOpen(false);
+      form.reset();
+      setSelectedMembers([]);
+      setSelectedOrgs([]);
+      router.refresh();
+      router.push(`/dashboard/projects/${project.id}`);
     } catch (error) {
-      console.error('Failed to create project:', error)
+      console.error("Failed to create project:", error);
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
   }
 
@@ -226,9 +198,7 @@ export function CreateProjectDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
-          <DialogDescription>
-            Set up a new project and assign team members and organizations.
-          </DialogDescription>
+          <DialogDescription>Set up a new project and assign team members and organizations.</DialogDescription>
         </DialogHeader>
 
         <Form {...form}>
@@ -260,7 +230,7 @@ export function CreateProjectDialog({
                           placeholder="Describe the project objectives and scope..."
                           className="min-h-[100px]"
                           {...field}
-                          value={field.value ?? ''}
+                          value={field.value ?? ""}
                         />
                       </FormControl>
                       <FormMessage />
@@ -331,7 +301,7 @@ export function CreateProjectDialog({
                           <Input
                             type="date"
                             {...field}
-                            value={field.value ?? ''}
+                            value={field.value ?? ""}
                             onChange={(e) => field.onChange(e.target.value || null)}
                           />
                         </FormControl>
@@ -350,7 +320,7 @@ export function CreateProjectDialog({
                           <Input
                             type="date"
                             {...field}
-                            value={field.value ?? ''}
+                            value={field.value ?? ""}
                             onChange={(e) => field.onChange(e.target.value || null)}
                           />
                         </FormControl>
@@ -363,41 +333,33 @@ export function CreateProjectDialog({
                 {/* Team Members Section */}
                 <div className="space-y-3">
                   <Label>Team Members</Label>
-                  <FormDescription>
-                    Select team members to assign to this project.
-                  </FormDescription>
+                  <FormDescription>Select team members to assign to this project.</FormDescription>
                   <div className="border rounded-lg max-h-[200px] overflow-y-auto">
                     {staffUsers.length === 0 ? (
                       <p className="p-4 text-sm text-slate-500">No staff users available.</p>
                     ) : (
                       <div className="divide-y">
                         {staffUsers.map((user) => {
-                          const isSelected = selectedMembers.some((m) => m.userId === user.id)
-                          const selection = selectedMembers.find((m) => m.userId === user.id)
-                          const displayName = user.profiles?.name ?? user.email
+                          const isSelected = selectedMembers.some((m) => m.userId === user.id);
+                          const selection = selectedMembers.find((m) => m.userId === user.id);
+                          const displayName = user.profiles?.name ?? user.email;
 
                           return (
-                            <div
-                              key={user.id}
-                              className="flex items-center justify-between p-3 hover:bg-slate-50"
-                            >
+                            <div key={user.id} className="flex items-center justify-between p-3 hover:bg-slate-50">
                               <div className="flex items-center gap-3">
                                 <Checkbox
                                   id={`member-${user.id}`}
                                   checked={isSelected}
                                   onCheckedChange={() => toggleMember(user.id)}
                                 />
-                                <Label
-                                  htmlFor={`member-${user.id}`}
-                                  className="cursor-pointer font-normal"
-                                >
+                                <Label htmlFor={`member-${user.id}`} className="cursor-pointer font-normal">
                                   <span className="block">{displayName}</span>
                                   <span className="text-xs text-slate-500">{user.email}</span>
                                 </Label>
                               </div>
                               {isSelected && (
                                 <Select
-                                  value={selection?.role ?? 'team_member'}
+                                  value={selection?.role ?? "team_member"}
                                   onValueChange={(value) => updateMemberRole(user.id, value)}
                                 >
                                   <SelectTrigger className="w-[150px] h-8">
@@ -413,7 +375,7 @@ export function CreateProjectDialog({
                                 </Select>
                               )}
                             </div>
-                          )
+                          );
                         })}
                       </div>
                     )}
@@ -423,46 +385,32 @@ export function CreateProjectDialog({
                 {/* Organizations Section */}
                 <div className="space-y-3">
                   <Label>Organizations</Label>
-                  <FormDescription>
-                    Assign client organizations to this project.
-                  </FormDescription>
+                  <FormDescription>Assign client organizations to this project.</FormDescription>
                   <div className="border rounded-lg max-h-[200px] overflow-y-auto">
                     {organizations.length === 0 ? (
                       <p className="p-4 text-sm text-slate-500">No organizations available.</p>
                     ) : (
                       <div className="divide-y">
                         {organizations.map((org) => {
-                          const isSelected = selectedOrgs.some(
-                            (o) => o.organizationId === org.id
-                          )
-                          const selection = selectedOrgs.find(
-                            (o) => o.organizationId === org.id
-                          )
+                          const isSelected = selectedOrgs.some((o) => o.organizationId === org.id);
+                          const selection = selectedOrgs.find((o) => o.organizationId === org.id);
 
                           return (
-                            <div
-                              key={org.id}
-                              className="flex items-center justify-between p-3 hover:bg-slate-50"
-                            >
+                            <div key={org.id} className="flex items-center justify-between p-3 hover:bg-slate-50">
                               <div className="flex items-center gap-3">
                                 <Checkbox
                                   id={`org-${org.id}`}
                                   checked={isSelected}
                                   onCheckedChange={() => toggleOrg(org.id)}
                                 />
-                                <Label
-                                  htmlFor={`org-${org.id}`}
-                                  className="cursor-pointer font-normal"
-                                >
+                                <Label htmlFor={`org-${org.id}`} className="cursor-pointer font-normal">
                                   <span className="block">{org.name}</span>
-                                  <span className="text-xs text-slate-500 capitalize">
-                                    {org.type}
-                                  </span>
+                                  <span className="text-xs text-slate-500 capitalize">{org.type}</span>
                                 </Label>
                               </div>
                               {isSelected && (
                                 <Select
-                                  value={selection?.role ?? 'client'}
+                                  value={selection?.role ?? "client"}
                                   onValueChange={(value) => updateOrgRole(org.id, value)}
                                 >
                                   <SelectTrigger className="w-[150px] h-8">
@@ -478,7 +426,7 @@ export function CreateProjectDialog({
                                 </Select>
                               )}
                             </div>
-                          )
+                          );
                         })}
                       </div>
                     )}
@@ -488,12 +436,7 @@ export function CreateProjectDialog({
             </ScrollArea>
 
             <DialogFooter className="mt-4 pt-4 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                disabled={isSubmitting}
-              >
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isSubmitting}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>
@@ -505,5 +448,5 @@ export function CreateProjectDialog({
         </Form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

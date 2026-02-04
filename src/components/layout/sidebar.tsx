@@ -63,6 +63,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: "Support",
     items: [
       { href: "/dashboard/tickets", icon: Ticket, label: "Support Tickets" },
+      { href: "/dashboard/services", icon: Layers, label: "Services" },
       { href: "/dashboard/service", icon: Wrench, label: "Service Requests" },
       { href: "/dashboard/contracts", icon: ClipboardList, label: "Contracts" },
       { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
@@ -149,7 +150,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     "/dashboard/settings/notifications",
   ];
   // Account items without invoices (for non-account-manager staff)
-  const accountBaseNoInvoices = accountBase.filter(href => href !== "/dashboard/invoices");
+  const accountBaseNoInvoices = accountBase.filter((href) => href !== "/dashboard/invoices");
   const whiteLabel = "/dashboard/settings/white-label";
   const adminStaff = [
     "/dashboard/users",
@@ -230,12 +231,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/settings#notifications",
       ];
     case "client":
-      return [
-        "/dashboard",
-        ...supportClient,
-        "/dashboard/projects",
-        ...accountBase,
-      ];
+      return ["/dashboard", ...supportClient, "/dashboard/projects", ...accountBase];
     default:
       return [];
   }
@@ -287,11 +283,7 @@ export function DashboardSidebar({
       <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-muted/30">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- dynamic user-provided logo URL
-          <img
-            src={logoUrl}
-            alt={appName}
-            className="h-9 w-auto max-w-full object-contain"
-          />
+          <img src={logoUrl} alt={appName} className="h-9 w-auto max-w-full object-contain" />
         ) : (
           <>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent text-white font-bold text-sm">
@@ -299,9 +291,7 @@ export function DashboardSidebar({
             </div>
             <div className="min-w-0">
               <h2 className="text-base font-semibold truncate">{appName}</h2>
-              <p className="text-xs text-sidebar-muted uppercase tracking-wider truncate">
-                {tagline}
-              </p>
+              <p className="text-xs text-sidebar-muted uppercase tracking-wider truncate">{tagline}</p>
             </div>
           </>
         )}

@@ -24,7 +24,7 @@ export default async function ServicesPage() {
   // Fetch available services
   // RLS will automatically filter to show only:
   // - Active services in user's organization
-  // - Global services (is_global = true)
+  // - Global services (is_global = true) - when column exists
   // - Parent org services (if white-label client)
   const baseSelect =
     "id, name, description, category, base_rate, rate_type, estimated_hours, is_active, display_order";
@@ -32,7 +32,11 @@ export default async function ServicesPage() {
 
   let { data: services, error } = await supabase
     .from("services")
+<<<<<<< Updated upstream
     .select(selectWithGlobal)
+=======
+    .select("id, name, description, category, base_rate, rate_type, estimated_hours, is_active, display_order")
+>>>>>>> Stashed changes
     .eq("is_active", true)
     .order("display_order", { ascending: true })
     .order("created_at", { ascending: false });

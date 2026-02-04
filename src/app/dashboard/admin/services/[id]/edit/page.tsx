@@ -1,60 +1,58 @@
-import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { ServiceForm } from '@/components/services/service-form'
-import { ChevronLeft } from 'lucide-react'
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { ServiceForm } from "@/components/services/service-form";
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
 interface EditServicePageProps {
-  params: Promise<{ id: string }>
+  params: Promise<{ id: string }>;
 }
 
 export default async function EditServicePage({ params }: EditServicePageProps) {
-  const { id } = await params
-  const supabase = await createServerSupabaseClient()
+  const { id } = await params;
+  const supabase = await createServerSupabaseClient();
 
   // Check auth and role
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await supabase.auth.getUser();
 
   if (!user) {
-    return <div>Unauthorized</div>
+    return <div>Unauthorized</div>;
   }
 
-  const { data: profile } = await supabase
-    .from('users')
-    .select('organization_id, role')
-    .eq('id', user.id)
-    .single()
+  const { data: profile } = await supabase.from("users").select("organization_id, role").eq("id", user.id).single();
 
   if (!profile) {
-    return <div>Profile not found</div>
+    return <div>Profile not found</div>;
   }
 
-  const p = profile as { organization_id: string | null; role: string }
-  if (!['super_admin', 'staff'].includes(p.role)) {
-    return <div>Forbidden - Admin access required</div>
+  const p = profile as { organization_id: string | null; role: string };
+  if (!["super_admin", "staff"].includes(p.role)) {
+    return <div>Forbidden - Admin access required</div>;
   }
 
   // Fetch the service
-  const serviceQuery = (supabase as any)
-    .from('services')
-    .select('*')
-    .eq('id', id)
+  const serviceQuery = (supabase as any).from("services").select("*").eq("id", id);
 
+<<<<<<< Updated upstream
   // Staff are scoped to their org; super admins can edit across orgs.
   if (p.role !== 'super_admin' && p.organization_id) {
     serviceQuery.eq('organization_id', p.organization_id)
+=======
+  if (p.organization_id) {
+    serviceQuery.eq("organization_id", p.organization_id);
+>>>>>>> Stashed changes
   }
 
-  const { data: service, error } = await serviceQuery.single()
+  const { data: service, error } = await serviceQuery.single();
 
   if (error || !service) {
-    notFound()
+    notFound();
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <Link
@@ -71,5 +69,5 @@ export default async function EditServicePage({ params }: EditServicePageProps) 
       {/* Form */}
       <ServiceForm initialData={service} />
     </div>
-  )
+  );
 }

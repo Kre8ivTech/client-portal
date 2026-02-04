@@ -72,7 +72,8 @@ export function ClientServiceCard({ service, onRequestService }: ClientServiceCa
           <div className="flex-1 min-w-0">
             <div className="flex items-start gap-2">
               <h3 className="font-bold text-lg">{service.name}</h3>
-              {service.is_global && (
+              {/* Global badge - only show if is_global column exists and is true */}
+              {"is_global" in service && service.is_global && (
                 <Badge
                   variant="outline"
                   className="bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 border-purple-200 text-xs"

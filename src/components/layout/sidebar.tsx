@@ -123,6 +123,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/admin/contracts", icon: ClipboardList, label: "Manage Contracts" },
       { href: "/dashboard/admin/notifications", icon: Bell, label: "Notifications" },
       { href: "/dashboard/admin/settings/sla", icon: Clock, label: "SLA Settings" },
+      { href: "/dashboard/admin/settings/auth", icon: Shield, label: "Auth Settings" },
       { href: "/dashboard/audit", icon: History, label: "Audit Log" },
     ],
   },
@@ -188,6 +189,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/admin/contracts",
         "/dashboard/admin/notifications",
         "/dashboard/admin/settings/sla",
+        "/dashboard/admin/settings/auth",
         "/dashboard/tenants",
         "/dashboard/audit",
       ];

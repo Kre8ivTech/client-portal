@@ -1,30 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import {
-  AlertCircle,
-  CheckCircle2,
-  ArrowRight,
-  Loader2,
-  Mail,
-  Lock,
-} from "lucide-react";
+import { AlertCircle, CheckCircle2, ArrowRight, Loader2, Mail, Lock } from "lucide-react";
 import Link from "next/link";
+import Script from "next/script";
 import { cn } from "@/lib/utils";
 import { getPortalBranding } from "@/lib/actions/portal-branding";
+import { getAuthSettings, verifyRecaptcha, type AuthSettings } from "@/lib/actions/auth-settings";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
+import { SSOButtons } from "@/components/auth/sso-buttons";
+import { MFAVerify } from "@/components/auth/mfa-verify";
 
 type LoginBranding = {
   app_name: string;
@@ -46,10 +36,18 @@ export default function LoginPage() {
     text: string;
   } | null>(null);
   const [branding, setBranding] = useState<LoginBranding | null>(null);
+  const [authSettings, setAuthSettings] = useState<AuthSettings | null>(null);
+  const [showMFA, setShowMFA] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
+
   const supabase = createClient();
 
   useEffect(() => {
-    getPortalBranding().then(setBranding);
+    Promise.all([getPortalBranding(), getAuthSettings()]).then(([brandingData, authSettingsData]) => {
+      setBranding(brandingData);
+      setAuthSettings(authSettingsData);
+    });
   }, []);
 
   // Password reset links sometimes land on /?code=... when Supabase Site URL has no path. Send to callback then /reset-password.
@@ -74,6 +72,23 @@ export default function LoginPage() {
     }
   }, []);
 
+  // Execute reCAPTCHA when ready
+  const executeRecaptcha = async (): Promise<string | null> => {
+    if (!authSettings?.recaptcha_enabled || !authSettings?.recaptcha_site_key) {
+      return null;
+    }
+
+    try {
+      if (typeof window !== "undefined" && window.grecaptcha) {
+        const token = await window.grecaptcha.execute(authSettings.recaptcha_site_key, { action: "login" });
+        return token;
+      }
+    } catch (err) {
+      console.error("reCAPTCHA error:", err);
+    }
+    return null;
+  };
+
   const appName = branding?.app_name ?? "KT-Portal";
   const tagline = branding?.tagline ?? "Client Portal";
   const logoUrl = branding?.logo_url;
@@ -84,15 +99,44 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setMessage(null);
 
     try {
+      // Verify reCAPTCHA if enabled
+      if (authSettings?.recaptcha_enabled && authSettings?.recaptcha_site_key) {
+        const token = await executeRecaptcha();
+        if (token) {
+          const recaptchaResult = await verifyRecaptcha(token, "login");
+          if (!recaptchaResult.success) {
+            setMessage({ type: "error", text: recaptchaResult.error || "reCAPTCHA verification failed" });
+            setLoading(false);
+            return;
+          }
+        }
+      }
+
       if (password.trim()) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
         if (error) {
           setMessage({ type: "error", text: getAuthErrorMessage(error) });
-        } else {
-          window.location.href = "/dashboard";
+          setLoading(false);
+          return;
         }
+
+        // Check if MFA is required
+        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        const totpFactor = factorsData?.totp?.[0];
+
+        if (totpFactor && totpFactor.status === "verified") {
+          // User has MFA enabled, show verification screen
+          setShowMFA(true);
+          setLoading(false);
+          return;
+        }
+
+        // No MFA required, redirect to dashboard
+        window.location.href = "/dashboard";
       } else {
         const { error } = await supabase.auth.signInWithOtp({
           email,
@@ -119,44 +163,85 @@ export default function LoginPage() {
     }
   };
 
+  const handleMFASuccess = () => {
+    window.location.href = "/dashboard";
+  };
+
+  const handleMFACancel = async () => {
+    // Sign out and return to login
+    await supabase.auth.signOut();
+    setShowMFA(false);
+    setPassword("");
+  };
+
   // Determine background styles - Note: URLs are validated server-side in portal branding
   // but we still validate here for defense in depth
   const hasCustomBackground = loginBgColor || loginBgImageUrl;
   const backgroundStyle: React.CSSProperties = {};
-  
+
   if (loginBgImageUrl) {
     // URL is already validated by server, but we use it safely here
     // by setting it via React style object which escapes values
     try {
       new URL(loginBgImageUrl); // Validate URL format
       backgroundStyle.backgroundImage = `url(${loginBgImageUrl})`;
-      backgroundStyle.backgroundSize = 'cover';
-      backgroundStyle.backgroundPosition = 'center';
-      backgroundStyle.backgroundRepeat = 'no-repeat';
+      backgroundStyle.backgroundSize = "cover";
+      backgroundStyle.backgroundPosition = "center";
+      backgroundStyle.backgroundRepeat = "no-repeat";
     } catch {
       // Invalid URL, skip background image
-      console.warn('Invalid background image URL');
+      console.warn("Invalid background image URL");
     }
   } else if (loginBgColor) {
     backgroundStyle.backgroundColor = loginBgColor;
   }
 
+  // Show MFA verification screen
+  if (showMFA) {
+    return (
+      <div
+        className={cn(
+          "flex min-h-screen items-center justify-center p-4 overflow-hidden relative",
+          !hasCustomBackground &&
+            "bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black",
+        )}
+        style={hasCustomBackground ? backgroundStyle : undefined}
+      >
+        {loginBgImageUrl && <div className="absolute inset-0 bg-black" style={{ opacity: loginBgOverlayOpacity }} />}
+        {!hasCustomBackground && (
+          <>
+            <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[120px] rounded-full animate-pulse" />
+            <div className="absolute bottom-[-5%] left-[-5%] w-[30%] h-[30%] bg-blue-500/10 blur-[100px] rounded-full" />
+          </>
+        )}
+        <div className="relative z-10">
+          <MFAVerify onSuccess={handleMFASuccess} onCancel={handleMFACancel} />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div 
+    <div
       className={cn(
         "flex min-h-screen items-center justify-center p-4 overflow-hidden relative",
-        !hasCustomBackground && "bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black"
+        !hasCustomBackground &&
+          "bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black",
       )}
       style={hasCustomBackground ? backgroundStyle : undefined}
     >
-      {/* Dark overlay for background image */}
-      {loginBgImageUrl && (
-        <div 
-          className="absolute inset-0 bg-black" 
-          style={{ opacity: loginBgOverlayOpacity }}
+      {/* reCAPTCHA Script */}
+      {authSettings?.recaptcha_enabled && authSettings?.recaptcha_site_key && (
+        <Script
+          src={`https://www.google.com/recaptcha/api.js?render=${authSettings.recaptcha_site_key}`}
+          strategy="afterInteractive"
+          onLoad={() => setRecaptchaLoaded(true)}
         />
       )}
-      
+
+      {/* Dark overlay for background image */}
+      {loginBgImageUrl && <div className="absolute inset-0 bg-black" style={{ opacity: loginBgOverlayOpacity }} />}
+
       {/* Decorative Blur Elements - only show for default background */}
       {!hasCustomBackground && (
         <>
@@ -166,35 +251,24 @@ export default function LoginPage() {
       )}
 
       <Card className="w-full max-w-md shadow-2xl border-slate-800 bg-slate-900/50 backdrop-blur-xl relative z-10 transition-all duration-500 hover:shadow-primary/5">
-        <CardHeader className="space-y-2 pb-8">
+        <CardHeader className="space-y-2 pb-6">
           <div className="flex justify-center mb-4">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- dynamic user-provided logo URL
-              <img
-                src={logoUrl}
-                alt={appName}
-                className="h-14 w-auto max-w-[180px] object-contain"
-              />
+              <img src={logoUrl} alt={appName} className="h-14 w-auto max-w-[180px] object-contain" />
             ) : (
               <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center shadow-lg shadow-primary/20 rotate-3">
                 <Mail className="text-white h-7 w-7" />
               </div>
             )}
           </div>
-          <CardTitle className="text-3xl font-bold tracking-tight text-center text-white">
-            Welcome Back
-          </CardTitle>
-          <CardDescription className="text-center text-slate-400 text-base">
-            {tagline}
-          </CardDescription>
+          <CardTitle className="text-3xl font-bold tracking-tight text-center text-white">Welcome Back</CardTitle>
+          <CardDescription className="text-center text-slate-400 text-base">{tagline}</CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+        <CardContent className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label
-                htmlFor="email"
-                className="text-slate-300 font-medium ml-1"
-              >
+              <Label htmlFor="email" className="text-slate-300 font-medium ml-1">
                 Email
               </Label>
               <div className="relative group">
@@ -216,10 +290,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label
-                htmlFor="password"
-                className="text-slate-300 font-medium ml-1"
-              >
+              <Label htmlFor="password" className="text-slate-300 font-medium ml-1">
                 Password
               </Label>
               <div className="relative group">
@@ -237,9 +308,7 @@ export default function LoginPage() {
                   <Lock size={18} />
                 </div>
               </div>
-              <p className="text-xs text-slate-500">
-                Leave blank to receive a sign-in link by email.
-              </p>
+              <p className="text-xs text-slate-500">Leave blank to receive a sign-in link by email.</p>
             </div>
 
             <Button
@@ -261,10 +330,24 @@ export default function LoginPage() {
             </Button>
           </form>
 
+          {/* SSO Buttons */}
+          {authSettings && (
+            <SSOButtons
+              enabledProviders={{
+                google: authSettings.sso_google_enabled,
+                microsoft: authSettings.sso_microsoft_enabled,
+                github: authSettings.sso_github_enabled,
+                apple: authSettings.sso_apple_enabled,
+              }}
+              disabled={loading}
+              onError={(error) => setMessage({ type: "error", text: error })}
+            />
+          )}
+
           {message && (
             <div
               className={cn(
-                "mt-6 p-4 rounded-xl flex items-start gap-4 text-sm animate-in fade-in slide-in-from-top-4 duration-300",
+                "p-4 rounded-xl flex items-start gap-4 text-sm animate-in fade-in slide-in-from-top-4 duration-300",
                 message.type === "success"
                   ? "bg-green-500/10 text-green-400 border border-green-500/20"
                   : "bg-red-500/10 text-red-400 border border-red-500/20",
@@ -288,16 +371,33 @@ export default function LoginPage() {
               Trouble signing in?
             </Link>
             <span className="text-slate-700">|</span>
-            <Link
-              href="/signup"
-              className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-            >
+            <Link href="/signup" className="text-sm font-medium text-primary hover:text-primary/80 transition-colors">
               Request Access
             </Link>
           </div>
-          <p className="text-[11px] text-slate-500 uppercase tracking-widest leading-relaxed opacity-60">
-            {appName}
-          </p>
+          {authSettings?.recaptcha_enabled && (
+            <p className="text-[10px] text-slate-600 leading-relaxed">
+              Protected by reCAPTCHA.{" "}
+              <a
+                href="https://policies.google.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                Privacy
+              </a>{" "}
+              &{" "}
+              <a
+                href="https://policies.google.com/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                Terms
+              </a>
+            </p>
+          )}
+          <p className="text-[11px] text-slate-500 uppercase tracking-widest leading-relaxed opacity-60">{appName}</p>
         </CardFooter>
       </Card>
     </div>

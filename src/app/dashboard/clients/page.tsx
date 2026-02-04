@@ -194,7 +194,7 @@ export default async function ClientsPage() {
               : 'Your organization details.'}
           </p>
         </div>
-        {(canViewAllOrgs || isPartner) && (
+        {(canViewAllOrgs || isPartner || isAssignedStaff) && (
           <Button className="gap-2" asChild>
             <Link href="/dashboard/clients/new">
               <Plus size={18} />

@@ -27,7 +27,7 @@ type Ticket = Database["public"]["Tables"]["tickets"]["Row"] & {
   } | null;
   organization?: {
     id: string;
-    name: string;
+    name: string | null;
   } | null;
 };
 
@@ -186,7 +186,7 @@ export function TicketDetail({
               <DetailItem
                 icon={<Building2 className="h-4 w-4 text-slate-400" />}
                 label="Organization"
-                value={ticket.organization.name}
+                value={ticket.organization.name || "Unknown"}
               />
             )}
 

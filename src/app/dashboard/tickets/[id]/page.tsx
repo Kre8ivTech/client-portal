@@ -69,7 +69,7 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
     } | null;
     organization: {
       id: string;
-      name: string;
+      name: string | null;
     } | null;
   };
 

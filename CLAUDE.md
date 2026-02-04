@@ -992,7 +992,7 @@ See migrations in `/supabase/migrations/`.
 
 **Cron Jobs (Vercel)**
 - `GET /api/cron/reminders` - Daily ticket reminders (9am UTC, Vercel auth)
-- `GET /api/cron/queue-calculate` - Recalculate queue positions (hourly, Vercel auth)
+- `GET /api/cron/queue-calculate` - Recalculate queue positions (daily, Vercel auth)
 
 **Auth Endpoints (Next.js)**
 - `GET /api/auth/callback` - OAuth callback handler

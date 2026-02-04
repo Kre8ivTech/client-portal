@@ -1478,6 +1478,9 @@ export type Database = {
           app_name: string;
           favicon_url: string | null;
           id: string;
+          login_bg_color: string | null;
+          login_bg_image_url: string | null;
+          login_bg_overlay_opacity: number | null;
           logo_url: string | null;
           primary_color: string | null;
           tagline: string | null;
@@ -1487,6 +1490,9 @@ export type Database = {
           app_name?: string;
           favicon_url?: string | null;
           id?: string;
+          login_bg_color?: string | null;
+          login_bg_image_url?: string | null;
+          login_bg_overlay_opacity?: number | null;
           logo_url?: string | null;
           primary_color?: string | null;
           tagline?: string | null;
@@ -1496,6 +1502,9 @@ export type Database = {
           app_name?: string;
           favicon_url?: string | null;
           id?: string;
+          login_bg_color?: string | null;
+          login_bg_image_url?: string | null;
+          login_bg_overlay_opacity?: number | null;
           logo_url?: string | null;
           primary_color?: string | null;
           tagline?: string | null;

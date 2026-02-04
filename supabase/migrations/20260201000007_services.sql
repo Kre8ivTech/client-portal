@@ -238,12 +238,14 @@ CREATE POLICY "Staff can update org service requests"
 -- ============================================================================
 
 -- Auto-update updated_at timestamp for services
+DROP TRIGGER IF EXISTS set_services_updated_at ON public.services;
 CREATE TRIGGER set_services_updated_at
   BEFORE UPDATE ON public.services
   FOR EACH ROW
   EXECUTE FUNCTION public.set_updated_at();
 
 -- Auto-update updated_at timestamp for service requests
+DROP TRIGGER IF EXISTS set_service_requests_updated_at ON public.service_requests;
 CREATE TRIGGER set_service_requests_updated_at
   BEFORE UPDATE ON public.service_requests
   FOR EACH ROW

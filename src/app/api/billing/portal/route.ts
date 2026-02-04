@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import Stripe from "stripe";
+
+// Lazy-load Stripe to prevent build-time initialization errors
+async function getStripeInstance() {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  if (!secretKey) {
+    return null;
+  }
+  const { default: Stripe } = await import("stripe");
+  return new Stripe(secretKey, {
+    apiVersion: "2024-12-18.acacia",
+  });
+}
 
 /**
  * POST /api/billing/portal
@@ -8,14 +19,11 @@ import Stripe from "stripe";
  */
 export async function POST(request: NextRequest) {
   try {
-    // Initialize Stripe inside the function to avoid build-time errors
-    if (!process.env.STRIPE_SECRET_KEY) {
+    // Initialize Stripe lazily to avoid build-time errors
+    const stripe = await getStripeInstance();
+    if (!stripe) {
       return NextResponse.json({ error: "Stripe is not configured. Please contact support." }, { status: 500 });
     }
-
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2024-12-18.acacia",
-    });
 
     const supabase = await createServerSupabaseClient();
     const {

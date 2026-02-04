@@ -48,18 +48,45 @@ export async function getStripeClient(): Promise<Stripe> {
   })
 }
 
-/** Server-side Stripe instance for backward compatibility (singleton). 
+/** Cached Stripe instance for backward compatibility */
+let _stripeInstance: Stripe | null = null
+
+/**
+ * Server-side Stripe instance getter for backward compatibility.
+ * Lazily initializes to avoid build-time errors.
  * Note: It's better to use getStripeClient() for dynamic configuration.
  */
-export const stripe: Stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2026-01-28.clover',
-      typescript: true,
-    })
-  : (undefined as unknown as Stripe)
+export function getStripeSingleton(): Stripe | null {
+  if (_stripeInstance) return _stripeInstance
+
+  const secretKey = process.env.STRIPE_SECRET_KEY
+  if (!secretKey) return null
+
+  _stripeInstance = new Stripe(secretKey, {
+    apiVersion: '2026-01-28.clover',
+    typescript: true,
+  })
+  return _stripeInstance
+}
+
+/**
+ * @deprecated Use getStripeSingleton() instead.
+ * This export is kept for backward compatibility but will throw if STRIPE_SECRET_KEY is not set.
+ */
+export const stripe: Stripe = new Proxy({} as Stripe, {
+  get(_, prop) {
+    const instance = getStripeSingleton()
+    if (!instance) {
+      throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.')
+    }
+    return (instance as any)[prop]
+  }
+})
 
 /** Whether Stripe is configured (STRIPE_SECRET_KEY is set). */
-export const isStripeConfigured = Boolean(process.env.STRIPE_SECRET_KEY)
+export function isStripeConfigured(): boolean {
+  return Boolean(process.env.STRIPE_SECRET_KEY)
+}
 
 /** Returns the Stripe instance when configured, otherwise null. */
 async function getStripe(): Promise<Stripe | null> {

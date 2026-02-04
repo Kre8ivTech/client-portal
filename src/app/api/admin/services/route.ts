@@ -48,15 +48,15 @@ export async function GET(request: NextRequest) {
     const active = searchParams.get('active')
 
     // Build query
-    let query = (supabase as any)
+    let query = supabase
       .from('services')
-      .select('*, created_by_user:users!created_by(id, profiles(name))')
-    
+      .select('*')
+
     // Staff are scoped to their own org. Super admins can view across orgs.
     if (p.role !== 'super_admin' && p.organization_id) {
       query = query.eq('organization_id', p.organization_id)
     }
-    
+
     query = query
       .order('display_order', { ascending: true })
       .order('created_at', { ascending: false })

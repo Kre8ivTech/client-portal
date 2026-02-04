@@ -32,18 +32,22 @@ export default async function AdminServicesPage() {
   }
 
   // Fetch services
-  const servicesQuery = (supabase as any)
+  let servicesQuery = supabase
     .from('services')
-    .select('*, created_by_user:users!created_by(id, profiles(name))')
-  
+    .select('*')
+
   // Staff are scoped to their org; super admins can view across orgs.
   if (p.role !== 'super_admin' && p.organization_id) {
-    servicesQuery.eq('organization_id', p.organization_id)
+    servicesQuery = servicesQuery.eq('organization_id', p.organization_id)
   }
-  
-  const { data: services } = await servicesQuery
+
+  const { data: services, error } = await servicesQuery
     .order('display_order', { ascending: true })
     .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching services:', error)
+  }
 
   return (
     <div className="w-full space-y-6">

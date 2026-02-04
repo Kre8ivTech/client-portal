@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { PortalBrandingForm } from "@/components/settings/portal-branding-form";
 import { OrganizationBrandingForm } from "@/components/settings/organization-branding-form";
+import { WhiteLabelAdminSection } from "@/components/settings/white-label-admin-section";
 import { getPortalBranding } from "@/lib/actions/portal-branding";
 import { redirect } from "next/navigation";
 
@@ -61,6 +62,16 @@ export default async function WhiteLabelSettingsPage() {
   const isPartner = role === "partner" || role === "partner_staff";
   const canSeeBranding = isStaffOrAdmin || isPartner;
 
+  // Fetch all organizations for staff/admin to edit
+  let allOrganizations: OrganizationRow[] = [];
+  if (isStaffOrAdmin) {
+    const { data: orgsData } = await supabase
+      .from("organizations")
+      .select("id, name, slug, type, branding_config")
+      .order("name", { ascending: true });
+    allOrganizations = (orgsData ?? []) as OrganizationRow[];
+  }
+
   // If user doesn't have access to branding, redirect to general settings
   if (!canSeeBranding) {
     redirect("/dashboard/settings");
@@ -81,11 +92,16 @@ export default async function WhiteLabelSettingsPage() {
         {/* Super Admin: Portal-wide branding */}
         {isSuperAdmin && portalBranding && <PortalBrandingForm branding={portalBranding} />}
 
+        {/* Staff/Admin: Edit any organization's branding */}
+        {isStaffOrAdmin && allOrganizations.length > 0 && (
+          <WhiteLabelAdminSection organizations={allOrganizations} />
+        )}
+
         {/* Organization branding - partners can edit their own branding */}
-        {canSeeBranding && !isSuperAdmin && organization && (
+        {isPartner && organization && (
           <OrganizationBrandingForm
             organization={organization}
-            canEdit={isPartner}
+            canEdit={true}
           />
         )}
       </div>

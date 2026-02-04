@@ -49,7 +49,7 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   // Fetch ticket with creator and assigned staff info
   const { data: ticketData, error } = await (supabase
     .from("tickets")
-    .select("*, assigned_staff:user_profiles!tickets_assigned_to_fkey(id, name)")
+    .select("*, creator:user_profiles!tickets_created_by_fkey(id, name), assigned_staff:user_profiles!tickets_assigned_to_fkey(id, name), organization:organizations(id, name)")
     .eq("id", id)
     .single() as unknown as Promise<{ data: Record<string, unknown> | null; error: Error | null }>);
 
@@ -61,22 +61,23 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   type QueryResult = typeof ticketData & {
     creator: {
       id: string;
-      profiles: {
-        name: string | null;
-      } | null;
+      name: string | null;
     } | null;
     assigned_staff: {
       id: string;
       name: string | null;
     } | null;
+    organization: {
+      id: string;
+      name: string;
+    } | null;
   };
 
   const ticketWithRelations = {
     ...ticketData,
-    creator: (ticketData as QueryResult).creator?.profiles
-      ? { name: (ticketData as QueryResult).creator?.profiles?.name }
-      : null,
+    creator: (ticketData as QueryResult).creator,
     assigned_staff: (ticketData as QueryResult).assigned_staff,
+    organization: (ticketData as QueryResult).organization,
   };
 
   const { data: deliverables } = await supabase

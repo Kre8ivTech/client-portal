@@ -63,11 +63,13 @@ export function EditUserDialog({
   }
 
   // Determine if we should show organization dropdown
-  // 1. We must have organizations to show
-  // 2. The selected role must be one that typically belongs to an organization (client, partner_staff)
-  // 3. Or if super_admin is editing, they might want to reassign anyone (though usually partners are assigned to their own org automatically)
-  // Let's stick to the AddUserDialog logic: only for client or partner_staff
-  const showOrgSelect = (role === 'client' || role === 'partner_staff') && organizations.length > 0;
+  // We want to show it for all roles except super_admin (who are global) and maybe staff (who are global)
+  // But actually, staff can be assigned to an org too if needed, though they have global access.
+  // The user requested: "when editing a user I need to have the ability to assign an organization to them"
+  // So we should probably just show it for everyone except maybe super_admin if that's the rule.
+  // But let's follow the previous logic but expand it: allow org assignment for almost everyone if organizations exist.
+  // For super_admin, organization_id is usually null, but we can allow setting it if needed (e.g. they belong to a parent org).
+  const showOrgSelect = organizations.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

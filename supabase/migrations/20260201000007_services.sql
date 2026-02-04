@@ -72,11 +72,21 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
 -- ============================================================================
 
 -- Services indexes
+DROP INDEX IF EXISTS idx_services_org;
+DROP INDEX IF EXISTS idx_services_active;
+DROP INDEX IF EXISTS idx_services_category;
+
 CREATE INDEX IF NOT EXISTS idx_services_org ON public.services(organization_id);
 CREATE INDEX IF NOT EXISTS idx_services_active ON public.services(is_active) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_services_category ON public.services(category);
 
 -- Service requests indexes
+DROP INDEX IF EXISTS idx_service_requests_org;
+DROP INDEX IF EXISTS idx_service_requests_service;
+DROP INDEX IF EXISTS idx_service_requests_requester;
+DROP INDEX IF EXISTS idx_service_requests_status;
+DROP INDEX IF EXISTS idx_service_requests_pending;
+
 CREATE INDEX IF NOT EXISTS idx_service_requests_org ON public.service_requests(organization_id);
 CREATE INDEX IF NOT EXISTS idx_service_requests_service ON public.service_requests(service_id);
 CREATE INDEX IF NOT EXISTS idx_service_requests_requester ON public.service_requests(requested_by);
@@ -106,6 +116,7 @@ ALTER TABLE public.service_requests ENABLE ROW LEVEL SECURITY;
 -- ============================================================================
 
 -- Clients can view active services in their org
+DROP POLICY IF EXISTS "Users can view active org services" ON public.services;
 CREATE POLICY "Users can view active org services"
   ON public.services
   FOR SELECT
@@ -119,6 +130,7 @@ CREATE POLICY "Users can view active org services"
   );
 
 -- Staff can view all services (including inactive)
+DROP POLICY IF EXISTS "Staff can view all org services" ON public.services;
 CREATE POLICY "Staff can view all org services"
   ON public.services
   FOR SELECT
@@ -132,6 +144,7 @@ CREATE POLICY "Staff can view all org services"
   );
 
 -- Only admins and staff can create/edit services
+DROP POLICY IF EXISTS "Staff can manage services" ON public.services;
 CREATE POLICY "Staff can manage services"
   ON public.services
   FOR ALL
@@ -157,6 +170,7 @@ CREATE POLICY "Staff can manage services"
 -- ============================================================================
 
 -- Users can view their own service requests
+DROP POLICY IF EXISTS "Users can view own service requests" ON public.service_requests;
 CREATE POLICY "Users can view own service requests"
   ON public.service_requests
   FOR SELECT
@@ -171,6 +185,7 @@ CREATE POLICY "Users can view own service requests"
   );
 
 -- Users can create service requests in their org
+DROP POLICY IF EXISTS "Users can create service requests" ON public.service_requests;
 CREATE POLICY "Users can create service requests"
   ON public.service_requests
   FOR INSERT
@@ -184,6 +199,7 @@ CREATE POLICY "Users can create service requests"
   );
 
 -- Users can cancel their own pending requests
+DROP POLICY IF EXISTS "Users can cancel own requests" ON public.service_requests;
 CREATE POLICY "Users can cancel own requests"
   ON public.service_requests
   FOR UPDATE
@@ -196,6 +212,7 @@ CREATE POLICY "Users can cancel own requests"
   );
 
 -- Staff can update any service request in their org
+DROP POLICY IF EXISTS "Staff can update org service requests" ON public.service_requests;
 CREATE POLICY "Staff can update org service requests"
   ON public.service_requests
   FOR UPDATE

@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { PayInvoiceButton } from '@/components/invoices/PayInvoiceButton'
+import { RecordManualPaymentDialog } from '@/components/invoices/record-manual-payment-dialog'
+import { SyncToQuickBooksButton } from '@/components/invoices/sync-to-quickbooks-button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Download, ArrowLeft } from 'lucide-react'
+import { Download, ArrowLeft, DollarSign, Calendar, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { generatePageMetadata } from '@/lib/seo'
@@ -52,13 +54,27 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
     return <div>Unauthorized</div>
   }
 
-  // Fetch invoice with line items
+  // Fetch invoice with line items and payment history
   const { data: invoice, error } = await (supabase as any)
     .from('invoices')
     .select(`
       *,
       organization:organizations(id, name),
-      line_items:invoice_line_items(*)
+      line_items:invoice_line_items(*),
+      payments:invoice_payments(
+        id,
+        amount,
+        payment_method,
+        payment_date,
+        payment_reference,
+        payment_source,
+        notes,
+        created_at,
+        recorded_by_profile:profiles!invoice_payments_recorded_by_fkey(
+          name,
+          email
+        )
+      )
     `)
     .eq('id', id)
     .single()
@@ -67,10 +83,10 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
     notFound()
   }
 
-  // Verify user can access this invoice
+  // Verify user can access this invoice and get their role
   const { data: profile } = await supabase
-    .from('users')
-    .select('organization_id, role')
+    .from('profiles')
+    .select('organization_id, role, is_account_manager')
     .eq('id', user.id)
     .single()
 
@@ -78,9 +94,22 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
     return <div>Profile not found</div>
   }
 
-  const p = profile as { organization_id: string | null; role: string }
+  const p = profile as { organization_id: string | null; role: string; is_account_manager: boolean }
   if (p.organization_id !== invoice.organization_id) {
     return <div>Access denied</div>
+  }
+
+  const isAccountManager = p.role === 'super_admin' || (p.role === 'staff' && p.is_account_manager)
+
+  // Check if QuickBooks is connected
+  let quickbooksConnected = false
+  if (isAccountManager) {
+    const { data: qbIntegration } = await supabase
+      .from('quickbooks_integrations')
+      .select('id')
+      .eq('organization_id', invoice.organization_id)
+      .single()
+    quickbooksConnected = !!qbIntegration
   }
 
   const getStatusColor = (status: string) => {
@@ -255,13 +284,101 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
         </CardContent>
       </Card>
 
+      {/* Payment History */}
+      {invoice.payments && invoice.payments.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment History</CardTitle>
+            <CardDescription>
+              {invoice.payments.length} payment{invoice.payments.length !== 1 ? 's' : ''} recorded
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {invoice.payments.map((payment: any) => {
+                const paymentSourceLabel =
+                  payment.payment_source === 'stripe' ? 'Stripe' :
+                  payment.payment_source === 'manual' ? 'Manual' :
+                  payment.payment_source === 'quickbooks' ? 'QuickBooks' :
+                  payment.payment_source;
+
+                const paymentSourceBadge =
+                  payment.payment_source === 'stripe' ? 'bg-purple-100 text-purple-700' :
+                  payment.payment_source === 'manual' ? 'bg-blue-100 text-blue-700' :
+                  'bg-gray-100 text-gray-700';
+
+                return (
+                  <div
+                    key={payment.id}
+                    className="flex items-start justify-between border-b pb-4 last:border-0 last:pb-0"
+                  >
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-semibold">{formatCurrency(payment.amount)}</span>
+                        <Badge className={paymentSourceBadge}>{paymentSourceLabel}</Badge>
+                      </div>
+
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{formatDate(payment.payment_date)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <CreditCard className="h-3 w-3" />
+                          <span className="capitalize">
+                            {payment.payment_method.replace('_', ' ')}
+                          </span>
+                        </div>
+                      </div>
+
+                      {payment.payment_reference && (
+                        <p className="text-sm text-muted-foreground">
+                          Reference: {payment.payment_reference}
+                        </p>
+                      )}
+
+                      {payment.notes && (
+                        <p className="text-sm text-muted-foreground">
+                          Notes: {payment.notes}
+                        </p>
+                      )}
+
+                      {payment.payment_source === 'manual' && payment.recorded_by_profile && (
+                        <p className="text-xs text-muted-foreground">
+                          Recorded by {payment.recorded_by_profile.name || payment.recorded_by_profile.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Actions */}
-      <div className="flex gap-4">
+      <div className="flex gap-4 flex-wrap">
         <Button variant="outline" disabled>
           <Download className="h-4 w-4 mr-2" />
           Download PDF
         </Button>
         {canPay && <PayInvoiceButton invoice={invoice} />}
+        {isAccountManager && invoice.balance_due > 0 && invoice.status !== 'cancelled' && (
+          <RecordManualPaymentDialog
+            invoiceId={invoice.id}
+            balanceDue={invoice.balance_due}
+          />
+        )}
+        {isAccountManager && quickbooksConnected && (
+          <SyncToQuickBooksButton
+            invoiceId={invoice.id}
+            quickbooksSyncStatus={invoice.quickbooks_sync_status}
+            quickbooksInvoiceId={invoice.quickbooks_invoice_id}
+            isConnected={quickbooksConnected}
+          />
+        )}
       </div>
     </div>
   )

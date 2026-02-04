@@ -197,11 +197,29 @@ export default async function DashboardPage() {
         const responseTarget = ticket.sla_response_target || 24 // default 24 hours
         const resolutionTarget = ticket.sla_resolution_target || 48 // default 48 hours
 
+        let isResponseBreached = false
+        let isResponseAtRisk = false
+        let isResolutionBreached = false
+        let isResolutionAtRisk = false
+
         // Check response SLA
         if (ticket.first_response_at) {
           const responseTime = (new Date(ticket.first_response_at).getTime() - createdAt.getTime()) / (1000 * 60 * 60)
           totalResponseTime += responseTime
           responseCount++
+
+          // Check if response was late
+          if (responseTime > responseTarget) {
+            isResponseBreached = true
+          }
+        } else {
+          // No response yet - check how long it's been
+          const hoursElapsed = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60)
+          if (hoursElapsed > responseTarget) {
+            isResponseBreached = true
+          } else if (hoursElapsed > responseTarget * 0.8) {
+            isResponseAtRisk = true
+          }
         }
 
         // Check resolution SLA
@@ -209,21 +227,25 @@ export default async function DashboardPage() {
           const resolutionTime = (new Date(ticket.resolved_at).getTime() - createdAt.getTime()) / (1000 * 60 * 60)
           totalResolutionTime += resolutionTime
           resolutionCount++
+
+          // Check if resolution was late
+          if (resolutionTime > resolutionTarget) {
+            isResolutionBreached = true
+          }
+        } else {
+          // Not resolved yet - check how long it's been
+          const hoursElapsed = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60)
+          if (hoursElapsed > resolutionTarget) {
+            isResolutionBreached = true
+          } else if (hoursElapsed > resolutionTarget * 0.8) {
+            isResolutionAtRisk = true
+          }
         }
 
-        // Determine ticket SLA status
-        const hoursElapsed = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60)
-        const responseTimeElapsed = ticket.first_response_at
-          ? (new Date(ticket.first_response_at).getTime() - createdAt.getTime()) / (1000 * 60 * 60)
-          : hoursElapsed
-
-        if (!ticket.first_response_at && hoursElapsed > responseTarget) {
+        // Categorize ticket based on worst SLA status
+        if (isResponseBreached || isResolutionBreached) {
           breached++
-        } else if (!ticket.first_response_at && hoursElapsed > responseTarget * 0.8) {
-          atRisk++
-        } else if (!ticket.resolved_at && hoursElapsed > resolutionTarget) {
-          breached++
-        } else if (!ticket.resolved_at && hoursElapsed > resolutionTarget * 0.8) {
+        } else if (isResponseAtRisk || isResolutionAtRisk) {
           atRisk++
         } else {
           compliant++

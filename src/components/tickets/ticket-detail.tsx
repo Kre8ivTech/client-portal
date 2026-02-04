@@ -81,7 +81,7 @@ export function TicketDetail({ ticket: initialTicket, userId, userRole, delivera
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <Link 
         href="/dashboard/tickets" 
         className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors mb-4 w-fit"

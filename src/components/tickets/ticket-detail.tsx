@@ -8,7 +8,7 @@ import { TicketComments } from "./ticket-comments";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { format } from "date-fns";
-import { Calendar, User, Tag, Clock, ChevronLeft, Package, Timer } from "lucide-react";
+import { Calendar, User, Tag, Clock, ChevronLeft, Package, Timer, Building2 } from "lucide-react";
 import Link from "next/link";
 import { Database } from "@/types/database";
 import { TICKET_CATEGORIES } from "@/lib/validators/ticket";
@@ -22,6 +22,10 @@ type Ticket = Database["public"]["Tables"]["tickets"]["Row"] & {
     name: string | null;
   };
   assigned_staff?: {
+    id: string;
+    name: string | null;
+  } | null;
+  organization?: {
     id: string;
     name: string | null;
   } | null;
@@ -177,6 +181,14 @@ export function TicketDetail({
               label="Last Updated"
               value={ticket.updated_at ? format(new Date(ticket.updated_at), "MMM d, h:mm a") : "—"}
             />
+
+            {ticket.organization && (
+              <DetailItem
+                icon={<Building2 className="h-4 w-4 text-slate-400" />}
+                label="Organization"
+                value={ticket.organization.name || "Unknown"}
+              />
+            )}
 
             <DetailItem
               icon={<Calendar className="h-4 w-4 text-slate-400" />}

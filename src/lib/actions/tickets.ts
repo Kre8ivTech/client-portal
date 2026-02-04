@@ -140,7 +140,7 @@ export async function closeTicketWithNote(ticketId: string, options: { note?: st
 
     // Get user's profile to check role and organization
     const { data: userData } = await supabase
-      .from("user_profiles")
+      .from("users")
       .select("organization_id, role")
       .eq("id", user.id)
       .single();

@@ -15,6 +15,7 @@ export type AppSettings = {
   openrouter_api_key: string | null;
   anthropic_api_key: string | null;
   openai_api_key: string | null;
+  timezone: string | null;
 };
 
 export async function getAppSettings(): Promise<AppSettings> {
@@ -74,6 +75,7 @@ export async function updateAppSettings(payload: Partial<AppSettings>): Promise<
 
   revalidatePath("/dashboard/settings/ai");
   revalidatePath("/dashboard/settings/integrations");
+  revalidatePath("/dashboard/settings");
   return { success: true };
 }
 

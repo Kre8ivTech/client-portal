@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChevronLeft, Calendar, DollarSign, AlertCircle, Clock } from 'lucide-react'
 import Link from 'next/link'
 
+import { CancelRequestButton } from '@/components/services/cancel-request-button'
+
 interface PageProps {
   params: Promise<{ id: string }>
 }
@@ -130,9 +132,7 @@ export default async function ServiceRequestPage({ params }: PageProps) {
             </p>
           </div>
           {request.status === 'pending' && (
-             <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50">
-               Cancel Request
-             </Button>
+             <CancelRequestButton requestId={request.id} />
           )}
         </div>
       </div>

@@ -21,11 +21,7 @@ export async function createTicket(data: z.infer<typeof createTicketSchema>) {
     }
 
     // Get user's organization
-    const { data: userData } = await supabase
-      .from("users")
-      .select("organization_id")
-      .eq("id", user.id)
-      .single();
+    const { data: userData } = await supabase.from("users").select("organization_id").eq("id", user.id).single();
 
     if (!userData?.organization_id) {
       return { success: false, error: "Organization not found" };
@@ -71,7 +67,7 @@ export async function createTicket(data: z.infer<typeof createTicketSchema>) {
  */
 export async function updateTicket(
   ticketId: string,
-  updates: { status?: string; priority?: string; category?: string; subject?: string; description?: string }
+  updates: { status?: string; priority?: string; category?: string; subject?: string; description?: string },
 ) {
   try {
     const supabase = await createServerSupabaseClient();
@@ -84,11 +80,7 @@ export async function updateTicket(
     }
 
     // Get user's organization
-    const { data: userData } = await supabase
-      .from("users")
-      .select("organization_id")
-      .eq("id", user.id)
-      .single();
+    const { data: userData } = await supabase.from("users").select("organization_id").eq("id", user.id).single();
 
     if (!userData?.organization_id) {
       return { success: false, error: "Organization not found" };
@@ -135,10 +127,7 @@ export async function updateTicket(
 /**
  * Close a ticket with an optional resolution note
  */
-export async function closeTicketWithNote(
-  ticketId: string,
-  options: { note?: string; isInternal?: boolean } = {}
-) {
+export async function closeTicketWithNote(ticketId: string, options: { note?: string; isInternal?: boolean } = {}) {
   try {
     const supabase = await createServerSupabaseClient();
     const {
@@ -160,26 +149,25 @@ export async function closeTicketWithNote(
       return { success: false, error: "Organization not found" };
     }
 
-    // Check if user has permission to close tickets (staff or admin)
-    const canClose =
+    // Get current ticket to verify it exists and check status
+    const { data: currentTicket } = await supabase.from("tickets").select("*").eq("id", ticketId).single();
+
+    if (!currentTicket) {
+      return { success: false, error: "Ticket not found" };
+    }
+
+    // Check if user has permission to close tickets
+    // Staff can close any ticket, clients can only close their own tickets
+    const isStaff =
       userData.role === "super_admin" ||
       userData.role === "staff" ||
       userData.role === "partner" ||
       userData.role === "partner_staff";
 
-    if (!canClose) {
-      return { success: false, error: "You do not have permission to close tickets" };
-    }
+    const isCreator = currentTicket.created_by === user.id;
 
-    // Get current ticket to verify it exists and check status
-    const { data: currentTicket } = await supabase
-      .from("tickets")
-      .select("*")
-      .eq("id", ticketId)
-      .single();
-
-    if (!currentTicket) {
-      return { success: false, error: "Ticket not found" };
+    if (!isStaff && !isCreator) {
+      return { success: false, error: "You do not have permission to close this ticket" };
     }
 
     if (currentTicket.status === "closed") {
@@ -203,11 +191,14 @@ export async function closeTicketWithNote(
 
     // Add resolution note as a comment if provided
     if (options.note?.trim()) {
+      // Clients cannot create internal notes
+      const isInternalNote = isStaff && (options.isInternal ?? false);
+
       const { error: commentError } = await supabase.from("ticket_comments").insert({
         ticket_id: ticketId,
         author_id: user.id,
         content: `[Ticket Closed] ${options.note.trim()}`,
-        is_internal: options.isInternal ?? false,
+        is_internal: isInternalNote,
       });
 
       if (commentError) {

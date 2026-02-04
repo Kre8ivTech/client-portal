@@ -50,6 +50,7 @@ export function TicketDetail({
   const canAssign = userRole === "super_admin" || userRole === "staff";
   const isStaff =
     userRole === "super_admin" || userRole === "staff" || userRole === "partner" || userRole === "partner_staff";
+  const isCreator = ticket.created_by === userId;
 
   useEffect(() => {
     setTicket(initialTicket);
@@ -114,11 +115,12 @@ export function TicketDetail({
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">{ticket.subject}</h1>
         </div>
-        {isStaff && ticket.status !== "closed" && (
+        {(isStaff || isCreator) && ticket.status !== "closed" && (
           <CloseTicketDialog
             ticketId={ticket.id}
             ticketNumber={ticket.ticket_number}
             onClose={() => setTicket({ ...ticket, status: "closed" })}
+            isStaff={isStaff}
           />
         )}
       </div>

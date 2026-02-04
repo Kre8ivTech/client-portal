@@ -23,6 +23,16 @@ export async function updateUserTimezone(timezone: string): Promise<{ success: b
 
   if (error) {
     console.error("Error updating user timezone:", error);
+
+    // Check if the error is about missing column (migration not yet applied)
+    if (error.message?.includes("column") && error.message?.includes("does not exist")) {
+      return {
+        success: false,
+        error:
+          "Timezone preference is not yet available. The system is being updated - please try again in a few minutes.",
+      };
+    }
+
     return { success: false, error: error.message };
   }
 

@@ -13,20 +13,36 @@ export default async function SettingsPage() {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: userData } = await supabase
+  // Try to fetch user data including timezone (may not exist if migration pending)
+  let userData: any = null;
+  let userTimezone: string | null = null;
+
+  // First try with timezone column
+  const { data: userDataWithTz, error: tzError } = await supabase
     .from("users")
     .select("id, role, organization_id, timezone")
     .eq("id", user.id)
     .single();
 
+  if (tzError && tzError.message?.includes("timezone")) {
+    // Timezone column doesn't exist yet, fetch without it
+    const { data: userDataBasic } = await supabase
+      .from("users")
+      .select("id, role, organization_id")
+      .eq("id", user.id)
+      .single();
+    userData = userDataBasic;
+  } else {
+    userData = userDataWithTz;
+    userTimezone = (userDataWithTz as any)?.timezone ?? null;
+  }
+
   const userRow = userData as {
     id: string;
     role: string;
     organization_id: string | null;
-    timezone?: string | null;
   } | null;
   const role = userRow?.role ?? "client";
-  const userTimezone = userRow?.timezone ?? null;
   const isStaffOrAdmin = role === "staff" || role === "super_admin";
   const isSuperAdmin = role === "super_admin";
 

@@ -37,9 +37,9 @@ EXCEPTION
 WHEN duplicate_column THEN null;
 END $$;
 -- Create indexes for Stripe ID lookups
-CREATE INDEX idx_plans_stripe_product ON plans(stripe_product_id)
+CREATE INDEX IF NOT EXISTS idx_plans_stripe_product ON plans(stripe_product_id)
 WHERE stripe_product_id IS NOT NULL;
-CREATE INDEX idx_plans_stripe_price ON plans(stripe_price_id)
+CREATE INDEX IF NOT EXISTS idx_plans_stripe_price ON plans(stripe_price_id)
 WHERE stripe_price_id IS NOT NULL;
 -- =============================================================================
 -- COMMENTS

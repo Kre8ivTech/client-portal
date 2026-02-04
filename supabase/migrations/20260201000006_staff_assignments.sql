@@ -28,10 +28,10 @@ CREATE TABLE IF NOT EXISTS public.staff_assignments (
 );
 
 -- Indexes for performance
-CREATE INDEX idx_staff_assignments_org ON public.staff_assignments(organization_id);
-CREATE INDEX idx_staff_assignments_assignable ON public.staff_assignments(assignable_type, assignable_id);
-CREATE INDEX idx_staff_assignments_staff_user ON public.staff_assignments(staff_user_id);
-CREATE INDEX idx_staff_assignments_active ON public.staff_assignments(assignable_type, assignable_id) WHERE unassigned_at IS NULL;
+CREATE INDEX IF NOT EXISTS idx_staff_assignments_org ON public.staff_assignments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_staff_assignments_assignable ON public.staff_assignments(assignable_type, assignable_id);
+CREATE INDEX IF NOT EXISTS idx_staff_assignments_staff_user ON public.staff_assignments(staff_user_id);
+CREATE INDEX IF NOT EXISTS idx_staff_assignments_active ON public.staff_assignments(assignable_type, assignable_id) WHERE unassigned_at IS NULL;
 
 -- Comments for documentation
 COMMENT ON TABLE public.staff_assignments IS 'Tracks staff member assignments to various resources across the application';

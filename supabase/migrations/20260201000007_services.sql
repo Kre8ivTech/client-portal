@@ -72,16 +72,16 @@ CREATE TABLE IF NOT EXISTS public.service_requests (
 -- ============================================================================
 
 -- Services indexes
-CREATE INDEX idx_services_org ON public.services(organization_id);
-CREATE INDEX idx_services_active ON public.services(is_active) WHERE is_active = true;
-CREATE INDEX idx_services_category ON public.services(category);
+CREATE INDEX IF NOT EXISTS idx_services_org ON public.services(organization_id);
+CREATE INDEX IF NOT EXISTS idx_services_active ON public.services(is_active) WHERE is_active = true;
+CREATE INDEX IF NOT EXISTS idx_services_category ON public.services(category);
 
 -- Service requests indexes
-CREATE INDEX idx_service_requests_org ON public.service_requests(organization_id);
-CREATE INDEX idx_service_requests_service ON public.service_requests(service_id);
-CREATE INDEX idx_service_requests_requester ON public.service_requests(requested_by);
-CREATE INDEX idx_service_requests_status ON public.service_requests(status);
-CREATE INDEX idx_service_requests_pending ON public.service_requests(status) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_service_requests_org ON public.service_requests(organization_id);
+CREATE INDEX IF NOT EXISTS idx_service_requests_service ON public.service_requests(service_id);
+CREATE INDEX IF NOT EXISTS idx_service_requests_requester ON public.service_requests(requested_by);
+CREATE INDEX IF NOT EXISTS idx_service_requests_status ON public.service_requests(status);
+CREATE INDEX IF NOT EXISTS idx_service_requests_pending ON public.service_requests(status) WHERE status = 'pending';
 
 -- ============================================================================
 -- COMMENTS

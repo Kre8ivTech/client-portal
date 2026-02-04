@@ -20,6 +20,7 @@ type Organization = {
   status: string
   parent_org_id: string | null
   custom_domain: string | null
+  description?: string | null
 }
 
 export default async function ClientsPage() {
@@ -63,6 +64,7 @@ export default async function ClientsPage() {
   const canManageOrgs = isSuperAdminOrStaff || isPartner || isAssignedStaff
 
   let ownOrg: Organization | null = null
+  let kre8ivtechOrg: Organization | null = null
   let directClients: Organization[] = []
   let tenantPartners: (Organization & { clients: Organization[] })[] = []
 
@@ -75,10 +77,13 @@ export default async function ClientsPage() {
     // Super admin/staff can see all organizations
     const { data: allOrgs } = await supabase
       .from('organizations')
-      .select('id, name, slug, type, status, parent_org_id, custom_domain')
+      .select('id, name, slug, type, status, parent_org_id, custom_domain, description')
       .order('name', { ascending: true })
 
-    const orgs = (allOrgs ?? []) as Organization[]
+    const orgs = (allOrgs ?? []) as (Organization & { description?: string })[]
+
+    // Get Kre8ivTech main organization
+    kre8ivtechOrg = orgs.find((o) => o.type === 'kre8ivtech') ?? null
 
     // Get user's own organization
     if (organizationId) {
@@ -203,6 +208,54 @@ export default async function ClientsPage() {
           </Button>
         )}
       </div>
+
+      {/* Main Organization - Kre8ivTech (Super Admin/Staff Only) */}
+      {(isSuperAdmin || isStaff) && kre8ivtechOrg && (
+        <Card className="border-2 border-primary bg-gradient-to-br from-primary/5 to-primary/10">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Building2 className="h-6 w-6 text-primary" />
+              Main Organization
+            </CardTitle>
+            <CardDescription>
+              The parent organization for all admin and staff members
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link
+              href={`/dashboard/clients/${kre8ivtechOrg.id}`}
+              className="flex items-center justify-between p-4 rounded-lg border-2 border-primary/30 bg-white hover:bg-primary/5 transition-colors group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-primary/20 flex items-center justify-center group-hover:bg-primary/30 transition-colors">
+                  <Building2 className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-lg font-bold text-slate-900">{kre8ivtechOrg.name}</p>
+                    <Badge variant="default" className="bg-primary text-white">Main</Badge>
+                  </div>
+                  <p className="text-sm text-slate-600 font-medium">{kre8ivtechOrg.slug}</p>
+                  {(kre8ivtechOrg as any).description && (
+                    <p className="text-xs text-slate-500 mt-1 max-w-2xl">
+                      {(kre8ivtechOrg as any).description}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={kre8ivtechOrg.status === 'active' ? 'default' : 'secondary'}
+                  className={kre8ivtechOrg.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-100' : ''}
+                >
+                  {kre8ivtechOrg.status}
+                </Badge>
+                <ChevronRight className="h-5 w-5 text-slate-400 group-hover:text-primary transition-colors" />
+              </div>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">

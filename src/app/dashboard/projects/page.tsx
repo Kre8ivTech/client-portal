@@ -8,6 +8,8 @@ import { CreateProjectDialog } from "@/components/projects/create-project-dialog
 import { RequestProjectDialog } from "@/components/projects/request-project-dialog";
 import { ProjectRequestsList } from "@/components/projects/project-requests-list";
 
+export const dynamic = 'force-dynamic';
+
 export default async function ProjectsPage() {
   const supabase = (await createServerSupabaseClient()) as any;
   const {

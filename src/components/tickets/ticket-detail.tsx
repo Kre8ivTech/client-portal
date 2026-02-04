@@ -42,6 +42,10 @@ export function TicketDetail({ ticket: initialTicket, userId, userRole, delivera
   const canAssign = userRole === 'super_admin' || userRole === 'staff'
   const isStaff = userRole === 'super_admin' || userRole === 'staff' || userRole === 'partner' || userRole === 'partner_staff'
 
+  useEffect(() => {
+    setTicket(initialTicket)
+  }, [initialTicket])
+
   const refreshDeliverables = async () => {
     const { data } = await supabase
       .from('deliverables')

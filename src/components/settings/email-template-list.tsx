@@ -35,6 +35,7 @@ import {
   Star,
   Globe,
   Building,
+  Send,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import {
@@ -48,6 +49,7 @@ import {
   getTemplateTypeDisplayName,
 } from '@/lib/email-templates-shared'
 import { EmailTemplateEditor } from './email-template-editor'
+import { SendTestEmailDialog } from './send-test-email-dialog'
 
 interface EmailTemplateListProps {
   isSuperAdmin: boolean
@@ -90,6 +92,7 @@ export function EmailTemplateList({ isSuperAdmin, organizationId }: EmailTemplat
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [isCreateMode, setIsCreateMode] = useState(false)
   const [templateToDelete, setTemplateToDelete] = useState<EmailTemplate | null>(null)
+  const [testEmailTemplate, setTestEmailTemplate] = useState<EmailTemplate | null>(null)
   const [activeTab, setActiveTab] = useState<'all' | 'organization' | 'system'>('all')
 
   // Fetch templates
@@ -295,6 +298,7 @@ export function EmailTemplateList({ isSuperAdmin, organizationId }: EmailTemplat
                           onDuplicate={() => duplicateMutation.mutate(template.id)}
                           onDelete={() => setTemplateToDelete(template)}
                           onSetDefault={() => setDefaultMutation.mutate(template.id)}
+                          onSendTest={() => setTestEmailTemplate(template)}
                         />
                       ))}
                     </div>
@@ -316,6 +320,15 @@ export function EmailTemplateList({ isSuperAdmin, organizationId }: EmailTemplat
         onSave={handleEditorSave}
         onCancel={handleEditorClose}
       />
+
+      {/* Send Test Email Dialog */}
+      {testEmailTemplate && (
+        <SendTestEmailDialog
+          open={!!testEmailTemplate}
+          onOpenChange={(open) => !open && setTestEmailTemplate(null)}
+          template={testEmailTemplate}
+        />
+      )}
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!templateToDelete} onOpenChange={(open) => !open && setTemplateToDelete(null)}>
@@ -354,6 +367,7 @@ interface TemplateCardProps {
   onDuplicate: () => void
   onDelete: () => void
   onSetDefault: () => void
+  onSendTest: () => void
 }
 
 function TemplateCard({
@@ -364,6 +378,7 @@ function TemplateCard({
   onDuplicate,
   onDelete,
   onSetDefault,
+  onSendTest,
 }: TemplateCardProps) {
   const isSystemTemplate = template.organization_id === null
   const canEdit = isSuperAdmin || (!isSystemTemplate && template.organization_id === organizationId)
@@ -395,6 +410,11 @@ function TemplateCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onSendTest}>
+                <Send className="mr-2 h-4 w-4" />
+                Send Test Email
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onEdit}>
                 <Pencil className="mr-2 h-4 w-4" />
                 {canEdit ? 'Edit' : 'View'}

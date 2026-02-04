@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useRealtimeTicketComments } from '@/hooks/use-realtime-ticket-comments'
@@ -34,6 +35,7 @@ export function TicketComments({ ticketId, userId, userRole }: TicketCommentsPro
   const [postError, setPostError] = useState<string | null>(null)
   const supabase = createClient() as any
   const queryClient = useQueryClient()
+  const router = useRouter()
 
   const isStaff = userRole === 'super_admin' || userRole === 'staff'
 
@@ -79,6 +81,9 @@ export function TicketComments({ ticketId, userId, userRole }: TicketCommentsPro
       setNewComment('')
       setIsInternal(false)
       setPostError(null)
+      // Refresh comments and ticket data
+      queryClient.invalidateQueries({ queryKey: ['ticket-comments', ticketId] })
+      router.refresh()
     }
     setIsSubmitting(false)
   }

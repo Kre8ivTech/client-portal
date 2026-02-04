@@ -149,6 +149,24 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
     })
   }, [tickets, searchTerm, statusFilter, priorityFilter, clientFilter, slaFilter])
 
+  // Separate priority tickets (Critical/High) from others
+  const { priorityTickets, otherTickets } = useMemo(() => {
+    const priority: Ticket[] = []
+    const other: Ticket[] = []
+
+    filteredTickets.forEach((ticket) => {
+      // Only separate if we're not filtering by a specific priority
+      // If user filters for "Low", we shouldn't show a empty "High" table
+      if (priorityFilter === 'all' && (ticket.priority === 'critical' || ticket.priority === 'high')) {
+        priority.push(ticket)
+      } else {
+        other.push(ticket)
+      }
+    })
+
+    return { priorityTickets: priority, otherTickets: other }
+  }, [filteredTickets, priorityFilter])
+
   const hasActiveFilters = 
     searchTerm !== '' || 
     statusFilter !== 'all' || 
@@ -259,94 +277,132 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
         </p>
       )}
 
-      {/* Table */}
-      <div className="rounded-md border bg-white shadow-sm overflow-hidden">
-        <Table>
-          <TableHeader className="bg-slate-50">
-            <TableRow>
-              <TableHead className="font-semibold w-[100px]">ID</TableHead>
-              <TableHead className="font-semibold">Subject</TableHead>
-              {organizations && organizations.length > 0 && (
-                <TableHead className="font-semibold">Client</TableHead>
-              )}
-              <TableHead className="font-semibold">Status</TableHead>
-              <TableHead className="font-semibold">Priority</TableHead>
-              <TableHead className="font-semibold">SLA Status</TableHead>
-              <TableHead className="font-semibold text-right">Created</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTickets.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={organizations && organizations.length > 0 ? 7 : 6} className="h-32 text-center text-slate-500 italic">
-                  {hasActiveFilters ? 'No tickets match your filters.' : 'No tickets found.'}
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredTickets.map((ticket) => {
-                const slaStatus = getCombinedSLAStatus(
-                  ticket.created_at,
-                  ticket.first_response_due_at ?? null,
-                  ticket.first_response_at,
-                  ticket.sla_due_at,
-                  ticket.resolved_at,
-                  ticket.status
-                )
-                return (
-                  <TableRow
-                    key={ticket.id}
-                    className={cn('transition-colors', getSLARowColor(slaStatus.status))}
-                  >
-                    <TableCell className="font-mono text-xs text-slate-500 uppercase">
-                      #{ticket.ticket_number}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      <Link
-                        href={`/dashboard/tickets/${ticket.id}`}
-                        className="hover:text-primary transition-colors block"
-                      >
-                        {ticket.subject}
-                        {ticket.organization?.is_priority_client && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="ml-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-600">
-                                  <AlertCircle className="h-3 w-3" />
-                                  PRIORITY
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Priority client - 50% faster SLA response times</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                      </Link>
-                    </TableCell>
-                    {organizations && organizations.length > 0 && (
-                      <TableCell className="text-sm text-slate-600">
-                        {ticket.organization?.name || '—'}
-                      </TableCell>
-                    )}
-                    <TableCell>
-                      <StatusBadge status={ticket.status} />
-                    </TableCell>
-                    <TableCell>
-                      <PriorityBadge priority={ticket.priority} />
-                    </TableCell>
-                    <TableCell>
-                      <SLAStatusBadge slaStatus={slaStatus} />
-                    </TableCell>
-                    <TableCell className="text-right text-slate-500 text-sm whitespace-nowrap">
-                      {ticket.created_at ? formatDate(ticket.created_at) : '—'}
-                    </TableCell>
-                  </TableRow>
-                )
-              })
-            )}
-          </TableBody>
-        </Table>
+      {/* Priority Tickets Table */}
+      {priorityTickets.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            <h3 className="font-semibold text-lg text-slate-900">Priority Tickets</h3>
+          </div>
+          <TicketTable 
+            tickets={priorityTickets} 
+            showOrgColumn={true} 
+            hasActiveFilters={hasActiveFilters}
+          />
+        </div>
+      )}
+
+      {/* Other Tickets Table */}
+      <div className="space-y-2">
+        {priorityTickets.length > 0 && (
+          <h3 className="font-semibold text-lg text-slate-900">All Tickets</h3>
+        )}
+        <TicketTable 
+          tickets={otherTickets} 
+          showOrgColumn={true}
+          hasActiveFilters={hasActiveFilters}
+        />
       </div>
+    </div>
+  )
+}
+
+function TicketTable({ 
+  tickets, 
+  showOrgColumn,
+  hasActiveFilters 
+}: { 
+  tickets: Ticket[]
+  showOrgColumn: boolean
+  hasActiveFilters: boolean
+}) {
+  return (
+    <div className="rounded-md border bg-white shadow-sm overflow-hidden">
+      <Table>
+        <TableHeader className="bg-slate-50">
+          <TableRow>
+            <TableHead className="font-semibold w-[100px]">ID</TableHead>
+            <TableHead className="font-semibold">Subject</TableHead>
+            {showOrgColumn && (
+              <TableHead className="font-semibold">Client</TableHead>
+            )}
+            <TableHead className="font-semibold">Status</TableHead>
+            <TableHead className="font-semibold">Priority</TableHead>
+            <TableHead className="font-semibold">SLA Status</TableHead>
+            <TableHead className="font-semibold text-right">Created</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {tickets.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={showOrgColumn ? 7 : 6} className="h-32 text-center text-slate-500 italic">
+                {hasActiveFilters ? 'No tickets match your filters.' : 'No tickets found.'}
+              </TableCell>
+            </TableRow>
+          ) : (
+            tickets.map((ticket) => {
+              const slaStatus = getCombinedSLAStatus(
+                ticket.created_at,
+                ticket.first_response_due_at ?? null,
+                ticket.first_response_at,
+                ticket.sla_due_at,
+                ticket.resolved_at,
+                ticket.status
+              )
+              return (
+                <TableRow
+                  key={ticket.id}
+                  className={cn('transition-colors', getSLARowColor(slaStatus.status))}
+                >
+                  <TableCell className="font-mono text-xs text-slate-500 uppercase">
+                    #{ticket.ticket_number}
+                  </TableCell>
+                  <TableCell className="font-medium">
+                    <Link
+                      href={`/dashboard/tickets/${ticket.id}`}
+                      className="hover:text-primary transition-colors block"
+                    >
+                      {ticket.subject}
+                      {ticket.organization?.is_priority_client && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="ml-2 inline-flex items-center gap-1 text-xs font-semibold text-amber-600">
+                                <AlertCircle className="h-3 w-3" />
+                                PRIORITY
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Priority client - 50% faster SLA response times</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </Link>
+                  </TableCell>
+                  {showOrgColumn && (
+                    <TableCell className="text-sm text-slate-600">
+                      {ticket.organization?.name || '—'}
+                    </TableCell>
+                  )}
+                  <TableCell>
+                    <StatusBadge status={ticket.status} />
+                  </TableCell>
+                  <TableCell>
+                    <PriorityBadge priority={ticket.priority} />
+                  </TableCell>
+                  <TableCell>
+                    <SLAStatusBadge slaStatus={slaStatus} />
+                  </TableCell>
+                  <TableCell className="text-right text-slate-500 text-sm whitespace-nowrap">
+                    {ticket.created_at ? formatDate(ticket.created_at) : '—'}
+                  </TableCell>
+                </TableRow>
+              )
+            })
+          )}
+        </TableBody>
+      </Table>
     </div>
   )
 }

@@ -282,11 +282,12 @@ function main() {
   log('   Supabase Migration Runner for Vercel', 'blue')
   log('═══════════════════════════════════════════════', 'blue')
   
-  // Only run migrations in production
-  if (process.env.VERCEL_ENV !== 'production') {
+  // Only run migrations in production unless forced
+  if (process.env.VERCEL_ENV !== 'production' && process.env.FORCE_MIGRATION !== 'true') {
     log('\n⚠️  Not in production environment, skipping migrations', 'yellow')
     log(`   Current environment: ${process.env.VERCEL_ENV || 'local'}`, 'yellow')
     log('   Migrations only run on production deployments', 'yellow')
+    log('   To force migrations locally, run: FORCE_MIGRATION=true SUPABASE_DB_PASSWORD=... npm run migrate', 'yellow')
     process.exit(0)
   }
   

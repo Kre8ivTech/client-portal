@@ -112,8 +112,8 @@ export function UserTable({ currentUserRole = 'client', isAccountManager = false
   }, [page, roleFilter]);
 
   useEffect(() => {
-    // Fetch organizations for super admins so they can assign new users to an org
-    if (currentUserRole === 'super_admin') {
+    // Fetch organizations for super admins and partners so they can assign new users to an org
+    if (currentUserRole === 'super_admin' || currentUserRole === 'partner' || currentUserRole === 'partner_staff' || currentUserRole === 'staff') {
       fetchOrganizations();
     } else {
       setOrganizations([]);
@@ -398,6 +398,8 @@ export function UserTable({ currentUserRole = 'client', isAccountManager = false
           open={!!editingUser} 
           onOpenChange={(open) => !open && setEditingUser(null)} 
           onSuccess={fetchUsers}
+          organizations={organizations}
+          currentUserRole={currentUserRole}
         />
       )}
       

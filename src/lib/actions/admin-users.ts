@@ -54,6 +54,22 @@ export async function createUser(input: CreateUserInput) {
     }
   }
 
+  // Validate organization assignment for non-super admins
+  if (data.organization_id && currentUserData.role !== 'super_admin') {
+    if (data.organization_id !== currentUserData.organization_id) {
+      // Check if it's a child organization
+      const { data: targetOrg } = await (supabase as any)
+        .from('organizations')
+        .select('parent_org_id')
+        .eq('id', data.organization_id)
+        .single()
+      
+      if (!targetOrg || targetOrg.parent_org_id !== currentUserData.organization_id) {
+        return { success: false, error: 'You can only assign users to your organization or its client organizations' }
+      }
+    }
+  }
+
   // If creating a client, ensure organization_id is set
   if (data.role === 'client' && !data.organization_id) {
     // For non-super_admin, use their own organization
@@ -254,7 +270,14 @@ export async function updateUser(
     // Get target user (use admin client to bypass RLS safely)
     const { data: targetUserData, error: targetUserError } = await (supabaseAdmin as any)
       .from('users')
-      .select('id, email, organization_id')
+      .select(`
+        id, 
+        email, 
+        organization_id,
+        organizations:organization_id (
+          parent_org_id
+        )
+      `)
       .eq('id', userId)
       .single()
 
@@ -262,12 +285,20 @@ export async function updateUser(
       return { success: false, error: 'User not found' }
     }
 
-    const targetUser = targetUserData as { id: string; email: string; organization_id: string | null }
+    const targetUser = targetUserData as { 
+      id: string; 
+      email: string; 
+      organization_id: string | null;
+      organizations: { parent_org_id: string | null } | null 
+    }
 
     // Enforce organization scoping for non-super admins
     if (adminProfile.role !== 'super_admin') {
-      if (targetUser.organization_id !== adminProfile.organization_id) {
-        return { success: false, error: 'Forbidden - Can only manage users in your organization' }
+      const isSameOrg = targetUser.organization_id === adminProfile.organization_id;
+      const isChildOrg = targetUser.organizations?.parent_org_id === adminProfile.organization_id;
+      
+      if (!isSameOrg && !isChildOrg) {
+        return { success: false, error: 'Forbidden - Can only manage users in your organization or client organizations' }
       }
     }
 

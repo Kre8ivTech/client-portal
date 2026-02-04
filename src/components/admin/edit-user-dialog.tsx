@@ -15,9 +15,18 @@ interface EditUserDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
+  organizations?: { id: string; name: string }[]
+  currentUserRole?: string
 }
 
-export function EditUserDialog({ user, open, onOpenChange, onSuccess }: EditUserDialogProps) {
+export function EditUserDialog({ 
+  user, 
+  open, 
+  onOpenChange, 
+  onSuccess,
+  organizations = [],
+  currentUserRole = 'client'
+}: EditUserDialogProps) {
   const [loading, setLoading] = useState(false)
   const { toast } = useToast()
   
@@ -25,6 +34,7 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess }: EditUser
   const [name, setName] = useState(user.user_profiles[0]?.name || '')
   const [email, setEmail] = useState(user.email || '')
   const [role, setRole] = useState(user.role || 'client')
+  const [organizationId, setOrganizationId] = useState<string>(user.organization_id || '')
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,7 +44,8 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess }: EditUser
       const result = await updateUser(user.id, {
         name,
         email,
-        role
+        role,
+        organization_id: organizationId || null
       })
 
       if (result.success) {
@@ -50,6 +61,13 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess }: EditUser
       setLoading(false)
     }
   }
+
+  // Determine if we should show organization dropdown
+  // 1. We must have organizations to show
+  // 2. The selected role must be one that typically belongs to an organization (client, partner_staff)
+  // 3. Or if super_admin is editing, they might want to reassign anyone (though usually partners are assigned to their own org automatically)
+  // Let's stick to the AddUserDialog logic: only for client or partner_staff
+  const showOrgSelect = (role === 'client' || role === 'partner_staff') && organizations.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,6 +118,25 @@ export function EditUserDialog({ user, open, onOpenChange, onSuccess }: EditUser
               </SelectContent>
             </Select>
           </div>
+
+          {showOrgSelect && (
+            <div className="space-y-2">
+              <Label htmlFor="organization">Organization</Label>
+              <Select value={organizationId} onValueChange={setOrganizationId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Organization</SelectItem>
+                  {organizations.map((org) => (
+                    <SelectItem key={org.id} value={org.id}>
+                      {org.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>

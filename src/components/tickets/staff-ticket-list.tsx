@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { format, differenceInHours, isPast } from 'date-fns'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Search, X, Filter, Clock, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { PriorityIndicator, PriorityDot } from './priority-indicator'
@@ -90,6 +91,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 export function StaffTicketList({ initialTickets }: StaffTicketListProps) {
   const supabase = createClient()
+  const router = useRouter()
   useRealtimeTickets()
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -398,8 +400,9 @@ export function StaffTicketList({ initialTickets }: StaffTicketListProps) {
                 return (
                   <TableRow
                     key={ticket.id}
+                    onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
                     className={cn(
-                      'transition-colors',
+                      'transition-colors cursor-pointer',
                       isActive && isUrgentPriority(ticket.priority) && priorityConfig.colors.row,
                       isActive && isUrgentPriority(ticket.priority) && priorityConfig.colors.rowHover,
                       !isActive && 'opacity-60',

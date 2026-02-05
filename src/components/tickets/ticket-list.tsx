@@ -356,6 +356,14 @@ function TicketTable({
                 <TableRow
                   key={ticket.id}
                   onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      router.push(`/dashboard/tickets/${ticket.id}`)
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
                   className={cn('transition-colors cursor-pointer', getSLARowColor(slaStatus.status))}
                 >
                   <TableCell className="font-mono text-xs text-slate-500 uppercase">

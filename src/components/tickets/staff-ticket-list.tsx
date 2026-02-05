@@ -401,6 +401,14 @@ export function StaffTicketList({ initialTickets }: StaffTicketListProps) {
                   <TableRow
                     key={ticket.id}
                     onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        router.push(`/dashboard/tickets/${ticket.id}`)
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
                     className={cn(
                       'transition-colors cursor-pointer',
                       isActive && isUrgentPriority(ticket.priority) && priorityConfig.colors.row,

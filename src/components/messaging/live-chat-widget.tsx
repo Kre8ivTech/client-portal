@@ -216,7 +216,3 @@ export function LiveChatWidget({
     </div>
   )
 }
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ')
-}

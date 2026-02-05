@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select'
 import { format, differenceInHours, isPast } from 'date-fns'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Search, X, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Database } from '@/types/database'
@@ -316,6 +317,8 @@ function TicketTable({
   showOrgColumn: boolean
   hasActiveFilters: boolean
 }) {
+  const router = useRouter()
+
   return (
     <div className="rounded-md border bg-white shadow-sm overflow-hidden">
       <Table>
@@ -352,16 +355,22 @@ function TicketTable({
               return (
                 <TableRow
                   key={ticket.id}
-                  className={cn('transition-colors', getSLARowColor(slaStatus.status))}
+                  onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      router.push(`/dashboard/tickets/${ticket.id}`)
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  className={cn('transition-colors cursor-pointer', getSLARowColor(slaStatus.status))}
                 >
                   <TableCell className="font-mono text-xs text-slate-500 uppercase">
                     #{ticket.ticket_number}
                   </TableCell>
                   <TableCell className="font-medium">
-                    <Link
-                      href={`/dashboard/tickets/${ticket.id}`}
-                      className="hover:text-primary transition-colors block"
-                    >
+                    <span className="hover:text-primary transition-colors block">
                       {ticket.subject}
                       {ticket.organization?.is_priority_client && (
                         <TooltipProvider>
@@ -378,7 +387,7 @@ function TicketTable({
                           </Tooltip>
                         </TooltipProvider>
                       )}
-                    </Link>
+                    </span>
                   </TableCell>
                   {showOrgColumn && (
                     <TableCell className="text-sm text-slate-600">

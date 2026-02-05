@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { CalendarIntegrations } from "@/components/integrations/calendar-integrations";
 import { StripeSettingsForm } from "@/components/integrations/stripe-settings-form";
+import { AIProvidersForm } from "@/components/integrations/ai-providers-form";
 import { ZapierIntegration } from "@/components/integrations/zapier-integration";
 import { getAppSettings } from "@/lib/actions/app-settings";
 
@@ -71,112 +72,15 @@ export default async function IntegrationsPage() {
         <StripeSettingsForm initialSettings={appSettings} />
 
         {/* AI Providers */}
-        <Card className="border-border shadow-sm overflow-hidden">
-          <CardHeader className="bg-muted/30 border-b">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-purple-500/10 rounded-lg">
-                  <Bot className="w-5 h-5 text-purple-500" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg font-semibold">AI Providers</CardTitle>
-                  <CardDescription>Enable AI-powered features like chat assistance and content generation</CardDescription>
-                </div>
-              </div>
-              <ConnectionStatus connected={anthropicConfigured || openaiConfigured || openrouterConfigured} />
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-6">
-            {/* Anthropic */}
-            <div className="space-y-2 pb-4 border-b">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="anthropic-key" className="flex items-center gap-2">
-                  <span className="font-semibold">Anthropic (Claude)</span>
-                  {anthropicConfigured && <Badge variant="secondary" className="text-xs">Connected</Badge>}
-                </Label>
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  id="anthropic-key"
-                  type="password"
-                  placeholder="sk-ant-..."
-                  defaultValue={anthropicConfigured ? "••••••••••••••••" : ""}
-                  className="font-mono text-sm"
-                />
-                <Button variant="outline" size="sm" className="shrink-0">
-                  {anthropicConfigured ? "Update" : "Save"}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
-                  Get API key <ExternalLink className="w-3 h-3" />
-                </a>
-              </p>
-            </div>
-
-            {/* OpenAI */}
-            <div className="space-y-2 pb-4 border-b">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="openai-key" className="flex items-center gap-2">
-                  <span className="font-semibold">OpenAI (GPT)</span>
-                  {openaiConfigured && <Badge variant="secondary" className="text-xs">Connected</Badge>}
-                </Label>
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  id="openai-key"
-                  type="password"
-                  placeholder="sk-..."
-                  defaultValue={openaiConfigured ? "••••••••••••••••" : ""}
-                  className="font-mono text-sm"
-                />
-                <Button variant="outline" size="sm" className="shrink-0">
-                  {openaiConfigured ? "Update" : "Save"}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
-                  Get API key <ExternalLink className="w-3 h-3" />
-                </a>
-              </p>
-            </div>
-
-            {/* OpenRouter */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="openrouter-key" className="flex items-center gap-2">
-                  <span className="font-semibold">OpenRouter</span>
-                  {openrouterConfigured && <Badge variant="secondary" className="text-xs">Connected</Badge>}
-                </Label>
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  id="openrouter-key"
-                  type="password"
-                  placeholder="sk-or-..."
-                  defaultValue={openrouterConfigured ? "••••••••••••••••" : ""}
-                  className="font-mono text-sm"
-                />
-                <Button variant="outline" size="sm" className="shrink-0">
-                  {openrouterConfigured ? "Update" : "Save"}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
-                  Get API key <ExternalLink className="w-3 h-3" />
-                </a>
-                {" "}- Access multiple AI models through one API
-              </p>
-            </div>
-
-            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex gap-2">
-              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700">
-                API keys are stored securely as environment variables or in application settings. Contact your system administrator for production updates.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        <AIProvidersForm
+          initialSettings={{
+            ai_provider_primary: appSettings.ai_provider_primary,
+            openrouter_api_key: appSettings.openrouter_api_key,
+            anthropic_api_key: appSettings.anthropic_api_key,
+            openai_api_key: appSettings.openai_api_key,
+            gemini_api_key: appSettings.gemini_api_key,
+          }}
+        />
 
         {/* Email Integration */}
         <Card className="border-border shadow-sm overflow-hidden">

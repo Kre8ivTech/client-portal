@@ -282,12 +282,14 @@ export default async function DashboardPage() {
           title="Open Tickets"
           value={String(openTicketsCount)}
           description={openTicketsCount > 0 ? "Awaiting response" : "All caught up"}
+          link="/dashboard/tickets"
         />
         <StatsCard
           icon={FolderKanban}
           title="Active Projects"
           value="—"
           description="On track"
+          link="/dashboard/projects"
         />
         
         {/* Show Current Plan card only for clients and partners */}
@@ -297,6 +299,7 @@ export default async function DashboardPage() {
             title="Current Plan"
             value={planName ?? "—"}
             description={supportHoursRemaining ?? "No active plan"}
+            link="/dashboard/plans"
           />
         )}
         

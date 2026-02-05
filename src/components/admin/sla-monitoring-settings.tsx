@@ -53,35 +53,40 @@ export function SLAMonitoringSettings() {
   const [hasChanges, setHasChanges] = useState(false)
   const [isCustomSchedule, setIsCustomSchedule] = useState(false)
 
-  // Fetch current settings
+  const defaultSettings: SLAMonitoringSettings = {
+    enabled: true,
+    cron_schedule: '0 8 * * *',
+    cron_enabled: true,
+    client_monitoring_enabled: true,
+    client_check_interval_minutes: 5,
+    notification_cooldown_hours: 4,
+    warning_threshold_percent: 25,
+    critical_threshold_hours: 2,
+    breach_immediate_notify: true,
+    auto_escalate_breaches: false,
+    escalation_delay_hours: 1,
+  }
+
+  // Fetch current settings from feature_settings table
   const { data: settings, isLoading } = useQuery({
     queryKey: ['sla-monitoring-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('app_settings')
+        .from('feature_settings')
         .select('value')
         .eq('key', 'sla_monitoring')
-        .single()
+        .maybeSingle()
 
-      if (error) throw error
+      // Return default settings if no row found
+      if (error || !data) {
+        return defaultSettings
+      }
       return data.value as SLAMonitoringSettings
     },
   })
 
   const [localSettings, setLocalSettings] = useState<SLAMonitoringSettings>(
-    settings || {
-      enabled: true,
-      cron_schedule: '0 8 * * *',
-      cron_enabled: true,
-      client_monitoring_enabled: true,
-      client_check_interval_minutes: 5,
-      notification_cooldown_hours: 4,
-      warning_threshold_percent: 25,
-      critical_threshold_hours: 2,
-      breach_immediate_notify: true,
-      auto_escalate_breaches: false,
-      escalation_delay_hours: 1,
-    }
+    settings || defaultSettings
   )
 
   // Update local settings when fetched settings change
@@ -92,13 +97,21 @@ export function SLAMonitoringSettings() {
     }
   }
 
-  // Save settings mutation
+  // Save settings mutation using upsert to feature_settings table
   const saveMutation = useMutation({
     mutationFn: async (newSettings: SLAMonitoringSettings) => {
       const { error } = await supabase
-        .from('app_settings')
-        .update({ value: newSettings })
-        .eq('key', 'sla_monitoring')
+        .from('feature_settings')
+        .upsert(
+          {
+            key: 'sla_monitoring',
+            value: newSettings,
+            description: 'SLA monitoring and cron job configuration',
+            category: 'monitoring',
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'key' }
+        )
 
       if (error) throw error
     },

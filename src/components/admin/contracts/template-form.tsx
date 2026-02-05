@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useChat } from '@ai-sdk/react'
+import { DefaultChatTransport, UIMessage } from 'ai'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,9 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { Loader2, AlertCircle, FileCode, Plus, Trash2, Variable, Eye, EyeOff } from 'lucide-react'
+import { Loader2, AlertCircle, FileCode, Plus, Trash2, Variable, Eye, EyeOff, Sparkles, Send, Copy, Check, Bot, User, X, ChevronRight, ChevronLeft } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { extractTemplateVariables } from '@/lib/validators/contract-template'
+import { cn } from '@/lib/utils'
+import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface TemplateVariable {
   name: string
@@ -41,11 +45,24 @@ const variableTypes = [
   { value: 'url', label: 'URL' },
 ]
 
+// Helper to extract text from UIMessage parts
+function getUIMessageText(msg: UIMessage): string {
+  if (!msg.parts || !Array.isArray(msg.parts)) return ''
+  return msg.parts
+    .filter((p): p is { type: 'text'; text: string } => p.type === 'text')
+    .map((p) => p.text)
+    .join('')
+}
+
 export function TemplateForm() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
+  const [showAiAssistant, setShowAiAssistant] = useState(true)
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
+  const [chatInput, setChatInput] = useState('')
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   // Form State
   const [name, setName] = useState('')
@@ -53,6 +70,53 @@ export function TemplateForm() {
   const [contractType, setContractType] = useState('')
   const [templateContent, setTemplateContent] = useState('')
   const [variables, setVariables] = useState<TemplateVariable[]>([])
+
+  // AI Chat
+  const { messages, sendMessage, status, setMessages } = useChat({
+    transport: new DefaultChatTransport({
+      api: '/api/ai/contracts/generate',
+      prepareSendMessagesRequest: ({ messages }) => ({
+        body: {
+          messages,
+          contractType,
+          templateName: name,
+        },
+      }),
+    }),
+  })
+
+  const isStreaming = status === 'streaming' || status === 'submitted'
+
+  // Auto scroll to bottom on new messages
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]')
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight
+      }
+    }
+  }, [messages])
+
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || isStreaming) return
+    const message = chatInput
+    setChatInput('')
+    await sendMessage({ text: message })
+  }
+
+  const copyToContent = (text: string, messageId: string) => {
+    if (templateContent) {
+      setTemplateContent(templateContent + '\n\n' + text)
+    } else {
+      setTemplateContent(text)
+    }
+    setCopiedMessageId(messageId)
+    setTimeout(() => setCopiedMessageId(null), 2000)
+  }
+
+  const replaceContent = (text: string) => {
+    setTemplateContent(text)
+  }
 
   // Extract variables from content
   const detectedVariables = extractTemplateVariables(templateContent)
@@ -140,15 +204,26 @@ export function TemplateForm() {
     return preview
   }
 
+  // Quick prompts for common contract generation tasks
+  const quickPrompts = [
+    { label: 'Generate full template', prompt: `Generate a complete ${contractType || 'service agreement'} contract template with all standard sections.` },
+    { label: 'Add payment terms', prompt: 'Add a comprehensive payment terms section with late fees and payment methods.' },
+    { label: 'Add confidentiality clause', prompt: 'Generate a standard confidentiality/NDA clause.' },
+    { label: 'Add termination clause', prompt: 'Add a termination clause with notice period and conditions.' },
+    { label: 'Add liability clause', prompt: 'Generate a limitation of liability clause.' },
+  ]
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pb-20">
-      {error && (
-        <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+    <div className="flex gap-6">
+      {/* Main Form */}
+      <form onSubmit={handleSubmit} className={cn("space-y-6 pb-20 transition-all duration-300", showAiAssistant ? "flex-1" : "w-full")}>
+        {error && (
+          <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
       {/* Basic Information */}
       <Card className="border-slate-200 shadow-sm">
@@ -406,30 +481,233 @@ The Client agrees to pay {{payment_amount}} for the services described above.
       </Card>
 
       {/* Submit */}
-      <div className="flex items-center justify-end gap-4 pt-4">
+      <div className="flex items-center justify-between gap-4 pt-4">
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.back()}
-          disabled={loading}
+          onClick={() => setShowAiAssistant(!showAiAssistant)}
+          className="gap-2"
         >
-          Cancel
+          <Sparkles className="h-4 w-4" />
+          {showAiAssistant ? 'Hide' : 'Show'} AI Assistant
         </Button>
-        <Button
-          type="submit"
-          disabled={loading || !name || !description || !contractType || !templateContent}
-          className="bg-primary hover:bg-primary/90 px-8"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creating...
-            </>
-          ) : (
-            'Create Template'
-          )}
-        </Button>
+        <div className="flex items-center gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={loading || !name || !description || !contractType || !templateContent}
+            className="bg-primary hover:bg-primary/90 px-8"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              'Create Template'
+            )}
+          </Button>
+        </div>
       </div>
-    </form>
+      </form>
+
+      {/* AI Assistant Panel */}
+      {showAiAssistant && (
+        <div className="w-[400px] shrink-0">
+          <Card className="border-slate-200 shadow-sm sticky top-6 h-[calc(100vh-120px)] flex flex-col">
+            <CardHeader className="pb-3 border-b shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">AI Contract Assistant</CardTitle>
+                    <CardDescription className="text-xs">Generate contract content with AI</CardDescription>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAiAssistant(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+
+            {/* Quick Prompts */}
+            <div className="p-3 border-b bg-slate-50/50 shrink-0">
+              <p className="text-xs font-medium text-slate-500 mb-2">Quick actions:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {quickPrompts.map((qp, idx) => (
+                  <Button
+                    key={idx}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    disabled={isStreaming}
+                    onClick={() => {
+                      setChatInput('')
+                      sendMessage({ text: qp.prompt })
+                    }}
+                  >
+                    {qp.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Messages */}
+            <ScrollArea className="flex-1 p-3" ref={scrollAreaRef}>
+              {messages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-4">
+                  <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                    <Bot className="h-6 w-6 text-slate-400" />
+                  </div>
+                  <p className="text-sm font-medium text-slate-600">Start a conversation</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Ask me to generate contract content, clauses, or help with legal language.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {messages.map((message) => {
+                    const text = getUIMessageText(message)
+                    return (
+                      <div
+                        key={message.id}
+                        className={cn(
+                          "flex gap-2",
+                          message.role === 'user' ? "justify-end" : "justify-start"
+                        )}
+                      >
+                        {message.role === 'assistant' && (
+                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
+                            <Bot className="h-3.5 w-3.5 text-primary" />
+                          </div>
+                        )}
+                        <div
+                          className={cn(
+                            "max-w-[85%] rounded-lg px-3 py-2 text-sm",
+                            message.role === 'user'
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-slate-100 text-slate-800"
+                          )}
+                        >
+                          <div className="whitespace-pre-wrap break-words">{text}</div>
+                          {message.role === 'assistant' && text && (
+                            <div className="flex items-center gap-1 mt-2 pt-2 border-t border-slate-200">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-xs gap-1 text-slate-500 hover:text-slate-700"
+                                onClick={() => copyToContent(text, message.id)}
+                              >
+                                {copiedMessageId === message.id ? (
+                                  <>
+                                    <Check className="h-3 w-3" />
+                                    Added
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="h-3 w-3" />
+                                    Append
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 text-xs gap-1 text-slate-500 hover:text-slate-700"
+                                onClick={() => replaceContent(text)}
+                              >
+                                <Copy className="h-3 w-3" />
+                                Replace
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        {message.role === 'user' && (
+                          <div className="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center shrink-0 mt-1">
+                            <User className="h-3.5 w-3.5 text-slate-600" />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                  {isStreaming && messages.length > 0 && !getUIMessageText(messages[messages.length - 1]) && (
+                    <div className="flex gap-2">
+                      <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Bot className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="bg-slate-100 rounded-lg px-3 py-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </ScrollArea>
+
+            {/* Input */}
+            <div className="p-3 border-t shrink-0">
+              <div className="flex gap-2">
+                <Textarea
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Ask AI to generate content..."
+                  className="min-h-[80px] resize-none text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSendMessage()
+                    }
+                  }}
+                />
+              </div>
+              <div className="flex justify-between items-center mt-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-slate-400"
+                  onClick={() => setMessages([])}
+                  disabled={messages.length === 0 || isStreaming}
+                >
+                  Clear chat
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSendMessage}
+                  disabled={!chatInput.trim() || isStreaming}
+                  className="gap-1"
+                >
+                  {isStreaming ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  Send
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
   )
 }

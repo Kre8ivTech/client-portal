@@ -27,7 +27,7 @@ export default async function NewContractTemplatePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 px-4 py-8">
+    <div className="w-full space-y-6 px-6 py-8">
       <Link 
         href="/dashboard/admin/contracts/templates" 
         className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors mb-4 w-fit"

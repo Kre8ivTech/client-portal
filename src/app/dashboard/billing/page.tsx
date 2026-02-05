@@ -133,8 +133,8 @@ export default async function BillingPage() {
                 started with Support and Dev pools.
               </p>
             </div>
-            <Button size="lg" className="px-8">
-              View Available Plans
+            <Button size="lg" className="px-8" asChild>
+              <Link href="/dashboard/plans">View Available Plans</Link>
             </Button>
           </CardContent>
         </Card>
@@ -267,9 +267,11 @@ export default async function BillingPage() {
                   Upgrade your plan or purchase additional hour packs to meet your needs.
                 </p>
               </div>
-              <Button className="bg-indigo-600 hover:bg-indigo-700 gap-2">
-                <ArrowUpRight className="h-4 w-4" />
-                Upgrade Plan
+              <Button className="bg-indigo-600 hover:bg-indigo-700 gap-2" asChild>
+                <Link href="/dashboard/plans">
+                  <ArrowUpRight className="h-4 w-4" />
+                  Upgrade Plan
+                </Link>
               </Button>
             </CardContent>
           </Card>

@@ -91,9 +91,13 @@ export async function POST(
     });
 
     // Send password reset email
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const { error: resetError } = await adminClient.auth.admin.generateLink({
       type: 'recovery',
       email: targetUser.email,
+      options: {
+        redirectTo: `${appUrl}/auth/callback?next=/reset-password`,
+      },
     });
 
     if (resetError) {

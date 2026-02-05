@@ -148,9 +148,13 @@ export async function createUser(input: CreateUserInput) {
 
     // Send invite email if requested
     if (data.send_invite_email) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
       const { error: inviteError } = await supabaseAdmin.auth.admin.generateLink({
         type: 'invite',
         email: data.email,
+        options: {
+          redirectTo: `${appUrl}/auth/callback?next=/reset-password`,
+        },
       })
 
       if (inviteError) {

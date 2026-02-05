@@ -370,10 +370,7 @@ function TicketTable({
                     #{ticket.ticket_number}
                   </TableCell>
                   <TableCell className="font-medium">
-                    <Link
-                      href={`/dashboard/tickets/${ticket.id}`}
-                      className="hover:text-primary transition-colors block"
-                    >
+                    <span className="hover:text-primary transition-colors block">
                       {ticket.subject}
                       {ticket.organization?.is_priority_client && (
                         <TooltipProvider>
@@ -390,7 +387,7 @@ function TicketTable({
                           </Tooltip>
                         </TooltipProvider>
                       )}
-                    </Link>
+                    </span>
                   </TableCell>
                   {showOrgColumn && (
                     <TableCell className="text-sm text-slate-600">

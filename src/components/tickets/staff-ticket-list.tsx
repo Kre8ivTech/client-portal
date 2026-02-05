@@ -424,12 +424,9 @@ export function StaffTicketList({ initialTickets }: StaffTicketListProps) {
                       #{ticket.ticket_number}
                     </TableCell>
                     <TableCell className="font-medium max-w-[300px]">
-                      <Link
-                        href={`/dashboard/tickets/${ticket.id}`}
-                        className="hover:text-primary transition-colors block truncate"
-                      >
+                      <span className="hover:text-primary transition-colors block truncate">
                         {ticket.subject}
-                      </Link>
+                      </span>
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={ticket.status} />

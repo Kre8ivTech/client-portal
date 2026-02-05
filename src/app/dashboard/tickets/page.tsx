@@ -13,10 +13,10 @@ export default async function TicketsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Fetch tickets - simplified query without join to avoid relationship errors
+  // Fetch tickets with organization data
   const { data: tickets, error } = await (supabase as any)
     .from("tickets")
-    .select("*")
+    .select("*, organization:organizations(id, name, is_priority_client)")
     .order("created_at", { ascending: false });
 
   // Fetch organizations for filter (only for staff/admins)

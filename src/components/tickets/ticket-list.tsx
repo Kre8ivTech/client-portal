@@ -443,7 +443,22 @@ function SLAStatusBadge({ slaStatus }: { slaStatus: ReturnType<typeof getCombine
 
 function formatDate(date: string) {
   try {
-    return format(new Date(date), 'MMM d, yyyy')
+    const dateObj = new Date(date)
+    // Format with time in user's local timezone
+    // Using toLocaleString for automatic timezone handling with fallback to main timezone
+    const formattedDate = dateObj.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
+    })
+    const formattedTime = dateObj.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/New_York',
+    })
+    return `${formattedDate}, ${formattedTime}`
   } catch {
     return 'Pending'
   }

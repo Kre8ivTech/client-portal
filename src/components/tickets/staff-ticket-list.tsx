@@ -402,7 +402,7 @@ export function StaffTicketList({ initialTickets }: StaffTicketListProps) {
                     key={ticket.id}
                     onClick={() => router.push(`/dashboard/tickets/${ticket.id}`)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
+                      if (e.key === 'Enter' || e.key === ' ' || e.key === 'Space') {
                         e.preventDefault()
                         router.push(`/dashboard/tickets/${ticket.id}`)
                       }

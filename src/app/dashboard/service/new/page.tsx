@@ -17,7 +17,7 @@ export default async function NewServiceRequestPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('organization_id')
+    .select('organization_id, role')
     .eq('id', user.id)
     .single()
 
@@ -25,18 +25,31 @@ export default async function NewServiceRequestPage() {
     return <div>Profile not found</div>
   }
 
-  const p = profile as { organization_id: string | null }
-  if (!p.organization_id) {
+  const p = profile as { organization_id: string | null; role: string }
+  const isStaffOrAdmin = ['super_admin', 'staff'].includes(p.role)
+
+  // For regular clients, require organization
+  if (!isStaffOrAdmin && !p.organization_id) {
     return <div>No organization associated with your account</div>
   }
 
-  // Fetch active services - RLS automatically handles org/parent org access
+  // Fetch active services - RLS automatically handles access
   const { data: services } = await (supabase as any)
     .from('services')
     .select('*')
     .eq('is_active', true)
     .order('display_order', { ascending: true })
     .order('name', { ascending: true })
+
+  // Fetch organizations for staff/admin to assign
+  let organizations: { id: string; name: string }[] = []
+  if (isStaffOrAdmin) {
+    const { data: orgs } = await supabase
+      .from('organizations')
+      .select('id, name')
+      .order('name', { ascending: true })
+    organizations = orgs || []
+  }
 
   return (
     <div className="w-full space-y-6">
@@ -51,12 +64,19 @@ export default async function NewServiceRequestPage() {
         </Link>
         <h1 className="text-3xl font-bold tracking-tight">New Service Request</h1>
         <p className="text-muted-foreground mt-1">
-          Request a service from our catalog. Your request will be reviewed and we&apos;ll follow up.
+          {isStaffOrAdmin
+            ? 'Create a service request for a client organization.'
+            : "Request a service from our catalog. Your request will be reviewed and we'll follow up."}
         </p>
       </div>
 
       {/* Form */}
-      <ServiceRequestForm services={services || []} />
+      <ServiceRequestForm 
+        services={services || []} 
+        organizations={organizations}
+        isStaffOrAdmin={isStaffOrAdmin}
+        defaultOrganizationId={p.organization_id}
+      />
     </div>
   )
 }

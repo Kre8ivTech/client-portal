@@ -23,15 +23,31 @@ import type { Database } from '@/types/database'
 
 type Service = Database['public']['Tables']['services']['Row']
 
-interface ServiceRequestFormProps {
-  services: Service[]
+interface Organization {
+  id: string
+  name: string
 }
 
-export function ServiceRequestForm({ services }: ServiceRequestFormProps) {
+interface ServiceRequestFormProps {
+  services: Service[]
+  organizations?: Organization[]
+  isStaffOrAdmin?: boolean
+  defaultOrganizationId?: string | null
+}
+
+export function ServiceRequestForm({ 
+  services, 
+  organizations = [], 
+  isStaffOrAdmin = false,
+  defaultOrganizationId 
+}: ServiceRequestFormProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null)
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(
+    defaultOrganizationId || null
+  )
 
   const selectedService = services.find((s) => s.id === selectedServiceId)
 
@@ -57,6 +73,11 @@ export function ServiceRequestForm({ services }: ServiceRequestFormProps) {
       return
     }
 
+    if (isStaffOrAdmin && !selectedOrganizationId) {
+      setError('Please select an organization to assign this request to')
+      return
+    }
+
     setIsSubmitting(true)
     setError(null)
 
@@ -67,6 +88,7 @@ export function ServiceRequestForm({ services }: ServiceRequestFormProps) {
         body: JSON.stringify({
           ...data,
           service_id: selectedServiceId,
+          ...(isStaffOrAdmin && selectedOrganizationId ? { organization_id: selectedOrganizationId } : {}),
         }),
       })
 
@@ -129,6 +151,33 @@ export function ServiceRequestForm({ services }: ServiceRequestFormProps) {
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
+      )}
+
+      {/* Organization Selection - Staff/Admin only */}
+      {isStaffOrAdmin && organizations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Assign to Organization</CardTitle>
+            <CardDescription>Select the client organization for this service request</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Select
+              value={selectedOrganizationId || ''}
+              onValueChange={(value) => setSelectedOrganizationId(value)}
+            >
+              <SelectTrigger className="w-full md:w-[400px]">
+                <SelectValue placeholder="Select an organization..." />
+              </SelectTrigger>
+              <SelectContent>
+                {organizations.map((org) => (
+                  <SelectItem key={org.id} value={org.id}>
+                    {org.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
       )}
 
       {/* Service Selection */}

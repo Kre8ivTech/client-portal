@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { serviceSchema } from '@/lib/validators/service'
+import { updateStripeProduct, createStripeProduct, archiveStripeProduct } from '@/lib/stripe'
 
 function isMissingColumnSchemaCacheError(message: string | undefined, column: string) {
   if (!message) return false
@@ -101,6 +102,70 @@ export async function PATCH(
       return NextResponse.json({ error: 'Service not found' }, { status: 404 })
     }
 
+    // Sync to Stripe
+    try {
+      if (service.stripe_product_id) {
+        // Update existing Stripe product
+        const stripeResult = await updateStripeProduct({
+          stripeProductId: service.stripe_product_id,
+          stripePriceId: service.stripe_price_id || undefined,
+          name: service.name,
+          description: service.description || undefined,
+          ...(result.data.base_rate !== undefined || result.data.rate_type !== undefined
+            ? {
+                monthlyFeeInCents: service.base_rate || 0,
+                billingInterval: service.rate_type === 'hourly' ? 'monthly' as const : 'one_time' as const,
+              }
+            : {}),
+          metadata: {
+            service_id: service.id,
+            category: service.category || '',
+            rate_type: service.rate_type || '',
+          },
+        })
+
+        // Update Stripe price ID if it changed
+        if (stripeResult.priceId && stripeResult.priceId !== service.stripe_price_id) {
+          await (supabase as any)
+            .from('services')
+            .update({ stripe_price_id: stripeResult.priceId })
+            .eq('id', service.id)
+          service.stripe_price_id = stripeResult.priceId
+        }
+      } else {
+        // No Stripe product yet - create one
+        const billingInterval = service.rate_type === 'hourly' ? 'monthly' : 'one_time'
+        const stripeResult = await createStripeProduct({
+          name: service.name,
+          description: service.description || undefined,
+          monthlyFeeInCents: service.base_rate || 0,
+          billingInterval,
+          metadata: {
+            service_id: service.id,
+            category: service.category || '',
+            rate_type: service.rate_type || '',
+          },
+        })
+
+        const { data: updatedService } = await (supabase as any)
+          .from('services')
+          .update({
+            stripe_product_id: stripeResult.productId,
+            stripe_price_id: stripeResult.priceId,
+          })
+          .eq('id', service.id)
+          .select()
+          .single()
+
+        if (updatedService) {
+          service = updatedService
+        }
+      }
+    } catch (stripeError) {
+      console.error('Stripe sync error during update:', stripeError)
+      // Don't fail - service was updated, Stripe can be retried
+    }
+
     return NextResponse.json({ data: service }, { status: 200 })
   } catch (err) {
     console.error('Unexpected error:', err)
@@ -154,6 +219,22 @@ export async function DELETE(
         { error: 'Cannot delete service with existing requests. Deactivate it instead.' },
         { status: 400 }
       )
+    }
+
+    // Archive in Stripe before deleting
+    const { data: serviceToDelete } = await (supabase as any)
+      .from('services')
+      .select('stripe_product_id')
+      .eq('id', id)
+      .single()
+
+    if (serviceToDelete?.stripe_product_id) {
+      try {
+        await archiveStripeProduct(serviceToDelete.stripe_product_id)
+      } catch (stripeError) {
+        console.error('Stripe archive error:', stripeError)
+        // Don't block deletion
+      }
     }
 
     // Delete service

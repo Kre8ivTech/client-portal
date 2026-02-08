@@ -12,8 +12,7 @@ import {
   Users,
   CheckCircle2,
   XCircle,
-  ExternalLink,
-  FolderSync,
+  FolderDown,
   Building2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -330,7 +329,7 @@ export function ClientCloudDrives({ awsConfigured }: ClientCloudDrivesProps) {
                                     {isSyncing ? (
                                       <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                                     ) : (
-                                      <FolderSync className="w-3 h-3 mr-1" />
+                                      <FolderDown className="w-3 h-3 mr-1" />
                                     )}
                                     Pull Files
                                   </Button>

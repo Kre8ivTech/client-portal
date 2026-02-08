@@ -8,7 +8,6 @@ import {
   FolderOpen,
   FileIcon,
   ChevronRight,
-  ChevronDown,
   ArrowLeft,
   HardDrive,
   Loader2,
@@ -38,16 +37,6 @@ type FolderData = {
   orgPrefix: string;
   hasMore: boolean;
   nextToken?: string;
-};
-
-type TreeNode = {
-  name: string;
-  prefix: string;
-  relativePath: string;
-  children: TreeNode[] | null; // null means not loaded yet
-  files: FileItem[];
-  isLoading: boolean;
-  isOpen: boolean;
 };
 
 export function FolderTree() {

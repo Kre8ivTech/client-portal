@@ -30,7 +30,7 @@ export async function POST(
 
     // Get user profile to check authorization
     const { data: profile, error: profileError } = await supabase
-      .from("profiles")
+      .from("users")
       .select("role, is_account_manager")
       .eq("id", user.id)
       .single();
@@ -86,7 +86,7 @@ export async function POST(
 
     // Verify user has access to this invoice's organization
     const { data: userOrg, error: userOrgError } = await supabase
-      .from("profiles")
+      .from("users")
       .select("organization_id")
       .eq("id", user.id)
       .single();
@@ -235,9 +235,10 @@ export async function GET(
           recorded_by,
           notes,
           created_at,
-          recorded_by_profile:profiles!invoice_payments_recorded_by_fkey (
-            name,
-            email
+          recorded_by_profile:users!invoice_payments_recorded_by_fkey (
+            id,
+            email,
+            profiles:profiles(name)
           )
         )
       `

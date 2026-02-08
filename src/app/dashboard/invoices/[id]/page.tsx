@@ -70,9 +70,10 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
         payment_source,
         notes,
         created_at,
-        recorded_by_profile:profiles!invoice_payments_recorded_by_fkey(
-          name,
-          email
+        recorded_by_profile:users!invoice_payments_recorded_by_fkey(
+          id,
+          email,
+          profiles:profiles(name)
         )
       )
     `)
@@ -85,7 +86,7 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
 
   // Verify user can access this invoice and get their role
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('users')
     .select('organization_id, role, is_account_manager')
     .eq('id', user.id)
     .single()
@@ -346,7 +347,7 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
 
                       {payment.payment_source === 'manual' && payment.recorded_by_profile && (
                         <p className="text-xs text-muted-foreground">
-                          Recorded by {payment.recorded_by_profile.name || payment.recorded_by_profile.email}
+                          Recorded by {payment.recorded_by_profile.profiles?.name || payment.recorded_by_profile.email}
                         </p>
                       )}
                     </div>

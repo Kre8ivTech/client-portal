@@ -27,8 +27,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Loader2, AlertCircle, CheckCircle2, ChevronLeft } from 'lucide-react'
+import { Loader2, AlertCircle, CheckCircle2, ChevronLeft, CalendarIcon } from 'lucide-react'
+import { format } from 'date-fns'
 import Link from 'next/link'
+import { cn } from '@/lib/cn'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TicketFileUpload, type UploadedFile } from './ticket-file-upload'
 
 type FormValues = CreateTicketInput
@@ -52,6 +56,7 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
       description: '',
       priority: 'medium',
       category: 'technical_support',
+      due_date: null,
     },
   })
 
@@ -78,6 +83,7 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
           category: values.category,
           status: 'new',
           tags: [],
+          client_due_date: values.due_date || null,
         })
         .select()
         .single()
@@ -219,6 +225,46 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
               )}
             />
           </div>
+
+          <FormField
+            control={form.control}
+            name="due_date"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel className="text-slate-700 font-semibold">Requested Due Date</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          'h-12 w-full pl-3 text-left font-normal',
+                          !field.value && 'text-muted-foreground'
+                        )}
+                      >
+                        {field.value ? format(new Date(field.value + 'T00:00:00'), 'PPP') : 'No due date'}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value ? new Date(field.value + 'T00:00:00') : undefined}
+                      onSelect={(date) => {
+                        field.onChange(date ? format(date, 'yyyy-MM-dd') : null)
+                      }}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormDescription>Optional. Let us know if you need this resolved by a specific date.</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <FormField
             control={form.control}

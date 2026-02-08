@@ -61,11 +61,16 @@ interface S3ConfigFormProps {
     updated_at: string;
   } | null;
   envConfigured: boolean;
+  /** Base path for success redirect (default: /dashboard/admin/settings/integrations) */
+  successRedirectBase?: string;
 }
+
+const DEFAULT_SUCCESS_REDIRECT = "/dashboard/admin/settings/integrations";
 
 export function S3ConfigForm({
   existingConfig,
   envConfigured,
+  successRedirectBase = DEFAULT_SUCCESS_REDIRECT,
 }: S3ConfigFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -115,9 +120,7 @@ export function S3ConfigForm({
         throw new Error(result.error || "Failed to save configuration");
       }
 
-      router.push(
-        "/dashboard/admin/settings/integrations?success=s3_config_saved"
-      );
+      router.push(`${successRedirectBase}?success=s3_config_saved`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -141,9 +144,7 @@ export function S3ConfigForm({
         throw new Error(result.error || "Failed to delete configuration");
       }
 
-      router.push(
-        "/dashboard/admin/settings/integrations?success=s3_config_deleted"
-      );
+      router.push(`${successRedirectBase}?success=s3_config_deleted`);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");

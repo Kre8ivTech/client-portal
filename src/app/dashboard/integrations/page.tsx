@@ -13,14 +13,22 @@ import {
   XCircle,
   ExternalLink,
   AlertCircle,
+  HardDrive,
 } from "lucide-react";
 import { CalendarIntegrations } from "@/components/integrations/calendar-integrations";
 import { StripeSettingsForm } from "@/components/integrations/stripe-settings-form";
 import { AIProvidersForm } from "@/components/integrations/ai-providers-form";
 import { ZapierIntegration } from "@/components/integrations/zapier-integration";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { S3ConfigForm } from "@/components/admin/s3-config-form";
 import { getAppSettings } from "@/lib/actions/app-settings";
 
-export default async function IntegrationsPage() {
+interface IntegrationsPageProps {
+  searchParams: Promise<{ success?: string }>;
+}
+
+export default async function IntegrationsPage({ searchParams }: IntegrationsPageProps) {
+  const params = await searchParams;
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
@@ -58,6 +66,42 @@ export default async function IntegrationsPage() {
   const openaiConfigured = !!process.env.OPENAI_API_KEY;
   const openrouterConfigured = !!process.env.OPENROUTER_API_KEY;
 
+  const APP_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
+  const db = supabase as unknown as { from: (table: string) => any };
+  const { data: appSettingsRow } = await db
+    .from("app_settings")
+    .select("aws_s3_config_encrypted")
+    .eq("id", APP_SETTINGS_ID)
+    .single();
+  const hasEncryptedS3 = !!appSettingsRow?.aws_s3_config_encrypted;
+  const { data: s3Config } = await db
+    .from("aws_s3_config")
+    .select(
+      "id, aws_region, access_key_id, bucket_name, kms_key_id, created_at, updated_at"
+    )
+    .is("organization_id", null)
+    .maybeSingle();
+  const s3EnvConfigured =
+    !!process.env.AWS_S3_BUCKET_NAME &&
+    !!process.env.AWS_ACCESS_KEY_ID &&
+    !!process.env.AWS_SECRET_ACCESS_KEY;
+  const s3ExistingConfig = hasEncryptedS3
+    ? {
+        id: "encrypted",
+        aws_region: "us-east-1",
+        access_key_id_masked: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+        bucket_name: "(encrypted)",
+        kms_key_id: null,
+        created_at: "",
+        updated_at: "",
+      }
+    : s3Config
+      ? {
+          ...s3Config,
+          access_key_id_masked: maskKey(s3Config.access_key_id || ""),
+        }
+      : null;
+
   return (
     <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
@@ -67,9 +111,50 @@ export default async function IntegrationsPage() {
         </p>
       </div>
 
+      {params.success === "s3_config_saved" && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            AWS S3 configuration saved successfully.
+          </AlertDescription>
+        </Alert>
+      )}
+      {params.success === "s3_config_deleted" && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            AWS S3 configuration removed. Using environment variables if set.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Stripe Integration */}
         <StripeSettingsForm initialSettings={appSettings} />
+
+        {/* AWS S3 Storage */}
+        <Card className="border-border shadow-sm overflow-hidden">
+          <CardHeader className="bg-muted/30 border-b">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-amber-500/10 rounded-lg">
+                <HardDrive className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-semibold">AWS S3 File Storage</CardTitle>
+                <CardDescription>
+                  Configure S3 for contracts, file sync, and avatars. Credentials are stored encrypted.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <S3ConfigForm
+              existingConfig={s3ExistingConfig}
+              envConfigured={s3EnvConfigured}
+              successRedirectBase="/dashboard/integrations"
+            />
+          </CardContent>
+        </Card>
 
         {/* AI Providers */}
         <AIProvidersForm
@@ -189,5 +274,10 @@ function ConnectionStatus({ connected }: { connected: boolean }) {
       Not Connected
     </Badge>
   );
+}
+
+function maskKey(key: string): string {
+  if (!key || key.length < 8) return "****";
+  return key.slice(0, 4) + "****" + key.slice(-4);
 }
 

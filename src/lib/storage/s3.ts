@@ -402,6 +402,77 @@ export async function headObject(key: string): Promise<{
 }
 
 /**
+ * List "folders" (common prefixes) and objects at a given S3 prefix level.
+ * Uses the Delimiter option to simulate a directory listing.
+ */
+export async function listFolders(params: {
+  prefix: string;
+  maxKeys?: number;
+  continuationToken?: string;
+}): Promise<{
+  folders: Array<{ name: string; prefix: string }>;
+  objects: Array<{
+    key: string;
+    name: string;
+    size: number;
+    lastModified: Date | undefined;
+  }>;
+  nextToken: string | undefined;
+  isTruncated: boolean;
+}> {
+  const config = await resolveConfig();
+  const client = buildClient(config);
+
+  // Ensure prefix ends with /
+  const normalizedPrefix = params.prefix.endsWith("/")
+    ? params.prefix
+    : params.prefix + "/";
+
+  const command = new ListObjectsV2Command({
+    Bucket: config.bucketName,
+    Prefix: normalizedPrefix,
+    Delimiter: "/",
+    MaxKeys: params.maxKeys ?? 200,
+    ContinuationToken: params.continuationToken,
+  });
+
+  const response = await client.send(command);
+
+  const folders = (response.CommonPrefixes ?? []).map((cp) => {
+    const fullPrefix = cp.Prefix ?? "";
+    // Extract just the folder name from the prefix
+    const parts = fullPrefix.replace(/\/$/, "").split("/");
+    return {
+      name: parts[parts.length - 1] || fullPrefix,
+      prefix: fullPrefix,
+    };
+  });
+
+  const objects = (response.Contents ?? [])
+    .filter((obj) => {
+      // Exclude the prefix itself (folder placeholder objects)
+      return obj.Key !== normalizedPrefix;
+    })
+    .map((obj) => {
+      const key = obj.Key ?? "";
+      const parts = key.split("/");
+      return {
+        key,
+        name: parts[parts.length - 1] || key,
+        size: obj.Size ?? 0,
+        lastModified: obj.LastModified,
+      };
+    });
+
+  return {
+    folders,
+    objects,
+    nextToken: response.NextContinuationToken,
+    isTruncated: response.IsTruncated ?? false,
+  };
+}
+
+/**
  * Delete an object from S3 by key (generic version)
  */
 export async function deleteObject(key: string): Promise<void> {

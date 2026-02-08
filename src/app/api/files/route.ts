@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import {
   uploadObject,
-  BUCKET_NAME,
+  getBucketName,
   sanitizeS3KeyPart,
 } from "@/lib/storage/s3";
 import { normalizeS3Prefix } from "@/lib/file-sync/s3-prefix";
@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
         name: file.name,
         mime_type: file.type,
         size_bytes: file.size,
-        s3_bucket: BUCKET_NAME,
+        s3_bucket: (await getBucketName()),
         s3_key: s3Key,
         folder: folder,
         synced_at: new Date().toISOString(),

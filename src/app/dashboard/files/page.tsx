@@ -48,10 +48,20 @@ export default async function FilesPage() {
     );
   }
 
-  const awsConfigured =
+  const awsEnvConfigured =
     !!process.env.AWS_S3_BUCKET_NAME &&
     !!process.env.AWS_ACCESS_KEY_ID &&
     !!process.env.AWS_SECRET_ACCESS_KEY;
+
+  // Also check if S3 is configured via the admin DB settings
+  const db = supabase as unknown as { from: (table: string) => any };
+  const { data: s3DbConfig } = await db
+    .from("aws_s3_config")
+    .select("id")
+    .is("organization_id", null)
+    .maybeSingle();
+
+  const awsConfigured = awsEnvConfigured || !!s3DbConfig;
 
   const isPrivileged =
     profile.role === "super_admin" || profile.role === "staff";

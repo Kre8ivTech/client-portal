@@ -9,35 +9,125 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-/**
- * Server-side encryption configuration.
- * Uses SSE-S3 (AES-256) by default. Set AWS_S3_KMS_KEY_ID env var
- * to enable SSE-KMS with a customer-managed key instead.
- */
-const SSE_ALGORITHM: ServerSideEncryption = process.env.AWS_S3_KMS_KEY_ID
-  ? "aws:kms"
-  : "AES256";
-const SSE_KMS_KEY_ID = process.env.AWS_S3_KMS_KEY_ID || undefined;
+// ---------------------------------------------------------------------------
+// S3 Configuration
+//
+// Credentials are resolved in this order:
+//   1. Database table `aws_s3_config` (global row where organization_id IS NULL)
+//   2. Environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, etc.)
+//
+// The resolved config is cached for the lifetime of the serverless invocation
+// (typically a single request). Call `resetS3Config()` to force a re-read.
+// ---------------------------------------------------------------------------
 
-// Initialize S3 client
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || "us-east-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-  },
-});
+type S3Config = {
+  region: string;
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucketName: string;
+  kmsKeyId: string | undefined;
+};
 
-const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME || "";
+let _cachedConfig: S3Config | null = null;
+let _cachedClient: S3Client | null = null;
 
-function requireS3Configured() {
-  if (!BUCKET_NAME) {
-    throw new Error("AWS_S3_BUCKET_NAME environment variable is not set");
+function envConfig(): S3Config | null {
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  const bucketName = process.env.AWS_S3_BUCKET_NAME;
+
+  if (!accessKeyId || !secretAccessKey || !bucketName) return null;
+
+  return {
+    region: process.env.AWS_REGION || "us-east-1",
+    accessKeyId,
+    secretAccessKey,
+    bucketName,
+    kmsKeyId: process.env.AWS_S3_KMS_KEY_ID || undefined,
+  };
+}
+
+async function dbConfig(): Promise<S3Config | null> {
+  try {
+    // Dynamic import to avoid circular dependency / module-load issues.
+    // supabaseAdmin bypasses RLS, which is necessary because this function
+    // runs outside of a user request context (no auth session).
+    const { supabaseAdmin } = await import("@/lib/supabase/admin");
+    const { data } = await (supabaseAdmin as any)
+      .from("aws_s3_config")
+      .select(
+        "aws_region, access_key_id, secret_access_key, bucket_name, kms_key_id"
+      )
+      .is("organization_id", null)
+      .maybeSingle();
+
+    if (!data) return null;
+
+    return {
+      region: data.aws_region || "us-east-1",
+      accessKeyId: data.access_key_id,
+      secretAccessKey: data.secret_access_key,
+      bucketName: data.bucket_name,
+      kmsKeyId: data.kms_key_id || undefined,
+    };
+  } catch {
+    // Table may not exist yet (pre-migration) or admin client unavailable
+    return null;
+  }
+}
+
+async function resolveConfig(): Promise<S3Config> {
+  if (_cachedConfig) return _cachedConfig;
+
+  // Try DB first, then fall back to env vars
+  const fromDb = await dbConfig();
+  const fromEnv = envConfig();
+  const config = fromDb || fromEnv;
+
+  if (!config) {
+    throw new Error(
+      "AWS S3 is not configured. Set credentials in Admin > Integrations or via environment variables."
+    );
   }
 
-  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-    throw new Error("AWS credentials are not configured");
+  _cachedConfig = config;
+  return config;
+}
+
+function buildClient(config: S3Config): S3Client {
+  if (_cachedClient) return _cachedClient;
+
+  _cachedClient = new S3Client({
+    region: config.region,
+    credentials: {
+      accessKeyId: config.accessKeyId,
+      secretAccessKey: config.secretAccessKey,
+    },
+  });
+
+  return _cachedClient;
+}
+
+function sseParams(config: S3Config): {
+  ServerSideEncryption: ServerSideEncryption;
+  SSEKMSKeyId?: string;
+} {
+  if (config.kmsKeyId) {
+    return { ServerSideEncryption: "aws:kms", SSEKMSKeyId: config.kmsKeyId };
   }
+  return { ServerSideEncryption: "AES256" };
+}
+
+/** Reset cached config (useful after saving new credentials via admin UI). */
+export function resetS3Config(): void {
+  _cachedConfig = null;
+  _cachedClient = null;
+}
+
+/** Resolve the current bucket name from DB or env config. */
+export async function getBucketName(): Promise<string> {
+  const config = await resolveConfig();
+  return config.bucketName;
 }
 
 export function sanitizeS3KeyPart(input: string): string {
@@ -57,9 +147,11 @@ export async function uploadObject(params: {
   metadata?: Record<string, string>;
   bucketName?: string;
 }): Promise<{ bucket: string; key: string }> {
-  requireS3Configured();
+  const config = await resolveConfig();
+  const client = buildClient(config);
+  const sse = sseParams(config);
 
-  const bucket = params.bucketName || BUCKET_NAME;
+  const bucket = params.bucketName || config.bucketName;
 
   const command = new PutObjectCommand({
     Bucket: bucket,
@@ -67,11 +159,10 @@ export async function uploadObject(params: {
     Body: params.body,
     ContentType: params.contentType,
     Metadata: params.metadata,
-    ServerSideEncryption: SSE_ALGORITHM,
-    ...(SSE_KMS_KEY_ID ? { SSEKMSKeyId: SSE_KMS_KEY_ID } : {}),
+    ...sse,
   });
 
-  await s3Client.send(command);
+  await client.send(command);
   return { bucket, key: params.key };
 }
 
@@ -89,18 +180,19 @@ export async function uploadContract(
   fileBuffer: Buffer,
   filename: string
 ): Promise<string> {
-  requireS3Configured();
+  const config = await resolveConfig();
+  const client = buildClient(config);
+  const sse = sseParams(config);
 
   const objectKey = `contracts/${organizationId}/${contractId}/${filename}`;
 
   try {
     const command = new PutObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: config.bucketName,
       Key: objectKey,
       Body: fileBuffer,
       ContentType: "application/pdf",
-      ServerSideEncryption: SSE_ALGORITHM,
-      ...(SSE_KMS_KEY_ID ? { SSEKMSKeyId: SSE_KMS_KEY_ID } : {}),
+      ...sse,
       Metadata: {
         contractId,
         organizationId,
@@ -108,7 +200,7 @@ export async function uploadContract(
       },
     });
 
-    await s3Client.send(command);
+    await client.send(command);
     return objectKey;
   } catch (error) {
     console.error("Error uploading contract to S3:", error);
@@ -128,15 +220,16 @@ export async function generatePresignedUrl(
   objectKey: string,
   expiresIn: number = 3600
 ): Promise<string> {
-  requireS3Configured();
+  const config = await resolveConfig();
+  const client = buildClient(config);
 
   try {
     const command = new GetObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: config.bucketName,
       Key: objectKey,
     });
 
-    const url = await getSignedUrl(s3Client, command, { expiresIn });
+    const url = await getSignedUrl(client, command, { expiresIn });
     return url;
   } catch (error) {
     console.error("Error generating presigned URL:", error);
@@ -151,15 +244,16 @@ export async function generatePresignedUrl(
  * @param objectKey - S3 object key to delete
  */
 export async function deleteContract(objectKey: string): Promise<void> {
-  requireS3Configured();
+  const config = await resolveConfig();
+  const client = buildClient(config);
 
   try {
     const command = new DeleteObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: config.bucketName,
       Key: objectKey,
     });
 
-    await s3Client.send(command);
+    await client.send(command);
   } catch (error) {
     console.error("Error deleting contract from S3:", error);
     throw new Error(
@@ -174,15 +268,16 @@ export async function deleteContract(objectKey: string): Promise<void> {
  * @returns Contract file buffer
  */
 export async function getContract(objectKey: string): Promise<Buffer> {
-  requireS3Configured();
+  const config = await resolveConfig();
+  const client = buildClient(config);
 
   try {
     const command = new GetObjectCommand({
-      Bucket: BUCKET_NAME,
+      Bucket: config.bucketName,
       Key: objectKey,
     });
 
-    const response = await s3Client.send(command);
+    const response = await client.send(command);
 
     if (!response.Body) {
       throw new Error("Empty response body from S3");
@@ -215,17 +310,18 @@ export async function generatePresignedUploadUrl(
   contentType: string,
   expiresIn: number = 900
 ): Promise<string> {
-  requireS3Configured();
+  const config = await resolveConfig();
+  const client = buildClient(config);
+  const sse = sseParams(config);
 
   const command = new PutObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: config.bucketName,
     Key: key,
     ContentType: contentType,
-    ServerSideEncryption: SSE_ALGORITHM,
-    ...(SSE_KMS_KEY_ID ? { SSEKMSKeyId: SSE_KMS_KEY_ID } : {}),
+    ...sse,
   });
 
-  return getSignedUrl(s3Client, command, { expiresIn });
+  return getSignedUrl(client, command, { expiresIn });
 }
 
 /**
@@ -247,19 +343,20 @@ export async function listObjects(params: {
   nextToken: string | undefined;
   isTruncated: boolean;
 }> {
-  requireS3Configured();
+  const config = await resolveConfig();
+  const client = buildClient(config);
 
   const command = new ListObjectsV2Command({
-    Bucket: BUCKET_NAME,
+    Bucket: config.bucketName,
     Prefix: params.prefix,
     MaxKeys: params.maxKeys ?? 100,
     ContinuationToken: params.continuationToken,
   });
 
-  const response = await s3Client.send(command);
+  const response = await client.send(command);
 
   return {
-    objects: (response.Contents ?? []).map((obj) => ({
+    objects: (response.Contents ?? []).map((obj: { Key?: string; Size?: number; LastModified?: Date }) => ({
       key: obj.Key ?? "",
       size: obj.Size ?? 0,
       lastModified: obj.LastModified,
@@ -278,14 +375,15 @@ export async function headObject(key: string): Promise<{
   lastModified: Date | undefined;
   metadata: Record<string, string> | undefined;
 }> {
-  requireS3Configured();
+  const config = await resolveConfig();
+  const client = buildClient(config);
 
   const command = new HeadObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: config.bucketName,
     Key: key,
   });
 
-  const response = await s3Client.send(command);
+  const response = await client.send(command);
 
   return {
     contentType: response.ContentType,
@@ -299,14 +397,13 @@ export async function headObject(key: string): Promise<{
  * Delete an object from S3 by key (generic version)
  */
 export async function deleteObject(key: string): Promise<void> {
-  requireS3Configured();
+  const config = await resolveConfig();
+  const client = buildClient(config);
 
   const command = new DeleteObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: config.bucketName,
     Key: key,
   });
 
-  await s3Client.send(command);
+  await client.send(command);
 }
-
-export { BUCKET_NAME, s3Client };

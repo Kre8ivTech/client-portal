@@ -2,7 +2,10 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { HardDrive } from "lucide-react";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { FileStorageSettings } from "@/components/settings/file-storage-settings";
+
+const APP_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 
 type IntegrationRow = {
   id: string;
@@ -83,7 +86,20 @@ export default async function FileStorageSettingsPage() {
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const awsConfigured = !!process.env.AWS_S3_BUCKET_NAME && !!process.env.AWS_ACCESS_KEY_ID && !!process.env.AWS_SECRET_ACCESS_KEY;
+  const awsEnvConfigured = !!process.env.AWS_S3_BUCKET_NAME && !!process.env.AWS_ACCESS_KEY_ID && !!process.env.AWS_SECRET_ACCESS_KEY;
+  const admin = getSupabaseAdmin();
+  const { data: appRow } = await (admin as any)
+    .from("app_settings")
+    .select("aws_s3_config_encrypted")
+    .eq("id", APP_SETTINGS_ID)
+    .single();
+  const hasEncryptedS3 = !!appRow?.aws_s3_config_encrypted;
+  const { data: s3DbRow } = await db
+    .from("aws_s3_config")
+    .select("id")
+    .is("organization_id", null)
+    .maybeSingle();
+  const awsConfigured = awsEnvConfigured || hasEncryptedS3 || !!s3DbRow;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">

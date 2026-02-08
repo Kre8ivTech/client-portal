@@ -13,12 +13,15 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 // S3 Configuration
 //
 // Credentials are resolved in this order:
-//   1. Database table `aws_s3_config` (global row where organization_id IS NULL)
-//   2. Environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, etc.)
+//   1. app_settings (encrypted: aws_s3_config_encrypted + iv + auth_tag)
+//   2. Database table `aws_s3_config` (global row where organization_id IS NULL)
+//   3. Environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, etc.)
 //
 // The resolved config is cached for the lifetime of the serverless invocation
 // (typically a single request). Call `resetS3Config()` to force a re-read.
 // ---------------------------------------------------------------------------
+
+import { getS3ConfigFromAppSettings } from "@/lib/s3-config";
 
 type S3Config = {
   region: string;
@@ -79,7 +82,12 @@ async function dbConfig(): Promise<S3Config | null> {
 async function resolveConfig(): Promise<S3Config> {
   if (_cachedConfig) return _cachedConfig;
 
-  // Try DB first, then fall back to env vars
+  // 1. Encrypted app_settings, 2. aws_s3_config table, 3. env vars
+  const fromApp = await getS3ConfigFromAppSettings();
+  if (fromApp) {
+    _cachedConfig = fromApp;
+    return fromApp;
+  }
   const fromDb = await dbConfig();
   const fromEnv = envConfig();
   const config = fromDb || fromEnv;

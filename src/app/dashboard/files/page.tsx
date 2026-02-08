@@ -8,7 +8,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FolderLock } from "lucide-react";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { FilesPageClient } from "./files-page-client";
+
+const APP_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 
 export default async function FilesPage() {
   const supabase = await createServerSupabaseClient();
@@ -53,7 +56,14 @@ export default async function FilesPage() {
     !!process.env.AWS_ACCESS_KEY_ID &&
     !!process.env.AWS_SECRET_ACCESS_KEY;
 
-  // Also check if S3 is configured via the admin DB settings
+  const admin = getSupabaseAdmin();
+  const { data: appRow } = await (admin as any)
+    .from("app_settings")
+    .select("aws_s3_config_encrypted")
+    .eq("id", APP_SETTINGS_ID)
+    .single();
+  const hasEncryptedS3 = !!appRow?.aws_s3_config_encrypted;
+
   const db = supabase as unknown as { from: (table: string) => any };
   const { data: s3DbConfig } = await db
     .from("aws_s3_config")
@@ -61,7 +71,7 @@ export default async function FilesPage() {
     .is("organization_id", null)
     .maybeSingle();
 
-  const awsConfigured = awsEnvConfigured || !!s3DbConfig;
+  const awsConfigured = awsEnvConfigured || hasEncryptedS3 || !!s3DbConfig;
 
   const isPrivileged =
     profile.role === "super_admin" || profile.role === "staff";

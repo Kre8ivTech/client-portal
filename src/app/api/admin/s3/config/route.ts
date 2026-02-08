@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { resetS3Config } from "@/lib/storage/s3";
+import { encrypt } from "@/lib/crypto";
 import { z } from "zod";
+
+const APP_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 
 const configSchema = z.object({
   aws_region: z.string().min(1).max(30).default("us-east-1"),
@@ -33,6 +37,7 @@ async function requireSuperAdmin(supabase: any) {
 
 /**
  * GET /api/admin/s3/config - Get current S3 configuration (secrets masked)
+ * Prefers encrypted app_settings; falls back to aws_s3_config (legacy).
  */
 export async function GET() {
   try {
@@ -41,6 +46,33 @@ export async function GET() {
 
     if (!user) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const admin = getSupabaseAdmin();
+    const { data: appRow } = await (admin as any)
+      .from("app_settings")
+      .select("aws_s3_config_encrypted")
+      .eq("id", APP_SETTINGS_ID)
+      .single();
+
+    if (appRow?.aws_s3_config_encrypted) {
+      const envConfigured =
+        !!process.env.AWS_S3_BUCKET_NAME &&
+        !!process.env.AWS_ACCESS_KEY_ID &&
+        !!process.env.AWS_SECRET_ACCESS_KEY;
+      return NextResponse.json({
+        config: {
+          id: "encrypted",
+          aws_region: "us-east-1",
+          access_key_id_masked: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+          bucket_name: "(encrypted)",
+          kms_key_id: null,
+          created_at: "",
+          updated_at: "",
+        },
+        source: "encrypted",
+        envConfigured,
+      });
     }
 
     const db = supabase as unknown as { from: (table: string) => any };
@@ -52,7 +84,6 @@ export async function GET() {
       .is("organization_id", null)
       .maybeSingle();
 
-    // Also report whether env vars are set (as a fallback indicator)
     const envConfigured =
       !!process.env.AWS_S3_BUCKET_NAME &&
       !!process.env.AWS_ACCESS_KEY_ID &&
@@ -62,10 +93,10 @@ export async function GET() {
       config: config
         ? {
             ...config,
-            // Mask the access key for display
             access_key_id_masked: maskKey(config.access_key_id),
           }
         : null,
+      source: config ? "legacy" : "none",
       envConfigured,
     });
   } catch {
@@ -77,7 +108,8 @@ export async function GET() {
 }
 
 /**
- * POST /api/admin/s3/config - Save or update S3 configuration
+ * POST /api/admin/s3/config - Save S3 configuration (encrypted in app_settings)
+ * Requires ENCRYPTION_SECRET. Removes legacy plain config from aws_s3_config.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -86,6 +118,17 @@ export async function POST(request: NextRequest) {
 
     if (!user) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const secret = process.env.ENCRYPTION_SECRET;
+    if (!secret || secret.length < 8) {
+      return NextResponse.json(
+        {
+          error:
+            "ENCRYPTION_SECRET must be set in the environment (at least 8 characters) to store S3 credentials encrypted.",
+        },
+        { status: 400 }
+      );
     }
 
     const body = await request.json().catch(() => null);
@@ -98,79 +141,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const db = supabase as unknown as { from: (table: string) => any };
-
-    // Check for existing global config
-    const { data: existing } = await db
-      .from("aws_s3_config")
-      .select("id")
-      .is("organization_id", null)
-      .maybeSingle();
-
-    if (existing) {
-      // Update
-      const updateData: Record<string, unknown> = {
-        aws_region: validation.data.aws_region,
-        access_key_id: validation.data.access_key_id,
-        bucket_name: validation.data.bucket_name,
-        updated_by: user.id,
-      };
-
-      if (validation.data.secret_access_key) {
-        updateData.secret_access_key = validation.data.secret_access_key;
-      }
-
-      if (validation.data.kms_key_id !== undefined) {
-        updateData.kms_key_id = validation.data.kms_key_id || null;
-      }
-
-      const { error } = await db
-        .from("aws_s3_config")
-        .update(updateData)
-        .eq("id", existing.id);
-
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-    } else {
-      // Insert new
-      if (!validation.data.secret_access_key) {
-        return NextResponse.json(
-          { error: "Secret Access Key is required for initial setup" },
-          { status: 400 }
-        );
-      }
-
-      const { error } = await db.from("aws_s3_config").insert({
-        aws_region: validation.data.aws_region,
-        access_key_id: validation.data.access_key_id,
-        secret_access_key: validation.data.secret_access_key,
-        bucket_name: validation.data.bucket_name,
-        kms_key_id: validation.data.kms_key_id || null,
-        organization_id: null,
-        created_by: user.id,
-        updated_by: user.id,
-      });
-
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
+    const secretAccessKey = validation.data.secret_access_key;
+    if (!secretAccessKey || secretAccessKey === "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022") {
+      return NextResponse.json(
+        { error: "Secret Access Key is required" },
+        { status: 400 }
+      );
     }
 
-    // Clear cached S3 config so next request picks up the new credentials
-    resetS3Config();
+    const payload = {
+      aws_region: validation.data.aws_region,
+      access_key_id: validation.data.access_key_id,
+      secret_access_key: secretAccessKey,
+      bucket_name: validation.data.bucket_name,
+      kms_key_id: validation.data.kms_key_id ?? null,
+    };
+    const { encryptedData, iv, authTag } = encrypt(JSON.stringify(payload));
 
+    const admin = getSupabaseAdmin();
+    const { error: updateError } = await (admin as any)
+      .from("app_settings")
+      .update({
+        aws_s3_config_encrypted: encryptedData,
+        aws_s3_config_iv: iv,
+        aws_s3_config_auth_tag: authTag,
+      })
+      .eq("id", APP_SETTINGS_ID);
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
+    }
+
+    const db = supabase as unknown as { from: (table: string) => any };
+    await db.from("aws_s3_config").delete().is("organization_id", null);
+
+    resetS3Config();
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 /**
- * DELETE /api/admin/s3/config - Remove S3 configuration (falls back to env vars)
+ * DELETE /api/admin/s3/config - Remove S3 configuration (encrypted + legacy), fall back to env
  */
 export async function DELETE() {
   try {
@@ -181,19 +195,20 @@ export async function DELETE() {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const admin = getSupabaseAdmin();
+    await (admin as any)
+      .from("app_settings")
+      .update({
+        aws_s3_config_encrypted: null,
+        aws_s3_config_iv: null,
+        aws_s3_config_auth_tag: null,
+      })
+      .eq("id", APP_SETTINGS_ID);
+
     const db = supabase as unknown as { from: (table: string) => any };
-    const { error } = await db
-      .from("aws_s3_config")
-      .delete()
-      .is("organization_id", null);
+    await db.from("aws_s3_config").delete().is("organization_id", null);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    // Clear cached S3 config so next request falls back to env vars
     resetS3Config();
-
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(

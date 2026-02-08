@@ -57,8 +57,17 @@ export default async function AdminIntegrationsSettingsPage({
     .is("organization_id", null)
     .single();
 
-  // Fetch existing S3 config (global)
+  const APP_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
   const db = supabase as unknown as { from: (table: string) => any };
+
+  const { data: appSettingsRow } = await db
+    .from("app_settings")
+    .select("aws_s3_config_encrypted")
+    .eq("id", APP_SETTINGS_ID)
+    .single();
+
+  const hasEncryptedS3 = !!appSettingsRow?.aws_s3_config_encrypted;
+
   const { data: s3Config } = await db
     .from("aws_s3_config")
     .select(
@@ -71,6 +80,23 @@ export default async function AdminIntegrationsSettingsPage({
     !!process.env.AWS_S3_BUCKET_NAME &&
     !!process.env.AWS_ACCESS_KEY_ID &&
     !!process.env.AWS_SECRET_ACCESS_KEY;
+
+  const s3ExistingConfig = hasEncryptedS3
+    ? {
+        id: "encrypted",
+        aws_region: "us-east-1",
+        access_key_id_masked: "\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022",
+        bucket_name: "(encrypted)",
+        kms_key_id: null,
+        created_at: "",
+        updated_at: "",
+      }
+    : s3Config
+      ? {
+          ...s3Config,
+          access_key_id_masked: maskKey(s3Config.access_key_id || ""),
+        }
+      : null;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -192,16 +218,7 @@ export default async function AdminIntegrationsSettingsPage({
           </CardHeader>
           <CardContent>
             <S3ConfigForm
-              existingConfig={
-                s3Config
-                  ? {
-                      ...s3Config,
-                      access_key_id_masked: maskKey(
-                        s3Config.access_key_id || ""
-                      ),
-                    }
-                  : null
-              }
+              existingConfig={s3ExistingConfig}
               envConfigured={s3EnvConfigured}
             />
           </CardContent>

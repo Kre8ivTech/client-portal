@@ -62,6 +62,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Support",
     items: [
+      { href: "/dashboard/projects", icon: FolderKanban, label: "Projects" },
       { href: "/dashboard/tickets", icon: Ticket, label: "Support Tickets" },
       { href: "/dashboard/services", icon: Layers, label: "Services" },
       { href: "/dashboard/service", icon: Wrench, label: "Service Requests" },
@@ -109,7 +110,6 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: "Admin",
     items: [
       { href: "/dashboard/clients", icon: Users, label: "Clients" },
-      { href: "/dashboard/projects", icon: FolderKanban, label: "Projects" },
       { href: "/dashboard/users", icon: UserCog, label: "User Management" },
       { href: "/dashboard/admin/staff-management", icon: UserCog, label: "Staff Management" },
       { href: "/dashboard/admin/permissions", icon: Shield, label: "Permissions" },

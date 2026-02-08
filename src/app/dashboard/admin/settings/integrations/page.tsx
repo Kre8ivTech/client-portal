@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { QuickBooksAppConfigForm } from "@/components/admin/quickbooks-app-config-form";
+import { S3ConfigForm } from "@/components/admin/s3-config-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 
@@ -56,6 +57,21 @@ export default async function AdminIntegrationsSettingsPage({
     .is("organization_id", null)
     .single();
 
+  // Fetch existing S3 config (global)
+  const db = supabase as unknown as { from: (table: string) => any };
+  const { data: s3Config } = await db
+    .from("aws_s3_config")
+    .select(
+      "id, aws_region, access_key_id, bucket_name, kms_key_id, created_at, updated_at"
+    )
+    .is("organization_id", null)
+    .maybeSingle();
+
+  const s3EnvConfigured =
+    !!process.env.AWS_S3_BUCKET_NAME &&
+    !!process.env.AWS_ACCESS_KEY_ID &&
+    !!process.env.AWS_SECRET_ACCESS_KEY;
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
@@ -76,6 +92,10 @@ export default async function AdminIntegrationsSettingsPage({
               "QuickBooks configuration saved successfully!"}
             {params.success === "config_deleted" &&
               "QuickBooks configuration deleted successfully!"}
+            {params.success === "s3_config_saved" &&
+              "AWS S3 configuration saved successfully!"}
+            {params.success === "s3_config_deleted" &&
+              "AWS S3 configuration deleted successfully!"}
           </AlertDescription>
         </Alert>
       )}
@@ -159,7 +179,88 @@ export default async function AdminIntegrationsSettingsPage({
             </Alert>
           </CardContent>
         </Card>
+
+        {/* AWS S3 Configuration */}
+        <Card>
+          <CardHeader>
+            <CardTitle>AWS S3 File Storage</CardTitle>
+            <CardDescription>
+              Configure AWS S3 credentials for encrypted file storage. All
+              client files are stored with server-side encryption (AES-256 or
+              KMS).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <S3ConfigForm
+              existingConfig={
+                s3Config
+                  ? {
+                      ...s3Config,
+                      access_key_id_masked: maskKey(
+                        s3Config.access_key_id || ""
+                      ),
+                    }
+                  : null
+              }
+              envConfigured={s3EnvConfigured}
+            />
+          </CardContent>
+        </Card>
+
+        {/* S3 Setup Instructions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>How to Set Up AWS S3</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+              <li>
+                Create an S3 bucket in the{" "}
+                <a
+                  href="https://console.aws.amazon.com/s3"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  AWS Console
+                </a>
+              </li>
+              <li>
+                Enable <strong>Default Encryption</strong> (SSE-S3 or SSE-KMS)
+                on the bucket
+              </li>
+              <li>
+                Block all public access (bucket should be{" "}
+                <strong>private</strong>)
+              </li>
+              <li>
+                Create an IAM user with{" "}
+                <strong>s3:PutObject, s3:GetObject, s3:DeleteObject, s3:ListBucket</strong>{" "}
+                permissions on the bucket
+              </li>
+              <li>
+                Generate an <strong>Access Key</strong> for the IAM user
+              </li>
+              <li>Enter the credentials above</li>
+            </ol>
+
+            <Alert className="bg-yellow-50 border-yellow-200">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800">
+                <strong>Security Note:</strong> Use a dedicated IAM user with
+                minimal permissions. Never use root account credentials. The
+                Secret Access Key is stored securely and never displayed after
+                saving.
+              </AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
+}
+
+function maskKey(key: string): string {
+  if (!key || key.length < 8) return "****";
+  return key.slice(0, 4) + "****" + key.slice(-4);
 }

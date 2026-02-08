@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
         acknowledgement_token,
         created_at,
         organization:organizations(id, name),
-        recipient:profiles!task_acknowledgements_acknowledged_by_fkey(id, email, name, role)
+        recipient:users!task_acknowledgements_acknowledged_by_fkey(id, email, role, profiles:profiles(name))
       `)
       .is('acknowledged_at', null) // Not acknowledged yet
       .lt('created_at', twentyFourHoursAgo.toISOString()) // Created more than 24 hours ago
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
         .select(`
           *,
           organization:organizations(id, name),
-          requested_by:profiles!${tableName}_requested_by_fkey(id, name, email)
+          requested_by_user:users!${tableName}_requested_by_fkey(id, email, profiles:profiles(name))
         `)
         .eq('id', taskId)
         .single()
@@ -112,13 +112,13 @@ export async function GET(request: NextRequest) {
         .from('task_acknowledgements')
         .select(`
           acknowledged_by,
-          acknowledger:profiles!task_acknowledgements_acknowledged_by_fkey(name)
+          acknowledger:users!task_acknowledgements_acknowledged_by_fkey(id, profiles:profiles(name))
         `)
         .eq('task_type', taskType)
         .eq('task_id', taskId)
         .not('acknowledged_at', 'is', null)
 
-      const acknowledgedByNames = acknowledgedRecords?.map((r) => r.acknowledger?.name || 'Unknown') || []
+      const acknowledgedByNames = acknowledgedRecords?.map((r) => r.acknowledger?.profiles?.name || 'Unknown') || []
 
       // Send reminder to each unacknowledged recipient
       for (const record of records) {
@@ -147,12 +147,12 @@ export async function GET(request: NextRequest) {
           to: record.recipient.email,
           templateType: 'task_acknowledgement_reminder',
           variables: {
-            recipient_name: record.recipient.name || record.recipient.email,
+            recipient_name: record.recipient.profiles?.name || record.recipient.email,
             request_number: (task as any).request_number || 'N/A',
             task_type: taskType === 'service_request' ? 'Service Request' : 'Project Request',
             task_title_label: taskType === 'service_request' ? 'Service' : 'Project',
             task_title: taskTitle,
-            client_name: task.requested_by?.name || 'Unknown',
+            client_name: task.requested_by_user?.profiles?.name || 'Unknown',
             organization_name: task.organization?.name || 'Unknown',
             priority: task.priority || 'medium',
             priority_class: priorityClass,

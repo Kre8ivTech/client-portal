@@ -30,7 +30,7 @@ export async function notifyStaffAssignedToServiceRequest(
       .select(`
         *,
         service:services(name),
-        requested_by_user:profiles!service_requests_requested_by_fkey(name)
+        requested_by_user:users!service_requests_requested_by_fkey(id, profiles:profiles(name))
       `)
       .eq('id', serviceRequestId)
       .single()
@@ -45,7 +45,7 @@ export async function notifyStaffAssignedToServiceRequest(
       serviceRequestId,
       (serviceRequest as any).request_number || 'N/A',
       (serviceRequest as any).service?.name || 'Service',
-      (serviceRequest as any).requested_by_user?.name || 'Client',
+      (serviceRequest as any).requested_by_user?.profiles?.name || 'Client',
       (serviceRequest as any).priority || 'medium'
     )
   } catch (error) {
@@ -70,7 +70,7 @@ export async function notifyStaffAssignedToProjectRequest(
       .from('project_requests')
       .select(`
         *,
-        requested_by_user:profiles!project_requests_requested_by_fkey(name)
+        requested_by_user:users!project_requests_requested_by_fkey(id, profiles:profiles(name))
       `)
       .eq('id', projectRequestId)
       .single()
@@ -85,7 +85,7 @@ export async function notifyStaffAssignedToProjectRequest(
       projectRequestId,
       (projectRequest as any).request_number || 'N/A',
       (projectRequest as any).title || 'Project',
-      (projectRequest as any).requested_by_user?.name || 'Client',
+      (projectRequest as any).requested_by_user?.profiles?.name || 'Client',
       (projectRequest as any).priority || 'medium'
     )
   } catch (error) {

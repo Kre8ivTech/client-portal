@@ -3,8 +3,21 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  ListObjectsV2Command,
+  HeadObjectCommand,
+  type ServerSideEncryption,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+/**
+ * Server-side encryption configuration.
+ * Uses SSE-S3 (AES-256) by default. Set AWS_S3_KMS_KEY_ID env var
+ * to enable SSE-KMS with a customer-managed key instead.
+ */
+const SSE_ALGORITHM: ServerSideEncryption = process.env.AWS_S3_KMS_KEY_ID
+  ? "aws:kms"
+  : "AES256";
+const SSE_KMS_KEY_ID = process.env.AWS_S3_KMS_KEY_ID || undefined;
 
 // Initialize S3 client
 const s3Client = new S3Client({
@@ -54,6 +67,8 @@ export async function uploadObject(params: {
     Body: params.body,
     ContentType: params.contentType,
     Metadata: params.metadata,
+    ServerSideEncryption: SSE_ALGORITHM,
+    ...(SSE_KMS_KEY_ID ? { SSEKMSKeyId: SSE_KMS_KEY_ID } : {}),
   });
 
   await s3Client.send(command);
@@ -84,6 +99,8 @@ export async function uploadContract(
       Key: objectKey,
       Body: fileBuffer,
       ContentType: "application/pdf",
+      ServerSideEncryption: SSE_ALGORITHM,
+      ...(SSE_KMS_KEY_ID ? { SSEKMSKeyId: SSE_KMS_KEY_ID } : {}),
       Metadata: {
         contractId,
         organizationId,
@@ -185,3 +202,111 @@ export async function getContract(objectKey: string): Promise<Buffer> {
     );
   }
 }
+
+/**
+ * Generate a presigned URL for direct browser-to-S3 upload
+ * @param key - S3 object key
+ * @param contentType - MIME type of the file
+ * @param expiresIn - URL expiration time in seconds (default: 900 = 15 min)
+ * @returns Presigned upload URL
+ */
+export async function generatePresignedUploadUrl(
+  key: string,
+  contentType: string,
+  expiresIn: number = 900
+): Promise<string> {
+  requireS3Configured();
+
+  const command = new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+    ContentType: contentType,
+    ServerSideEncryption: SSE_ALGORITHM,
+    ...(SSE_KMS_KEY_ID ? { SSEKMSKeyId: SSE_KMS_KEY_ID } : {}),
+  });
+
+  return getSignedUrl(s3Client, command, { expiresIn });
+}
+
+/**
+ * List objects in S3 under a given prefix
+ * @param prefix - S3 key prefix to list
+ * @param maxKeys - Maximum number of keys to return (default: 100)
+ * @param continuationToken - Token for pagination
+ */
+export async function listObjects(params: {
+  prefix: string;
+  maxKeys?: number;
+  continuationToken?: string;
+}): Promise<{
+  objects: Array<{
+    key: string;
+    size: number;
+    lastModified: Date | undefined;
+  }>;
+  nextToken: string | undefined;
+  isTruncated: boolean;
+}> {
+  requireS3Configured();
+
+  const command = new ListObjectsV2Command({
+    Bucket: BUCKET_NAME,
+    Prefix: params.prefix,
+    MaxKeys: params.maxKeys ?? 100,
+    ContinuationToken: params.continuationToken,
+  });
+
+  const response = await s3Client.send(command);
+
+  return {
+    objects: (response.Contents ?? []).map((obj) => ({
+      key: obj.Key ?? "",
+      size: obj.Size ?? 0,
+      lastModified: obj.LastModified,
+    })),
+    nextToken: response.NextContinuationToken,
+    isTruncated: response.IsTruncated ?? false,
+  };
+}
+
+/**
+ * Get metadata for an S3 object without downloading the body
+ */
+export async function headObject(key: string): Promise<{
+  contentType: string | undefined;
+  contentLength: number | undefined;
+  lastModified: Date | undefined;
+  metadata: Record<string, string> | undefined;
+}> {
+  requireS3Configured();
+
+  const command = new HeadObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+  });
+
+  const response = await s3Client.send(command);
+
+  return {
+    contentType: response.ContentType,
+    contentLength: response.ContentLength,
+    lastModified: response.LastModified,
+    metadata: response.Metadata,
+  };
+}
+
+/**
+ * Delete an object from S3 by key (generic version)
+ */
+export async function deleteObject(key: string): Promise<void> {
+  requireS3Configured();
+
+  const command = new DeleteObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+  });
+
+  await s3Client.send(command);
+}
+
+export { BUCKET_NAME, s3Client };

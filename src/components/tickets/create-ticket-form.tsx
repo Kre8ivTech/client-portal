@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
@@ -29,6 +29,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Loader2, AlertCircle, CheckCircle2, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
+import { TicketFileUpload, type UploadedFile } from './ticket-file-upload'
 
 type FormValues = CreateTicketInput
 
@@ -41,6 +42,7 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const supabase = createClient() as any
 
   const form = useForm<FormValues>({
@@ -55,11 +57,16 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
 
   const { isSubmitting } = form.formState
 
+  const handleFilesChange = useCallback((files: UploadedFile[]) => {
+    setUploadedFiles(files)
+  }, [])
+
   async function onSubmit(values: FormValues) {
     setError(null)
     setIsSuccess(false)
 
     try {
+      // Create the ticket
       const { data, error: submitError } = await supabase
         .from('tickets')
         .insert({
@@ -77,14 +84,31 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
 
       if (submitError) throw submitError
 
+      // Link uploaded files to the ticket
+      if (uploadedFiles.length > 0) {
+        const attachments = uploadedFiles.map((f) => ({
+          ticket_id: data.id,
+          file_id: f.id,
+        }))
+
+        const { error: attachError } = await supabase
+          .from('ticket_attachments')
+          .insert(attachments)
+
+        if (attachError) {
+          // Ticket was created but attachments failed - log but don't block
+          console.error('Failed to link attachments:', attachError)
+        }
+      }
+
       setIsSuccess(true)
       form.reset()
-      
+
       // Navigate to the new ticket after a brief delay
       setTimeout(() => {
         router.push(`/dashboard/tickets/${data.id}`)
       }, 1500)
-      
+
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.')
     }
@@ -98,8 +122,8 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
           <div className="space-y-1">
             <AlertTitle className="text-lg font-bold">Ticket Created Successfully!</AlertTitle>
             <AlertDescription>
-              Your support request has been submitted. We&apos;ll be in touch shortly.
-              Redirecting you to the ticket details...
+              Your support request has been submitted{uploadedFiles.length > 0 ? ` with ${uploadedFiles.length} attachment${uploadedFiles.length !== 1 ? 's' : ''}` : ''}.
+              We&apos;ll be in touch shortly. Redirecting you to the ticket details...
             </AlertDescription>
           </div>
         </Alert>
@@ -109,8 +133,8 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
 
   return (
     <div className="w-full space-y-8">
-      <Link 
-        href="/dashboard/tickets" 
+      <Link
+        href="/dashboard/tickets"
         className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors mb-4 w-fit"
       >
         <ChevronLeft className="h-4 w-4" />
@@ -203,16 +227,21 @@ export function CreateTicketForm({ organizationId, userId }: CreateTicketFormPro
               <FormItem>
                 <FormLabel className="text-slate-700 font-semibold">Description</FormLabel>
                 <FormControl>
-                  <Textarea 
-                    placeholder="Provide as much detail as possible..." 
+                  <Textarea
+                    placeholder="Provide as much detail as possible..."
                     className="min-h-[150px] resize-none"
-                    {...field} 
+                    {...field}
                   />
                 </FormControl>
                 <FormDescription>Include steps to reproduce, error messages, and what you have tried.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
+          />
+
+          <TicketFileUpload
+            onFilesChange={handleFilesChange}
+            disabled={isSubmitting}
           />
 
           <Button type="submit" className="w-full h-12 text-lg font-bold" disabled={isSubmitting}>

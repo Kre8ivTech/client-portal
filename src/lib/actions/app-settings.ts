@@ -15,6 +15,7 @@ export type AppSettings = {
   openrouter_api_key: string | null;
   anthropic_api_key: string | null;
   openai_api_key: string | null;
+  gemini_api_key: string | null;
   timezone: string | null;
 };
 
@@ -37,6 +38,8 @@ export async function getAppSettings(): Promise<AppSettings> {
       openrouter_api_key: null,
       anthropic_api_key: null,
       openai_api_key: null,
+      gemini_api_key: null,
+      timezone: null,
     };
   }
 

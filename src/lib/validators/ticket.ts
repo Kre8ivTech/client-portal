@@ -8,6 +8,7 @@ export const createTicketSchema = z.object({
   description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
   priority: ticketPrioritySchema,
   category: z.string().min(1, { message: 'Please select a category.' }),
+  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').nullable().optional(),
 })
 
 export type CreateTicketInput = z.infer<typeof createTicketSchema>

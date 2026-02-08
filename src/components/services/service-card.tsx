@@ -22,7 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { MoreVertical, Edit, Trash2, Power, PowerOff, DollarSign, Clock } from 'lucide-react'
+import { MoreVertical, Edit, Trash2, Power, PowerOff, DollarSign, Clock, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import type { Database } from '@/types/database'
 
@@ -35,6 +35,22 @@ interface ServiceCardProps {
 export function ServiceCard({ service }: ServiceCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const queryClient = useQueryClient()
+
+  // Sync to Stripe (trigger update which will create/update Stripe product)
+  const syncToStripe = useMutation({
+    mutationFn: async () => {
+      const response = await fetch(`/api/admin/services/${service.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: service.name }),
+      })
+      if (!response.ok) throw new Error('Failed to sync to Stripe')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-services'] })
+    },
+  })
 
   // Toggle active status
   const toggleActive = useMutation({
@@ -143,6 +159,27 @@ export function ServiceCard({ service }: ServiceCardProps) {
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                {(service as any).stripe_product_id ? (
+                  <DropdownMenuItem asChild>
+                    <a
+                      href={`https://dashboard.stripe.com/test/products/${(service as any).stripe_product_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View in Stripe
+                    </a>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => syncToStripe.mutate()}
+                    disabled={syncToStripe.isPending}
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    {syncToStripe.isPending ? 'Syncing...' : 'Sync to Stripe'}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => setShowDeleteDialog(true)}
                   className="text-red-600"
@@ -179,11 +216,22 @@ export function ServiceCard({ service }: ServiceCardProps) {
             )}
           </div>
 
-          {!service.is_active && (
-            <Badge variant="secondary" className="text-xs">
-              Inactive
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {(service as any).stripe_product_id ? (
+              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                Stripe Synced
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                Not Synced
+              </Badge>
+            )}
+            {!service.is_active && (
+              <Badge variant="secondary" className="text-xs">
+                Inactive
+              </Badge>
+            )}
+          </div>
         </CardFooter>
       </Card>
 

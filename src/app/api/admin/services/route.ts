@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { serviceSchema } from '@/lib/validators/service'
+import { createStripeProduct } from '@/lib/stripe'
 
 function isMissingColumnSchemaCacheError(message: string | undefined, column: string) {
   if (!message) return false
@@ -175,6 +176,43 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Error creating service:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // Sync to Stripe - create product and price
+    try {
+      const billingInterval = service.rate_type === 'hourly' ? 'monthly' : 'one_time'
+      const stripeResult = await createStripeProduct({
+        name: service.name,
+        description: service.description || undefined,
+        monthlyFeeInCents: service.base_rate || 0,
+        billingInterval,
+        metadata: {
+          service_id: service.id,
+          category: service.category || '',
+          rate_type: service.rate_type || '',
+        },
+      })
+
+      // Update service with Stripe IDs
+      const { data: updatedService, error: updateError } = await (supabase as any)
+        .from('services')
+        .update({
+          stripe_product_id: stripeResult.productId,
+          stripe_price_id: stripeResult.priceId,
+        })
+        .eq('id', service.id)
+        .select()
+        .single()
+
+      if (updateError) {
+        console.error('Error updating service with Stripe IDs:', updateError)
+        // Return the service anyway - Stripe sync can be retried
+      } else {
+        service = updatedService
+      }
+    } catch (stripeError) {
+      console.error('Stripe sync error (service still created):', stripeError)
+      // Don't fail the request - the service was created, Stripe sync can be retried
     }
 
     return NextResponse.json({ data: service }, { status: 201 })

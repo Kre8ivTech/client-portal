@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     }
 
     const p = profile as { organization_id: string | null; role: string }
+    const isStaffOrAdmin = ['super_admin', 'staff'].includes(p.role)
 
     // Build query based on role
     let query = (supabase as any)
@@ -36,10 +37,12 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         service:services(id, name, description, category, base_rate, rate_type),
-        requester:users!requested_by(id, email, profiles(name, avatar_url))
+        requester:users!requested_by(id, email, profiles(name, avatar_url)),
+        organization:organizations(id, name)
       `)
     
-    if (p.organization_id) {
+    // Staff/Admin can see ALL requests, clients only see their organization's
+    if (!isStaffOrAdmin && p.organization_id) {
       query = query.eq('organization_id', p.organization_id)
     }
     
@@ -78,10 +81,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Get user's organization
+    // Get user's organization and role
     const { data: profile } = await supabase
       .from('users')
-      .select('organization_id')
+      .select('organization_id, role')
       .eq('id', user.id)
       .single()
 
@@ -89,26 +92,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    const p = profile as { organization_id: string | null }
-    if (!p.organization_id) {
+    const p = profile as { organization_id: string | null; role: string }
+    const isStaffOrAdmin = ['super_admin', 'staff'].includes(p.role)
+
+    // Validate input first to get the body
+    const body = await request.json()
+
+    // Determine the organization_id to use
+    let targetOrganizationId: string | null = p.organization_id
+
+    // Staff/Admin can specify a different organization
+    if (isStaffOrAdmin && body.organization_id) {
+      // Verify the organization exists
+      const { data: targetOrg } = await supabase
+        .from('organizations')
+        .select('id')
+        .eq('id', body.organization_id)
+        .single()
+      
+      if (!targetOrg) {
+        return NextResponse.json({ error: 'Specified organization not found' }, { status: 404 })
+      }
+      targetOrganizationId = body.organization_id
+    }
+
+    // For non-staff users, require an organization
+    if (!isStaffOrAdmin && !targetOrganizationId) {
       return NextResponse.json(
         { error: 'No organization associated with your account' },
         { status: 400 }
       )
     }
 
-    // Allow requesting services offered by the user's org OR their parent org
-    const { data: orgRow } = await (supabase as any)
-      .from('organizations')
-      .select('parent_org_id')
-      .eq('id', p.organization_id)
-      .single()
-
-    const parentOrgId = (orgRow as { parent_org_id: string | null } | null)?.parent_org_id ?? null
-    const allowedServiceOrgIds = new Set([p.organization_id, parentOrgId].filter(Boolean) as string[])
-
-    // Validate input
-    const body = await request.json()
+    // For staff/admin creating requests, require an organization to be selected
+    if (isStaffOrAdmin && !targetOrganizationId) {
+      return NextResponse.json(
+        { error: 'Please select an organization for this service request' },
+        { status: 400 }
+      )
+    }
     const result = serviceRequestSchema.safeParse(body)
 
     if (!result.success) {
@@ -124,7 +146,7 @@ export async function POST(request: NextRequest) {
     // Verify service exists and is active
     const { data: service, error: serviceError } = await (supabase as any)
       .from('services')
-      .select('id, is_active, organization_id')
+      .select('id, is_active')
       .eq('id', result.data.service_id)
       .single()
 
@@ -136,17 +158,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Service is not available' }, { status: 400 })
     }
 
-    const serviceData = service as { id: string; is_active: boolean; organization_id: string | null }
-    if (!serviceData.organization_id || !allowedServiceOrgIds.has(serviceData.organization_id)) {
-      return NextResponse.json({ error: 'Service not available for your organization' }, { status: 403 })
-    }
-
     // Create service request
     const { data: serviceRequest, error } = await (supabase as any)
       .from('service_requests')
       .insert({
         ...result.data,
-        organization_id: p.organization_id,
+        organization_id: targetOrganizationId,
         requested_by: user.id,
         status: 'pending',
       })
@@ -171,7 +188,7 @@ export async function POST(request: NextRequest) {
     const { data: organization } = await supabase
       .from('organizations')
       .select('name')
-      .eq('id', p.organization_id)
+      .eq('id', targetOrganizationId)
       .single()
 
     // Trigger notification to admin and assigned staff

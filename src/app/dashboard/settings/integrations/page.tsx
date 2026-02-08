@@ -29,9 +29,9 @@ export default async function IntegrationsSettingsPage({
     return <div>Unauthorized</div>;
   }
 
-  // Get user profile
+  // Get user role and org
   const { data: profile } = await supabase
-    .from("profiles")
+    .from("users")
     .select("role, is_account_manager, organization_id")
     .eq("id", user.id)
     .single();

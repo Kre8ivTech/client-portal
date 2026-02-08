@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user is super admin
     const { data: profile } = await supabase
-      .from("profiles")
+      .from("users")
       .select("role")
       .eq("id", user.id)
       .single();
@@ -150,7 +150,7 @@ export async function DELETE(request: NextRequest) {
 
     // Check if user is super admin
     const { data: profile } = await supabase
-      .from("profiles")
+      .from("users")
       .select("role")
       .eq("id", user.id)
       .single();
@@ -223,7 +223,7 @@ export async function GET(request: NextRequest) {
 
     // Check if user is super admin
     const { data: profile } = await supabase
-      .from("profiles")
+      .from("users")
       .select("role")
       .eq("id", user.id)
       .single();

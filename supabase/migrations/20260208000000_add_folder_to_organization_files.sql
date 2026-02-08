@@ -2,16 +2,26 @@
 -- Description: Adds a `folder` column for logical folder grouping and an index
 --   on (organization_id, owner_user_id) to optimize client-isolated queries.
 -- Date: 2026-02-08
+-- Note: Guarded with IF EXISTS because the parent table is created in
+--   20260204000000_file_storage_sync.sql which may not yet be applied.
 
--- 1. Add folder column for logical grouping of uploaded files
-ALTER TABLE public.organization_files
-  ADD COLUMN IF NOT EXISTS folder TEXT;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'organization_files'
+  ) THEN
+    -- 1. Add folder column for logical grouping of uploaded files
+    ALTER TABLE public.organization_files
+      ADD COLUMN IF NOT EXISTS folder TEXT;
 
--- 2. Index for efficient client-folder queries (list files by owner within an org)
-CREATE INDEX IF NOT EXISTS idx_org_files_org_owner
-  ON public.organization_files(organization_id, owner_user_id);
+    -- 2. Index for efficient client-folder queries (list files by owner within an org)
+    CREATE INDEX IF NOT EXISTS idx_org_files_org_owner
+      ON public.organization_files(organization_id, owner_user_id);
 
--- 3. Index for folder-based filtering
-CREATE INDEX IF NOT EXISTS idx_org_files_folder
-  ON public.organization_files(organization_id, folder)
-  WHERE folder IS NOT NULL;
+    -- 3. Index for folder-based filtering
+    CREATE INDEX IF NOT EXISTS idx_org_files_folder
+      ON public.organization_files(organization_id, folder)
+      WHERE folder IS NOT NULL;
+  END IF;
+END $$;

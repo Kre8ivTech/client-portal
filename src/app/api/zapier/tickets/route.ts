@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabaseAdmin
       .from("tickets")
-      .select("*, created_by:profiles!created_by(id, name, email)")
+      .select("*, created_by_user:users!tickets_created_by_fkey(id, email, profiles:profiles(name))")
       .eq("organization_id", apiKeyContext.organizationId)
       .order("created_at", { ascending: false })
       .limit(limit);

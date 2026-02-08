@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Get user profile
+    // Get user role and org
     const { data: profile, error: profileError } = await supabase
-      .from("profiles")
+      .from("users")
       .select("role, is_account_manager, organization_id")
       .eq("id", user.id)
       .single();

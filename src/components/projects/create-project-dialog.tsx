@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -333,7 +333,7 @@ export function CreateProjectDialog({ staffUsers, organizations, userOrganizatio
                 {/* Team Members Section */}
                 <div className="space-y-3">
                   <Label>Team Members</Label>
-                  <FormDescription>Select team members to assign to this project.</FormDescription>
+                  <p className="text-sm text-muted-foreground">Select team members to assign to this project.</p>
                   <div className="border rounded-lg max-h-[200px] overflow-y-auto">
                     {staffUsers.length === 0 ? (
                       <p className="p-4 text-sm text-slate-500">No staff users available.</p>
@@ -385,7 +385,7 @@ export function CreateProjectDialog({ staffUsers, organizations, userOrganizatio
                 {/* Organizations Section */}
                 <div className="space-y-3">
                   <Label>Organizations</Label>
-                  <FormDescription>Assign client organizations to this project.</FormDescription>
+                  <p className="text-sm text-muted-foreground">Assign client organizations to this project.</p>
                   <div className="border rounded-lg max-h-[200px] overflow-y-auto">
                     {organizations.length === 0 ? (
                       <p className="p-4 text-sm text-slate-500">No organizations available.</p>

@@ -303,7 +303,7 @@ export async function buildTaskNotificationPayloads(
     .select(`
       *,
       organization:organizations(id, name, notification_preferences),
-      requested_by_user:profiles!${tableName}_requested_by_fkey(id, email, name, role)
+      requested_by_user:users!${tableName}_requested_by_fkey(id, email, role, profiles:profiles(name))
     `)
     .eq('id', taskId)
     .single()
@@ -322,11 +322,11 @@ export async function buildTaskNotificationPayloads(
     .select(`
       staff_user_id,
       role,
-      staff_user:profiles!staff_assignments_staff_user_id_fkey(
+      staff_user:users!staff_assignments_staff_user_id_fkey(
         id,
         email,
-        name,
-        role
+        role,
+        profiles:profiles(name)
       )
     `)
     .eq('assignable_type', taskType)
@@ -345,8 +345,8 @@ export async function buildTaskNotificationPayloads(
   // Get all admins and staff from the organization for 'created' notifications
   if (notificationType === 'service_request_created' || notificationType === 'project_request_created') {
     const { data: staffUsers } = await supabaseAdmin
-      .from('profiles')
-      .select('id, email, name, role')
+      .from('users')
+      .select('id, email, role, profiles:profiles(name)')
       .eq('organization_id', task.organization_id)
       .in('role', ['super_admin', 'staff', 'partner', 'partner_staff'])
 
@@ -411,8 +411,8 @@ export async function buildTaskNotificationPayloads(
         acknowledgementUrl,
         acknowledgementToken,
         requestUrl,
-        recipientName: user.name || user.email,
-        clientName: task.requested_by_user?.name || 'Unknown',
+        recipientName: user.profiles?.name || user.email,
+        clientName: task.requested_by_user?.profiles?.name || 'Unknown',
         organizationName: task.organization?.name || 'Unknown',
         priority: task.priority || 'medium',
         status: task.status,

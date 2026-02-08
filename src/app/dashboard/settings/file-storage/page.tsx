@@ -1,9 +1,10 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { HardDrive } from "lucide-react";
+import { HardDrive, CloudIcon } from "lucide-react";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { FileStorageSettings } from "@/components/settings/file-storage-settings";
+import { ClientCloudDrives } from "@/components/settings/client-cloud-drives";
 
 const APP_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -101,12 +102,14 @@ export default async function FileStorageSettingsPage() {
     .maybeSingle();
   const awsConfigured = awsEnvConfigured || hasEncryptedS3 || !!s3DbRow;
 
+  const isAdminOrStaff = role === "super_admin" || role === "staff";
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">File Storage</h1>
         <p className="text-muted-foreground">
-          Connect Google Drive, OneDrive, or Dropbox and sync files into your organization’s secure S3 storage.
+          Connect Google Drive, OneDrive, or Dropbox and sync files into your organization's secure S3 storage.
         </p>
       </div>
 
@@ -129,6 +132,25 @@ export default async function FileStorageSettingsPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Client Cloud Drive Integrations - Staff/Admin only */}
+      {isAdminOrStaff && (
+        <Card className="border-border shadow-sm overflow-hidden">
+          <CardHeader className="bg-muted/30 border-b">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <CloudIcon className="text-primary w-5 h-5" />
+              Client Cloud Drives
+            </CardTitle>
+            <CardDescription>
+              View and pull files from client cloud drives (Google Drive, OneDrive, Dropbox).
+              Clients must first connect their cloud storage from their own File Storage settings.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <ClientCloudDrives awsConfigured={awsConfigured} />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

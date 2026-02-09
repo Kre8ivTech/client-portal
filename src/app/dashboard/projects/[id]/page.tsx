@@ -23,11 +23,11 @@ import {
 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
-const ProjectOverview = dynamic(() => import('@/components/projects/workspace/project-overview').then(m => ({ default: m.ProjectOverview })), { ssr: false })
-const ProjectTasksBoard = dynamic(() => import('@/components/projects/workspace/project-tasks-board').then(m => ({ default: m.ProjectTasksBoard })), { ssr: false })
-const ProjectFilesManager = dynamic(() => import('@/components/projects/workspace/project-files-manager').then(m => ({ default: m.ProjectFilesManager })), { ssr: false })
-const ProjectActivityFeed = dynamic(() => import('@/components/projects/workspace/project-activity-feed').then(m => ({ default: m.ProjectActivityFeed })), { ssr: false })
-const ProjectCalendar = dynamic(() => import('@/components/projects/workspace/project-calendar').then(m => ({ default: m.ProjectCalendar })), { ssr: false })
+const ProjectOverview = dynamic(() => import('@/components/projects/workspace/project-overview').then(m => ({ default: m.ProjectOverview })))
+const ProjectTasksBoard = dynamic(() => import('@/components/projects/workspace/project-tasks-board').then(m => ({ default: m.ProjectTasksBoard })))
+const ProjectFilesManager = dynamic(() => import('@/components/projects/workspace/project-files-manager').then(m => ({ default: m.ProjectFilesManager })))
+const ProjectActivityFeed = dynamic(() => import('@/components/projects/workspace/project-activity-feed').then(m => ({ default: m.ProjectActivityFeed })))
+const ProjectCalendar = dynamic(() => import('@/components/projects/workspace/project-calendar').then(m => ({ default: m.ProjectCalendar })))
 import { ProjectMembersPanel } from '@/components/projects/project-members-panel'
 import { ProjectOrganizationsPanel } from '@/components/projects/project-organizations-panel'
 import { ProjectSettingsForm } from '@/components/projects/project-settings-form'
@@ -373,6 +373,12 @@ export default async function ProjectWorkspacePage({
               <span className="hidden sm:inline">Files</span>
               {activeFiles.length > 0 && (
                 <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{activeFiles.length}</span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </div>
+      </Tabs>
+
       {/* Quick Stats */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
         <Card>
@@ -649,6 +655,46 @@ export default async function ProjectWorkspacePage({
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Team Tab */}
+        <TabsContent value="team">
+          <ProjectMembersPanel
+            projectId={project.id}
+            members={activeMembers}
+            canEdit={canEdit}
+          />
+        </TabsContent>
+
+        {/* Organizations Tab */}
+        <TabsContent value="organizations">
+          <ProjectOrganizationsPanel
+            projectId={project.id}
+            organizations={assignedOrgs}
+            canEdit={canEdit}
+          />
+        </TabsContent>
+
+        {/* Settings Tab */}
+        {canEdit && (
+          <TabsContent value="settings">
+            <ProjectSettingsForm project={project} />
+          </TabsContent>
+        )}
+      </Tabs>
+
+      {/* Workspace Tabs */}
+      <Tabs defaultValue="overview" className="space-y-4">
+        <div className="border-b -mx-1">
+          <TabsList className="bg-transparent h-auto p-0 w-full justify-start overflow-x-auto">
+            <TabsTrigger
+              value="overview"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 gap-2"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
             <TabsTrigger
               value="activity"

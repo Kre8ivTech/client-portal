@@ -46,7 +46,7 @@ const DEFAULT_SETTINGS: SLAMonitoringSettings = {
 export async function getSLASettings(): Promise<SLAMonitoringSettings> {
   try {
     const { data, error } = await supabaseAdmin
-      .from('app_settings')
+      .from('feature_settings')
       .select('value')
       .eq('key', 'sla_monitoring')
       .single()
@@ -56,7 +56,7 @@ export async function getSLASettings(): Promise<SLAMonitoringSettings> {
       return DEFAULT_SETTINGS
     }
 
-    return { ...DEFAULT_SETTINGS, ...data.value } as SLAMonitoringSettings
+    return { ...DEFAULT_SETTINGS, ...(data.value as Record<string, unknown>) } as SLAMonitoringSettings
   } catch (error) {
     console.error('[SLA Settings] Error fetching settings:', error)
     return DEFAULT_SETTINGS
@@ -74,7 +74,7 @@ export async function updateSLASettings(
     const newSettings = { ...currentSettings, ...settings }
 
     const { error } = await supabaseAdmin
-      .from('app_settings')
+      .from('feature_settings')
       .update({ value: newSettings })
       .eq('key', 'sla_monitoring')
 

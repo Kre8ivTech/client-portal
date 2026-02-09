@@ -1,33 +1,33 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   FolderKanban,
   ChevronLeft,
-  Calendar,
+  ListTodo,
+  FileText,
+  MessageSquare,
+  CalendarDays,
   Users,
   Building2,
-  Clock,
-  Target,
   Settings,
   AlertTriangle,
-  ListTodo,
+  LayoutDashboard,
   GanttChart,
-  MessageSquare,
   FolderOpen,
   Bell,
   CheckCircle2,
 } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+const ProjectOverview = dynamic(() => import('@/components/projects/workspace/project-overview').then(m => ({ default: m.ProjectOverview })), { ssr: false })
+const ProjectTasksBoard = dynamic(() => import('@/components/projects/workspace/project-tasks-board').then(m => ({ default: m.ProjectTasksBoard })), { ssr: false })
+const ProjectFilesManager = dynamic(() => import('@/components/projects/workspace/project-files-manager').then(m => ({ default: m.ProjectFilesManager })), { ssr: false })
+const ProjectActivityFeed = dynamic(() => import('@/components/projects/workspace/project-activity-feed').then(m => ({ default: m.ProjectActivityFeed })), { ssr: false })
+const ProjectCalendar = dynamic(() => import('@/components/projects/workspace/project-calendar').then(m => ({ default: m.ProjectCalendar })), { ssr: false })
 import { ProjectMembersPanel } from '@/components/projects/project-members-panel'
 import { ProjectOrganizationsPanel } from '@/components/projects/project-organizations-panel'
 import { ProjectSettingsForm } from '@/components/projects/project-settings-form'
@@ -67,9 +67,9 @@ function getPriorityBadgeClass(priority: string): string {
   }
 }
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
-export default async function ProjectDetailPage({
+export default async function ProjectWorkspacePage({
   params,
 }: {
   params: Promise<{ id: string }>
@@ -123,25 +123,21 @@ export default async function ProjectDetailPage({
         <div className="space-y-6">
           <Link
             href="/dashboard/projects"
-            className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors w-fit"
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors w-fit"
           >
             <ChevronLeft className="h-4 w-4" />
             Back to Projects
           </Link>
-
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Projects system is not available yet</AlertTitle>
             <AlertDescription>
-              The database table <span className="font-mono">public.projects</span> was not found
-              (Supabase error <span className="font-mono">PGRST205</span>). This usually means
-              production migrations haven&apos;t been applied yet.
+              The database table <span className="font-mono">public.projects</span> was not found. This usually means production migrations haven&apos;t been applied yet.
             </AlertDescription>
           </Alert>
         </div>
       )
     }
-
     notFound()
   }
 
@@ -158,6 +154,52 @@ export default async function ProjectDetailPage({
     (isPartner && project.organization_id === organizationId) ||
     (isPartner && isAccountManager)
 
+  // Fetch workspace data in parallel
+  const [tasksResult, filesResult, activityResult, commentsResult] = await Promise.all([
+    supabase
+      .from('project_tasks')
+      .select(`
+        *,
+        assignee:users!project_tasks_assigned_to_fkey(id, email, profiles:profiles(name, avatar_url))
+      `)
+      .eq('project_id', projectId)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('project_files')
+      .select(`
+        *,
+        uploader:users!project_files_uploaded_by_fkey(id, email, profiles:profiles(name, avatar_url))
+      `)
+      .eq('project_id', projectId)
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('project_activity')
+      .select(`
+        *,
+        user:users!project_activity_user_id_fkey(id, email, profiles:profiles(name, avatar_url))
+      `)
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('project_comments')
+      .select(`
+        *,
+        author:users!project_comments_author_id_fkey(id, email, profiles:profiles(name, avatar_url))
+      `)
+      .eq('project_id', projectId)
+      .is('task_id', null)
+      .order('created_at', { ascending: false })
+      .limit(50),
+  ])
+
+  const tasks = tasksResult.data ?? []
+  const files = filesResult.data ?? []
+  const activityItems = activityResult.data ?? []
+  const projectComments = commentsResult.data ?? []
+
   // Fetch available staff for assignment
   let availableStaff: any[] = []
   let availableOrganizations: any[] = []
@@ -172,7 +214,6 @@ export default async function ProjectDetailPage({
 
     availableStaff = staff ?? []
 
-    // Fetch organizations for assignment
     if (isSuperAdmin || isStaff) {
       const { data: orgs } = await supabase
         .from('organizations')
@@ -193,6 +234,8 @@ export default async function ProjectDetailPage({
     }
   }
 
+  const activeMembers = project.project_members?.filter((m: any) => m.is_active) ?? []
+  const activeFiles = files.filter((f: any) => f.name !== '.folder')
   // Fetch project tasks
   let projectTasks: any[] = []
   const { data: tasksData, error: tasksError } = await supabase
@@ -268,24 +311,27 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/dashboard/projects"
-        className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors w-fit"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Back to Projects
-      </Link>
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <Link
+          href="/dashboard/projects"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Projects
+        </Link>
+        <span className="text-muted-foreground">/</span>
+        <span className="text-sm font-medium truncate">{project.name}</span>
+      </div>
 
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center">
-            <FolderKanban className="h-7 w-7 text-primary" />
+          <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <FolderKanban className="h-6 w-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              {project.name}
-            </h1>
-            <p className="text-slate-500 font-mono text-sm">PRJ-{project.project_number}</p>
+            <h1 className="text-xl font-bold tracking-tight">{project.name}</h1>
+            <p className="text-sm text-muted-foreground font-mono">PRJ-{project.project_number}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -298,6 +344,35 @@ export default async function ProjectDetailPage({
         </div>
       </div>
 
+      {/* Workspace Tabs */}
+      <Tabs defaultValue="overview" className="space-y-4">
+        <div className="border-b -mx-1">
+          <TabsList className="bg-transparent h-auto p-0 w-full justify-start overflow-x-auto">
+            <TabsTrigger
+              value="overview"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 gap-2"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="tasks"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 gap-2"
+            >
+              <ListTodo className="h-4 w-4" />
+              <span className="hidden sm:inline">Tasks</span>
+              {tasks.length > 0 && (
+                <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{tasks.length}</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="files"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Files</span>
+              {activeFiles.length > 0 && (
+                <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{activeFiles.length}</span>
       {/* Quick Stats */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
         <Card>
@@ -574,12 +649,93 @@ export default async function ProjectDetailPage({
                   </div>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </TabsTrigger>
+            <TabsTrigger
+              value="activity"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 gap-2"
+            >
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Activity</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="calendar"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 gap-2"
+            >
+              <CalendarDays className="h-4 w-4" />
+              <span className="hidden sm:inline">Calendar</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="team"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 gap-2"
+            >
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Team</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="organizations"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 gap-2"
+            >
+              <Building2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Orgs</span>
+            </TabsTrigger>
+            {canEdit && (
+              <TabsTrigger
+                value="settings"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 gap-2"
+              >
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Settings</span>
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </div>
+
+        <TabsContent value="overview" className="mt-6">
+          <ProjectOverview
+            project={project}
+            tasks={tasks}
+            members={activeMembers}
+            fileCount={activeFiles.length}
+            commentCount={projectComments.length}
+          />
         </TabsContent>
 
-        {/* Team Tab */}
-        <TabsContent value="team">
+        <TabsContent value="tasks" className="mt-6">
+          <ProjectTasksBoard
+            projectId={project.id}
+            initialTasks={tasks}
+            members={activeMembers}
+            canEdit={canEdit}
+          />
+        </TabsContent>
+
+        <TabsContent value="files" className="mt-6">
+          <ProjectFilesManager
+            projectId={project.id}
+            initialFiles={files}
+            canEdit={canEdit}
+          />
+        </TabsContent>
+
+        <TabsContent value="activity" className="mt-6">
+          <ProjectActivityFeed
+            projectId={project.id}
+            initialActivity={activityItems}
+            initialComments={projectComments}
+            currentUserId={user.id}
+            canEdit={canEdit}
+          />
+        </TabsContent>
+
+        <TabsContent value="calendar" className="mt-6">
+          <ProjectCalendar
+            tasks={tasks}
+            projectStartDate={project.start_date}
+            projectEndDate={project.target_end_date}
+          />
+        </TabsContent>
+
+        <TabsContent value="team" className="mt-6">
           <ProjectMembersPanel
             projectId={project.id}
             members={project.project_members ?? []}
@@ -588,9 +744,17 @@ export default async function ProjectDetailPage({
           />
         </TabsContent>
 
-        {/* Settings Tab (Edit permissions required) */}
+        <TabsContent value="organizations" className="mt-6">
+          <ProjectOrganizationsPanel
+            projectId={project.id}
+            projectOrganizations={project.project_organizations ?? []}
+            availableOrganizations={availableOrganizations}
+            canEdit={canEdit}
+          />
+        </TabsContent>
+
         {canEdit && (
-          <TabsContent value="settings" className="space-y-6">
+          <TabsContent value="settings" className="mt-6">
             <ProjectSettingsForm project={project} />
 
             <ProjectOrganizationsPanel

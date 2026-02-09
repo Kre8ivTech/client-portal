@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import {
   Card,
   CardContent,
@@ -102,18 +103,28 @@ const STATUS_ICONS: Record<string, any> = {
 }
 
 export function ProjectOverview({ project, tasks, members, fileCount, commentCount }: ProjectOverviewProps) {
+  const [now, setNow] = useState<Date | null>(null)
+
+  useEffect(() => {
+    setNow(new Date())
+  }, [])
+
   const totalTasks = tasks.length
   const doneTasks = tasks.filter(t => t.status === 'done').length
   const inProgressTasks = tasks.filter(t => t.status === 'in_progress').length
   const inReviewTasks = tasks.filter(t => t.status === 'in_review').length
   const todoTasks = tasks.filter(t => t.status === 'todo').length
-  const overdueTasks = tasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done' && t.status !== 'cancelled')
+  const overdueTasks = now
+    ? tasks.filter(t => t.due_date && new Date(t.due_date) < now && t.status !== 'done' && t.status !== 'cancelled')
+    : []
   const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
 
-  const upcomingTasks = tasks
-    .filter(t => t.due_date && new Date(t.due_date) >= new Date() && t.status !== 'done' && t.status !== 'cancelled')
-    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
-    .slice(0, 5)
+  const upcomingTasks = now
+    ? tasks
+        .filter(t => t.due_date && new Date(t.due_date) >= now && t.status !== 'done' && t.status !== 'cancelled')
+        .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime())
+        .slice(0, 5)
+    : []
 
   return (
     <div className="space-y-6">

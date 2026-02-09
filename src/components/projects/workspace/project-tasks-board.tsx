@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -134,6 +134,12 @@ export function ProjectTasksBoard({ projectId, initialTasks, members, canEdit }:
   const [newAssignee, setNewAssignee] = useState<string>('unassigned')
   const [newDueDate, setNewDueDate] = useState('')
   const [newEstimatedHours, setNewEstimatedHours] = useState('')
+
+  const [now, setNow] = useState<Date | null>(null)
+
+  useEffect(() => {
+    setNow(new Date())
+  }, [])
 
   const router = useRouter()
   const supabase = createClient()
@@ -408,7 +414,7 @@ export function ProjectTasksBoard({ projectId, initialTasks, members, canEdit }:
     const priorityConfig = PRIORITIES.find(p => p.value === task.priority)
     const assigneeName = getAssigneeName(task)
     const initials = assigneeName ? assigneeName.slice(0, 2).toUpperCase() : null
-    const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done'
+    const isOverdue = now && task.due_date && new Date(task.due_date) < now && task.status !== 'done'
 
     return (
       <div key={task.id} className="group rounded-lg border bg-card p-3 space-y-2.5 hover:shadow-sm transition-shadow">
@@ -591,7 +597,7 @@ export function ProjectTasksBoard({ projectId, initialTasks, members, canEdit }:
                   const statusConfig = STATUSES.find(s => s.value === task.status)
                   const priorityConfig = PRIORITIES.find(p => p.value === task.priority)
                   const assigneeName = getAssigneeName(task)
-                  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done'
+                  const isOverdue = now && task.due_date && new Date(task.due_date) < now && task.status !== 'done'
                   const StatusIcon = statusConfig?.icon ?? Circle
 
                   return (

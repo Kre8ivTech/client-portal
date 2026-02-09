@@ -101,10 +101,12 @@ function getActionDescription(activity: ActivityItem) {
   }
 }
 
-function timeAgo(dateString: string) {
+function timeAgo(dateString: string, referenceNow?: Date | null) {
   const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
+  if (!referenceNow) {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+  const diffMs = referenceNow.getTime() - date.getTime()
   const diffMins = Math.floor(diffMs / 60000)
   const diffHours = Math.floor(diffMins / 60)
   const diffDays = Math.floor(diffHours / 24)
@@ -128,7 +130,12 @@ export function ProjectActivityFeed({
   const [newComment, setNewComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [activeTab, setActiveTab] = useState<'all' | 'comments'>('all')
+  const [now, setNow] = useState<Date | null>(null)
   const supabase = createClient()
+
+  useEffect(() => {
+    setNow(new Date())
+  }, [])
 
   const fetchActivity = useCallback(async () => {
     const { data } = await supabase
@@ -305,7 +312,7 @@ export function ProjectActivityFeed({
                       <span className="text-sm font-medium">{authorName}</span>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {timeAgo(comment.created_at)}
+                        {timeAgo(comment.created_at, now)}
                       </span>
                       {comment.is_edited && (
                         <span className="text-xs text-muted-foreground">(edited)</span>
@@ -337,7 +344,7 @@ export function ProjectActivityFeed({
                     <span className="font-medium">{userName}</span>{' '}
                     <span className="text-muted-foreground">{getActionDescription(act)}</span>
                   </span>
-                  <span className="text-xs text-muted-foreground shrink-0">{timeAgo(act.created_at)}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{timeAgo(act.created_at, now)}</span>
                 </div>
               )
             }

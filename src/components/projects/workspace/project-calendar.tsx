@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -54,8 +54,13 @@ const STATUS_CONFIG: Record<string, { icon: any; label: string }> = {
 }
 
 export function ProjectCalendar({ tasks, projectStartDate, projectEndDate }: ProjectCalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [mounted, setMounted] = useState(false)
+  const [currentDate, setCurrentDate] = useState(() => new Date())
   const [selectedDay, setSelectedDay] = useState<{ date: Date; tasks: Task[] } | null>(null)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -110,14 +115,17 @@ export function ProjectCalendar({ tasks, projectStartDate, projectEndDate }: Pro
   const taskStats = useMemo(() => {
     const total = tasks.length
     const withDueDate = tasks.filter(t => t.due_date).length
-    const overdue = tasks.filter(t => t.due_date && new Date(t.due_date) < new Date() && t.status !== 'done').length
+    const now = new Date()
+    const overdue = mounted
+      ? tasks.filter(t => t.due_date && new Date(t.due_date) < now && t.status !== 'done').length
+      : 0
     const dueThisMonth = tasks.filter(t => {
       if (!t.due_date) return false
       const d = new Date(t.due_date)
       return d.getMonth() === month && d.getFullYear() === year
     }).length
     return { total, withDueDate, overdue, dueThisMonth }
-  }, [tasks, month, year])
+  }, [tasks, month, year, mounted])
 
   function prevMonth() {
     setCurrentDate(new Date(year, month - 1, 1))

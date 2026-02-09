@@ -218,3 +218,35 @@ export const updateCommunicationSettingsSchema = z.object({
 })
 
 export type UpdateCommunicationSettingsInput = z.infer<typeof updateCommunicationSettingsSchema>
+
+// =============================================================================
+// TASK COMMENTS
+// =============================================================================
+
+export const createTaskCommentSchema = z.object({
+  content: z.string().min(1, { message: 'Comment cannot be empty.' }).max(10000),
+  parent_comment_id: z.string().uuid().optional().nullable(),
+  is_internal: z.boolean().default(false),
+})
+
+export type CreateTaskCommentInput = z.infer<typeof createTaskCommentSchema>
+
+export const updateTaskCommentSchema = z.object({
+  content: z.string().min(1, { message: 'Comment cannot be empty.' }).max(10000),
+})
+
+export type UpdateTaskCommentInput = z.infer<typeof updateTaskCommentSchema>
+
+// =============================================================================
+// TASK FILES
+// =============================================================================
+
+export const createTaskFileSchema = z.object({
+  file_name: z.string().min(1, { message: 'File name is required.' }).max(255),
+  file_size: z.number().int().positive({ message: 'File size must be positive.' }),
+  mime_type: z.string().min(1, { message: 'MIME type is required.' }),
+  storage_path: z.string().min(1, { message: 'Storage path is required.' }),
+  description: z.string().max(1000).optional().nullable(),
+})
+
+export type CreateTaskFileInput = z.infer<typeof createTaskFileSchema>

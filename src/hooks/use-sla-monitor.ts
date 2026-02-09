@@ -24,7 +24,7 @@ export function useSLAMonitor(enabled: boolean = true) {
     queryKey: ['sla-settings'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('app_settings')
+        .from('feature_settings')
         .select('value')
         .eq('key', 'sla_monitoring')
         .single()

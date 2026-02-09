@@ -17,11 +17,13 @@ import {
   AlertTriangle,
   LayoutDashboard,
 } from 'lucide-react'
-import { ProjectOverview } from '@/components/projects/workspace/project-overview'
-import { ProjectTasksBoard } from '@/components/projects/workspace/project-tasks-board'
-import { ProjectFilesManager } from '@/components/projects/workspace/project-files-manager'
-import { ProjectActivityFeed } from '@/components/projects/workspace/project-activity-feed'
-import { ProjectCalendar } from '@/components/projects/workspace/project-calendar'
+import dynamic from 'next/dynamic'
+
+const ProjectOverview = dynamic(() => import('@/components/projects/workspace/project-overview').then(m => ({ default: m.ProjectOverview })), { ssr: false })
+const ProjectTasksBoard = dynamic(() => import('@/components/projects/workspace/project-tasks-board').then(m => ({ default: m.ProjectTasksBoard })), { ssr: false })
+const ProjectFilesManager = dynamic(() => import('@/components/projects/workspace/project-files-manager').then(m => ({ default: m.ProjectFilesManager })), { ssr: false })
+const ProjectActivityFeed = dynamic(() => import('@/components/projects/workspace/project-activity-feed').then(m => ({ default: m.ProjectActivityFeed })), { ssr: false })
+const ProjectCalendar = dynamic(() => import('@/components/projects/workspace/project-calendar').then(m => ({ default: m.ProjectCalendar })), { ssr: false })
 import { ProjectMembersPanel } from '@/components/projects/project-members-panel'
 import { ProjectOrganizationsPanel } from '@/components/projects/project-organizations-panel'
 import { ProjectSettingsForm } from '@/components/projects/project-settings-form'

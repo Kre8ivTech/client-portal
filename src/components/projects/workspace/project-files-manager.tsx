@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -440,7 +440,7 @@ export function ProjectFilesManager({ projectId, initialFiles, canEdit }: Projec
                           {uploaderName}
                         </TableCell>
                         <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                          {new Date(file.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {new Date(file.created_at).toISOString().split('T')[0]}
                         </TableCell>
                         <TableCell>
                           <DropdownMenu>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Play, Square, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { createTimeEntry } from "@/lib/actions/time-entries";
 import { useRouter } from "next/navigation";
 import { cn, calculateBillableHours } from "@/lib/utils";
+import { useWorkTimer } from "@/hooks/use-work-timer";
+import { InactivityDialog } from "./inactivity-dialog";
 
 interface WorkTimerButtonProps {
   organizationId: string;
@@ -34,36 +36,21 @@ export function WorkTimerButton({
   planAssignments = [],
 }: WorkTimerButtonProps) {
   const router = useRouter();
-  const [isRunning, setIsRunning] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const {
+    isRunning,
+    elapsedSeconds,
+    showInactivityDialog,
+    startTimer,
+    stopTimer,
+    resetTimer,
+    handleInactivityContinue,
+    handleInactivityStop,
+  } = useWorkTimer();
+
   const [showDialog, setShowDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [workType, setWorkType] = useState<"support" | "dev">("support");
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (isRunning) {
-      startTimeRef.current = Date.now() - elapsedSeconds * 1000;
-      intervalRef.current = setInterval(() => {
-        if (startTimeRef.current) {
-          setElapsedSeconds(Math.floor((Date.now() - startTimeRef.current) / 1000));
-        }
-      }, 1000);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [isRunning, elapsedSeconds]);
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -73,18 +60,18 @@ export function WorkTimerButton({
   };
 
   const handleStart = () => {
-    setIsRunning(true);
+    startTimer();
     setError(null);
   };
 
   const handleStop = () => {
-    setIsRunning(false);
+    stopTimer();
     setShowDialog(true);
   };
 
   const handleCancel = () => {
     setShowDialog(false);
-    setElapsedSeconds(0);
+    resetTimer();
     setError(null);
     setWorkType("support");
   };
@@ -111,7 +98,7 @@ export function WorkTimerButton({
         return;
       }
       setShowDialog(false);
-      setElapsedSeconds(0);
+      resetTimer();
       setWorkType("support");
       form.reset();
       router.refresh();
@@ -155,6 +142,12 @@ export function WorkTimerButton({
           )}
         </Button>
       </div>
+
+      <InactivityDialog
+        open={showInactivityDialog}
+        onContinue={handleInactivityContinue}
+        onStop={handleInactivityStop}
+      />
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="sm:max-w-[500px]">

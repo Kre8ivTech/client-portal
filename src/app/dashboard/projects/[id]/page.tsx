@@ -16,26 +16,17 @@ import {
   Settings,
   AlertTriangle,
   LayoutDashboard,
-  GanttChart,
-  FolderOpen,
-  Bell,
-  CheckCircle2,
 } from 'lucide-react'
-import dynamic from 'next/dynamic'
+import nextDynamic from 'next/dynamic'
 
-const ProjectOverview = dynamic(() => import('@/components/projects/workspace/project-overview').then(m => ({ default: m.ProjectOverview })), { ssr: false })
-const ProjectTasksBoard = dynamic(() => import('@/components/projects/workspace/project-tasks-board').then(m => ({ default: m.ProjectTasksBoard })), { ssr: false })
-const ProjectFilesManager = dynamic(() => import('@/components/projects/workspace/project-files-manager').then(m => ({ default: m.ProjectFilesManager })), { ssr: false })
-const ProjectActivityFeed = dynamic(() => import('@/components/projects/workspace/project-activity-feed').then(m => ({ default: m.ProjectActivityFeed })), { ssr: false })
-const ProjectCalendar = dynamic(() => import('@/components/projects/workspace/project-calendar').then(m => ({ default: m.ProjectCalendar })), { ssr: false })
+const ProjectOverview = nextDynamic(() => import('@/components/projects/workspace/project-overview').then(m => ({ default: m.ProjectOverview })), { ssr: false })
+const ProjectTasksBoard = nextDynamic(() => import('@/components/projects/workspace/project-tasks-board').then(m => ({ default: m.ProjectTasksBoard })), { ssr: false })
+const ProjectFilesManager = nextDynamic(() => import('@/components/projects/workspace/project-files-manager').then(m => ({ default: m.ProjectFilesManager })), { ssr: false })
+const ProjectActivityFeed = nextDynamic(() => import('@/components/projects/workspace/project-activity-feed').then(m => ({ default: m.ProjectActivityFeed })), { ssr: false })
+const ProjectCalendar = nextDynamic(() => import('@/components/projects/workspace/project-calendar').then(m => ({ default: m.ProjectCalendar })), { ssr: false })
 import { ProjectMembersPanel } from '@/components/projects/project-members-panel'
 import { ProjectOrganizationsPanel } from '@/components/projects/project-organizations-panel'
 import { ProjectSettingsForm } from '@/components/projects/project-settings-form'
-import { ProjectTasksList } from '@/components/projects/project-tasks-list'
-import { ProjectGanttChart } from '@/components/projects/project-gantt-chart'
-import { ProjectCalendarView } from '@/components/projects/project-calendar-view'
-import { ProjectComments } from '@/components/projects/project-comments'
-import { ProjectFiles } from '@/components/projects/project-files'
 import { ProjectCommunicationSettings } from '@/components/projects/project-communication-settings'
 
 function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'outline' | 'destructive' {
@@ -236,51 +227,6 @@ export default async function ProjectWorkspacePage({
 
   const activeMembers = project.project_members?.filter((m: any) => m.is_active) ?? []
   const activeFiles = files.filter((f: any) => f.name !== '.folder')
-  // Fetch project tasks
-  let projectTasks: any[] = []
-  const { data: tasksData, error: tasksError } = await supabase
-    .from('project_tasks')
-    .select(`
-      *,
-      assignee:users!project_tasks_assigned_to_fkey(id, email, profiles:profiles(name, avatar_url))
-    `)
-    .eq('project_id', projectId)
-    .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: false })
-
-  if (!tasksError) {
-    projectTasks = tasksData ?? []
-  }
-
-  // Fetch project comments
-  let projectComments: any[] = []
-  const { data: commentsData, error: commentsError } = await supabase
-    .from('project_comments')
-    .select(`
-      *,
-      author:users!project_comments_created_by_fkey(id, email, profiles:profiles(name, avatar_url))
-    `)
-    .eq('project_id', projectId)
-    .order('created_at', { ascending: true })
-
-  if (!commentsError) {
-    projectComments = commentsData ?? []
-  }
-
-  // Fetch project files
-  let projectFiles: any[] = []
-  const { data: filesData, error: filesError } = await supabase
-    .from('project_files')
-    .select(`
-      *,
-      uploader:users!project_files_uploaded_by_fkey(id, email, profiles:profiles(name, avatar_url))
-    `)
-    .eq('project_id', projectId)
-    .order('created_at', { ascending: false })
-
-  if (!filesError) {
-    projectFiles = filesData ?? []
-  }
 
   // Fetch communication settings
   let commSettings: any = null
@@ -293,21 +239,6 @@ export default async function ProjectWorkspacePage({
   if (!settingsError) {
     commSettings = settingsData
   }
-
-  const memberCount = project.project_members?.filter((m: any) => m.is_active).length ?? 0
-  const orgCount = project.project_organizations?.filter((o: any) => o.is_active).length ?? 0
-  const tasksDone = projectTasks.filter((t: any) => t.status === 'done').length
-  const tasksTotal = projectTasks.length
-
-  // Only active project members can be assigned to tasks
-  const taskAssignees = (project.project_members ?? [])
-    .filter((m: any) => m.is_active && m.user)
-    .map((m: any) => ({
-      id: m.user.id,
-      email: m.user.email,
-      role: m.user.role,
-      profiles: m.user.profiles,
-    }))
 
   return (
     <div className="space-y-6">

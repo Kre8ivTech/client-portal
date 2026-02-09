@@ -551,7 +551,7 @@ export default async function ProjectDetailPage({
                     <div className="flex justify-between py-2 border-b border-slate-100">
                       <span className="text-slate-500">Budget</span>
                       <span className="font-medium">
-                        ${(project.budget_amount / 100).toLocaleString()}
+                        ${(project.budget_amount / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
                   )}

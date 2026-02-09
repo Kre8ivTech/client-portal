@@ -374,23 +374,29 @@ export function ProjectTasksList({
                     </div>
                     <div>
                       <label className="text-sm font-medium">Assign To</label>
-                      <Select
-                        value={newTask.assigned_to}
-                        onValueChange={(v) =>
-                          setNewTask((prev) => ({ ...prev, assigned_to: v }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Unassigned" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {members.map((m) => (
-                            <SelectItem key={m.id} value={m.id}>
-                              {m.profiles?.name ?? m.email}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {members.length > 0 ? (
+                        <Select
+                          value={newTask.assigned_to}
+                          onValueChange={(v) =>
+                            setNewTask((prev) => ({ ...prev, assigned_to: v }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Unassigned" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {members.map((m) => (
+                              <SelectItem key={m.id} value={m.id}>
+                                {m.profiles?.name ?? m.email}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <p className="text-sm text-slate-500 mt-1">
+                          Add members to the project Team tab first.
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm font-medium">Due Date</label>

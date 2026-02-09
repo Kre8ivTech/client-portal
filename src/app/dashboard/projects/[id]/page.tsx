@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -22,10 +21,22 @@ import {
   Target,
   Settings,
   AlertTriangle,
+  ListTodo,
+  GanttChart,
+  MessageSquare,
+  FolderOpen,
+  Bell,
+  CheckCircle2,
 } from 'lucide-react'
 import { ProjectMembersPanel } from '@/components/projects/project-members-panel'
 import { ProjectOrganizationsPanel } from '@/components/projects/project-organizations-panel'
 import { ProjectSettingsForm } from '@/components/projects/project-settings-form'
+import { ProjectTasksList } from '@/components/projects/project-tasks-list'
+import { ProjectGanttChart } from '@/components/projects/project-gantt-chart'
+import { ProjectCalendarView } from '@/components/projects/project-calendar-view'
+import { ProjectComments } from '@/components/projects/project-comments'
+import { ProjectFiles } from '@/components/projects/project-files'
+import { ProjectCommunicationSettings } from '@/components/projects/project-communication-settings'
 
 function getStatusBadgeVariant(status: string): 'default' | 'secondary' | 'outline' | 'destructive' {
   switch (status) {
@@ -171,7 +182,6 @@ export default async function ProjectDetailPage({
 
       availableOrganizations = orgs ?? []
     } else if (organizationId) {
-      // Partners can assign their own org and child orgs
       const { data: orgs } = await supabase
         .from('organizations')
         .select('id, name, type, status')
@@ -183,8 +193,84 @@ export default async function ProjectDetailPage({
     }
   }
 
+  // Fetch project tasks
+  let projectTasks: any[] = []
+  const { data: tasksData, error: tasksError } = await supabase
+    .from('project_tasks')
+    .select(`
+      *,
+      assignee:users!project_tasks_assigned_to_fkey(id, email, profiles:profiles(name, avatar_url))
+    `)
+    .eq('project_id', projectId)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false })
+
+  if (!tasksError) {
+    projectTasks = tasksData ?? []
+  }
+
+  // Fetch project comments
+  let projectComments: any[] = []
+  const { data: commentsData, error: commentsError } = await supabase
+    .from('project_comments')
+    .select(`
+      *,
+      author:users!project_comments_created_by_fkey(id, email, profiles:profiles(name, avatar_url))
+    `)
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: true })
+
+  if (!commentsError) {
+    projectComments = commentsData ?? []
+  }
+
+  // Fetch project files
+  let projectFiles: any[] = []
+  const { data: filesData, error: filesError } = await supabase
+    .from('project_files')
+    .select(`
+      *,
+      uploader:users!project_files_uploaded_by_fkey(id, email, profiles:profiles(name, avatar_url))
+    `)
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false })
+
+  if (!filesError) {
+    projectFiles = filesData ?? []
+  }
+
+  // Fetch communication settings
+  let commSettings: any = null
+  const { data: settingsData, error: settingsError } = await supabase
+    .from('project_communication_settings')
+    .select('*')
+    .eq('project_id', projectId)
+    .maybeSingle()
+
+  if (!settingsError) {
+    commSettings = settingsData
+  }
+
   const memberCount = project.project_members?.filter((m: any) => m.is_active).length ?? 0
   const orgCount = project.project_organizations?.filter((o: any) => o.is_active).length ?? 0
+  const tasksDone = projectTasks.filter((t: any) => t.status === 'done').length
+  const tasksTotal = projectTasks.length
+
+  // Members for task assignment (active project members + available staff)
+  const taskAssignees = [
+    ...(project.project_members ?? [])
+      .filter((m: any) => m.is_active && m.user)
+      .map((m: any) => ({
+        id: m.user.id,
+        email: m.user.email,
+        role: m.user.role,
+        profiles: m.user.profiles,
+      })),
+    ...availableStaff.filter(
+      (s: any) =>
+        !(project.project_members ?? []).some((m: any) => m.user_id === s.id)
+    ),
+  ]
 
   return (
     <div className="space-y-6">
@@ -219,10 +305,22 @@ export default async function ProjectDetailPage({
       </div>
 
       {/* Quick Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Team Members</CardTitle>
+            <CardTitle className="text-sm font-medium">Tasks</CardTitle>
+            <ListTodo className="h-4 w-4 text-slate-400" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{tasksTotal}</div>
+            <p className="text-xs text-slate-500">
+              {tasksDone} completed
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Team</CardTitle>
             <Users className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
@@ -232,12 +330,12 @@ export default async function ProjectDetailPage({
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Organizations</CardTitle>
-            <Building2 className="h-4 w-4 text-slate-400" />
+            <CardTitle className="text-sm font-medium">Files</CardTitle>
+            <FolderOpen className="h-4 w-4 text-slate-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{orgCount}</div>
-            <p className="text-xs text-slate-500">Assigned orgs</p>
+            <div className="text-2xl font-bold">{projectFiles.length}</div>
+            <p className="text-xs text-slate-500">Uploaded</p>
           </CardContent>
         </Card>
         <Card>
@@ -285,28 +383,105 @@ export default async function ProjectDetailPage({
       </div>
 
       {/* Tabbed Content */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview" className="gap-2">
-            <FolderKanban className="h-4 w-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="team" className="gap-2">
-            <Users className="h-4 w-4" />
-            Team
-          </TabsTrigger>
-          <TabsTrigger value="organizations" className="gap-2">
-            <Building2 className="h-4 w-4" />
-            Organizations
-          </TabsTrigger>
-          {canEdit && (
-            <TabsTrigger value="settings" className="gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
+      <Tabs defaultValue="tasks" className="space-y-4">
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList className="inline-flex w-auto min-w-full md:min-w-0">
+            <TabsTrigger value="tasks" className="gap-2">
+              <ListTodo className="h-4 w-4" />
+              <span className="hidden sm:inline">Tasks</span>
             </TabsTrigger>
-          )}
-        </TabsList>
+            <TabsTrigger value="gantt" className="gap-2">
+              <GanttChart className="h-4 w-4" />
+              <span className="hidden sm:inline">Gantt</span>
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="gap-2">
+              <Calendar className="h-4 w-4" />
+              <span className="hidden sm:inline">Calendar</span>
+            </TabsTrigger>
+            <TabsTrigger value="comments" className="gap-2">
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Comments</span>
+              {projectComments.length > 0 && (
+                <span className="ml-1 rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium">
+                  {projectComments.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="files" className="gap-2">
+              <FolderOpen className="h-4 w-4" />
+              <span className="hidden sm:inline">Files</span>
+              {projectFiles.length > 0 && (
+                <span className="ml-1 rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] font-medium">
+                  {projectFiles.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="overview" className="gap-2">
+              <FolderKanban className="h-4 w-4" />
+              <span className="hidden sm:inline">Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="team" className="gap-2">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Team</span>
+            </TabsTrigger>
+            {canEdit && (
+              <TabsTrigger value="settings" className="gap-2">
+                <Settings className="h-4 w-4" />
+                <span className="hidden sm:inline">Settings</span>
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </div>
 
+        {/* Tasks Tab */}
+        <TabsContent value="tasks">
+          <ProjectTasksList
+            projectId={project.id}
+            tasks={projectTasks}
+            members={taskAssignees}
+            canEdit={canEdit}
+          />
+        </TabsContent>
+
+        {/* Gantt Chart Tab */}
+        <TabsContent value="gantt">
+          <ProjectGanttChart
+            projectId={project.id}
+            tasks={projectTasks}
+            projectStartDate={project.start_date}
+            projectEndDate={project.target_end_date}
+          />
+        </TabsContent>
+
+        {/* Calendar Tab */}
+        <TabsContent value="calendar">
+          <ProjectCalendarView
+            projectId={project.id}
+            tasks={projectTasks}
+          />
+        </TabsContent>
+
+        {/* Comments Tab */}
+        <TabsContent value="comments">
+          <ProjectComments
+            projectId={project.id}
+            comments={projectComments}
+            currentUserId={user.id}
+            canEdit={canEdit}
+          />
+        </TabsContent>
+
+        {/* Files Tab */}
+        <TabsContent value="files">
+          <ProjectFiles
+            projectId={project.id}
+            files={projectFiles}
+            currentUserId={user.id}
+            canEdit={canEdit}
+          />
+        </TabsContent>
+
+        {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
           <Card>
             <CardHeader>
@@ -337,6 +512,12 @@ export default async function ProjectDetailPage({
                     >
                       {project.priority}
                     </Badge>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-slate-100">
+                    <span className="text-slate-500">Organization</span>
+                    <span className="font-medium">
+                      {project.organization?.name ?? 'N/A'}
+                    </span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-slate-100">
                     <span className="text-slate-500">Created By</span>
@@ -373,13 +554,17 @@ export default async function ProjectDetailPage({
                     </div>
                   )}
                   {project.budget_amount && (
-                    <div className="flex justify-between py-2">
+                    <div className="flex justify-between py-2 border-b border-slate-100">
                       <span className="text-slate-500">Budget</span>
                       <span className="font-medium">
                         ${(project.budget_amount / 100).toLocaleString()}
                       </span>
                     </div>
                   )}
+                  <div className="flex justify-between py-2">
+                    <span className="text-slate-500">Organizations</span>
+                    <span className="font-medium">{orgCount} assigned</span>
+                  </div>
                 </div>
               </div>
 
@@ -399,6 +584,7 @@ export default async function ProjectDetailPage({
           </Card>
         </TabsContent>
 
+        {/* Team Tab */}
         <TabsContent value="team">
           <ProjectMembersPanel
             projectId={project.id}
@@ -408,18 +594,23 @@ export default async function ProjectDetailPage({
           />
         </TabsContent>
 
-        <TabsContent value="organizations">
-          <ProjectOrganizationsPanel
-            projectId={project.id}
-            projectOrganizations={project.project_organizations ?? []}
-            availableOrganizations={availableOrganizations}
-            canEdit={canEdit}
-          />
-        </TabsContent>
-
+        {/* Settings Tab (Edit permissions required) */}
         {canEdit && (
-          <TabsContent value="settings">
+          <TabsContent value="settings" className="space-y-6">
             <ProjectSettingsForm project={project} />
+
+            <ProjectOrganizationsPanel
+              projectId={project.id}
+              projectOrganizations={project.project_organizations ?? []}
+              availableOrganizations={availableOrganizations}
+              canEdit={canEdit}
+            />
+
+            <ProjectCommunicationSettings
+              projectId={project.id}
+              settings={commSettings}
+              canEdit={canEdit}
+            />
           </TabsContent>
         )}
       </Tabs>

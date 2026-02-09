@@ -73,7 +73,7 @@ export const createProjectSchema = z.object({
   priority: projectPrioritySchema.default('medium'),
   start_date: z.string().optional().nullable(),
   target_end_date: z.string().optional().nullable(),
-  budget_amount: z.number().int().min(0).optional().nullable(),
+  budget_amount: z.number().min(0).optional().nullable(),
   tags: z.array(z.string()).optional().default([]),
 })
 
@@ -88,7 +88,7 @@ export const updateProjectSchema = z.object({
   start_date: z.string().optional().nullable(),
   target_end_date: z.string().optional().nullable(),
   actual_end_date: z.string().optional().nullable(),
-  budget_amount: z.number().int().min(0).optional().nullable(),
+  budget_amount: z.number().min(0).optional().nullable(),
   tags: z.array(z.string()).optional(),
 })
 

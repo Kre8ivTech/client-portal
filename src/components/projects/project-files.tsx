@@ -105,10 +105,6 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${sizes[i]}`
 }
 
-function isImageType(mimeType: string | null): boolean {
-  return mimeType?.startsWith('image/') ?? false
-}
-
 const DEFAULT_FOLDERS = ['General', 'Documents', 'Images', 'Media', 'Deliverables']
 
 export function ProjectFiles({
@@ -168,19 +164,25 @@ export function ProjectFiles({
           continue
         }
 
-        const storagePath = `projects/${projectId}/${targetFolder}/${Date.now()}-${file.name}`
+        // Upload to S3 via the /api/files endpoint
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('folder', `projects/${projectId}/${targetFolder}`)
 
-        // Upload to Supabase Storage
-        const { error: uploadError } = await supabase.storage
-          .from('project-files')
-          .upload(storagePath, file)
+        const uploadRes = await fetch('/api/files', {
+          method: 'POST',
+          body: formData,
+        })
 
-        if (uploadError) {
-          console.error('Upload failed:', uploadError)
+        if (!uploadRes.ok) {
+          const err = await uploadRes.json().catch(() => ({}))
+          console.error('Upload failed:', err.error ?? uploadRes.statusText)
           continue
         }
 
-        // Create database record
+        const { data: orgFile } = await uploadRes.json()
+
+        // Create project_files record linking to the organization file
         const { error: dbError } = await supabase
           .from('project_files')
           .insert({
@@ -188,7 +190,7 @@ export function ProjectFiles({
             file_name: file.name,
             file_size: file.size,
             mime_type: file.type || null,
-            storage_path: storagePath,
+            storage_path: orgFile.id,
             folder: targetFolder,
             uploaded_by: currentUserId,
           })
@@ -210,15 +212,17 @@ export function ProjectFiles({
     }
   }
 
-  async function handleDeleteFile(fileId: string, storagePath: string) {
+  async function handleDeleteFile(fileId: string, orgFileId: string) {
     if (!confirm('Delete this file permanently?')) return
 
     setDeletingFileId(fileId)
     try {
-      // Delete from storage
-      await supabase.storage.from('project-files').remove([storagePath])
+      // Delete from S3 + organization_files via API
+      if (orgFileId) {
+        await fetch(`/api/files/${orgFileId}`, { method: 'DELETE' })
+      }
 
-      // Delete record
+      // Delete project_files record
       const { error } = await supabase
         .from('project_files')
         .delete()
@@ -233,22 +237,17 @@ export function ProjectFiles({
     }
   }
 
-  async function handleDownloadFile(storagePath: string, fileName: string) {
+  async function handleDownloadFile(orgFileId: string, fileName: string) {
     try {
-      const { data, error } = await supabase.storage
-        .from('project-files')
-        .download(storagePath)
+      // Get presigned download URL from S3 via API
+      const res = await fetch(`/api/files/${orgFileId}`)
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error ?? 'Failed to get download URL')
+      }
 
-      if (error) throw error
-
-      const url = URL.createObjectURL(data)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = fileName
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      const { data } = await res.json()
+      window.open(data.downloadUrl, '_blank')
     } catch (error) {
       console.error('Download failed:', error)
     }

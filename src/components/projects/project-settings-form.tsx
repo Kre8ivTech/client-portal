@@ -83,7 +83,7 @@ export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
       start_date: project.start_date ?? null,
       target_end_date: project.target_end_date ?? null,
       actual_end_date: project.actual_end_date ?? null,
-      budget_amount: project.budget_amount ?? null,
+      budget_amount: project.budget_amount != null ? project.budget_amount / 100 : null,
       tags: project.tags ?? [],
     },
   })
@@ -105,7 +105,7 @@ export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
           start_date: values.start_date || null,
           target_end_date: values.target_end_date || null,
           actual_end_date: values.actual_end_date || null,
-          budget_amount: values.budget_amount,
+          budget_amount: values.budget_amount != null ? Math.round(values.budget_amount * 100) : null,
           tags: values.tags || [],
           updated_by: user?.id,
           updated_at: new Date().toISOString(),
@@ -297,11 +297,11 @@ export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
                 name="budget_amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Budget (in cents)</FormLabel>
+                    <FormLabel>Budget ($)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
-                        placeholder="e.g., 100000 for $1,000"
+                        placeholder="e.g., 1000"
                         {...field}
                         value={field.value ?? ''}
                         onChange={(e) =>

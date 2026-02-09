@@ -20,8 +20,8 @@ export default async function RootLayout({
   const branding = await getPortalBranding();
   const primaryVar = branding.primary_color.trim();
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={inter.className} suppressHydrationWarning>
         <style
           dangerouslySetInnerHTML={{
             __html: `:root { --primary: ${primaryVar}; --ring: ${primaryVar}; --sidebar-accent: ${primaryVar}; }`,

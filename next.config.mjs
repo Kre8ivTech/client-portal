@@ -18,13 +18,6 @@ const nextConfig = {
       config.externals.push({
         'docusign-esign': 'commonjs docusign-esign',
       });
-      
-      // Handle the 'ApiClient' and model internal imports in docusign-esign
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'ApiClient': path.resolve(__dirname, 'node_modules/docusign-esign/src/ApiClient.js'),
-        'model': path.resolve(__dirname, 'node_modules/docusign-esign/src/model'),
-      };
     }
     return config;
   },

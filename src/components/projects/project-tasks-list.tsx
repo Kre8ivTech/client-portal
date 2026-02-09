@@ -69,7 +69,7 @@ type ProjectTask = {
   start_date: string | null
   due_date: string | null
   completed_at: string | null
-  progress: number
+  progress?: number
   sort_order: number
   parent_task_id: string | null
   created_by: string
@@ -219,11 +219,9 @@ export function ProjectTasksList({
 
       const update: Record<string, unknown> = {
         status: newStatus,
-        updated_by: user?.id,
       }
       if (newStatus === 'done') {
         update.completed_at = new Date().toISOString()
-        update.progress = 100
       }
 
       const { error } = await supabase

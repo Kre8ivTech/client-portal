@@ -27,7 +27,7 @@ type ProjectTask = {
   start_date: string | null
   due_date: string | null
   completed_at: string | null
-  progress: number
+  progress?: number
   assignee?: {
     id: string
     email: string
@@ -317,7 +317,7 @@ export function ProjectGanttChart({
                         <div
                           className={`absolute inset-0 rounded-md ${getStatusColor(task.status)}`}
                           style={{
-                            width: `${task.status === 'done' ? 100 : task.progress}%`,
+                            width: `${task.status === 'done' ? 100 : (task.progress ?? 0)}%`,
                             opacity: 0.9,
                           }}
                         />

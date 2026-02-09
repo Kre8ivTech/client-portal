@@ -1,8 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, User, Settings, LogOut } from "lucide-react";
+import { ChevronRight, User, Settings, LogOut, Search } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { WorkTimerButton } from "@/components/time/work-timer-button";
+import { SearchCommand } from "@/components/layout/search-command";
 
 type UserInfo = { email?: string | null };
 type ProfileInfo = {
@@ -89,6 +91,20 @@ export function DashboardTopbar({
   const isStaff = profile?.role === "staff";
   const showTimer = isSuperAdmin || isStaff;
 
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
     <header className="h-16 border-b bg-card flex items-center justify-between px-6 shadow-sm flex-shrink-0">
       <div className="flex items-center gap-2 min-w-0">
@@ -110,6 +126,19 @@ export function DashboardTopbar({
       </div>
 
       <div className="flex items-center gap-3 shrink-0">
+        <Button
+          variant="outline"
+          onClick={() => setSearchOpen(true)}
+          className="relative h-9 w-9 p-0 md:w-auto md:px-3 md:gap-2"
+        >
+          <Search className="h-4 w-4" />
+          <span className="hidden md:inline text-sm text-muted-foreground">
+            Search
+          </span>
+          <kbd className="hidden md:inline-flex items-center gap-0.5 rounded border bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground ml-auto">
+            <span className="text-xs">⌘</span>K
+          </kbd>
+        </Button>
         {showTimer && profile?.organization_id && (
           <WorkTimerButton
             organizationId={profile.organization_id}
@@ -176,6 +205,12 @@ export function DashboardTopbar({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      <SearchCommand
+        open={searchOpen}
+        onOpenChange={setSearchOpen}
+        profile={profile}
+      />
     </header>
   );
 }

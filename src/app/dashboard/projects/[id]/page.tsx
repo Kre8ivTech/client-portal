@@ -256,21 +256,15 @@ export default async function ProjectDetailPage({
   const tasksDone = projectTasks.filter((t: any) => t.status === 'done').length
   const tasksTotal = projectTasks.length
 
-  // Members for task assignment (active project members + available staff)
-  const taskAssignees = [
-    ...(project.project_members ?? [])
-      .filter((m: any) => m.is_active && m.user)
-      .map((m: any) => ({
-        id: m.user.id,
-        email: m.user.email,
-        role: m.user.role,
-        profiles: m.user.profiles,
-      })),
-    ...availableStaff.filter(
-      (s: any) =>
-        !(project.project_members ?? []).some((m: any) => m.user_id === s.id)
-    ),
-  ]
+  // Only active project members can be assigned to tasks
+  const taskAssignees = (project.project_members ?? [])
+    .filter((m: any) => m.is_active && m.user)
+    .map((m: any) => ({
+      id: m.user.id,
+      email: m.user.email,
+      role: m.user.role,
+      profiles: m.user.profiles,
+    }))
 
   return (
     <div className="space-y-6">

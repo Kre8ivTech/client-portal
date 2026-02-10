@@ -12,12 +12,14 @@ export function ProfileForm({
   defaultName,
   userEmail,
   defaultPhone,
+  defaultWhatsappNumber,
   defaultBusinessAddress,
   defaultMailingAddress,
 }: {
   defaultName: string;
   userEmail: string;
   defaultPhone?: string;
+  defaultWhatsappNumber?: string;
   defaultBusinessAddress?: {
     street?: string;
     city?: string;
@@ -76,6 +78,19 @@ export function ProfileForm({
               type="tel"
               defaultValue={defaultPhone || ""}
               placeholder="(555) 123-4567"
+              className="bg-white border-slate-200"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="whatsapp_number" className="text-slate-700">
+              WhatsApp Number
+            </Label>
+            <Input
+              id="whatsapp_number"
+              name="whatsapp_number"
+              type="tel"
+              defaultValue={defaultWhatsappNumber || ""}
+              placeholder="+1 (555) 123-4567"
               className="bg-white border-slate-200"
             />
           </div>

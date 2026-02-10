@@ -1,33 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { uploadObject, sanitizeS3KeyPart } from "@/lib/storage/s3";
+import { normalizeS3Prefix } from "@/lib/file-sync/s3-prefix";
+
+type UserRow = {
+  organization_id: string | null;
+  role: string;
+};
+
+async function getAuthenticatedUser(supabase: any) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data: userRow } = await supabase
+    .from("users")
+    .select("organization_id, role")
+    .eq("id", user.id)
+    .single();
+
+  const row = userRow as UserRow | null;
+  if (!row?.organization_id) return null;
+
+  return {
+    id: user.id,
+    organizationId: row.organization_id,
+    role: row.role ?? "client",
+  };
+}
+
+function isPrivilegedRole(role: string): boolean {
+  return role === "super_admin" || role === "staff";
+}
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
+    const authUser = await getAuthenticatedUser(supabase);
 
-    // Check auth
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
+    if (!authUser) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Get user's org
-    const { data: profile } = await supabase
-      .from("users")
-      .select("organization_id, role")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile?.organization_id) {
-      return NextResponse.json(
-        { error: "No organization found" },
-        { status: 400 }
-      );
     }
 
     // Get request body
@@ -48,53 +62,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get AWS config
-    const bucketName = process.env.AWS_S3_BUCKET_NAME;
-    const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-    const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-    const region = process.env.AWS_REGION || "us-east-1";
+    // Get org storage settings for custom prefix
+    const db = supabase as unknown as { from: (table: string) => any };
+    const { data: settings } = await db
+      .from("organization_file_storage_settings")
+      .select("s3_prefix, enabled")
+      .eq("organization_id", authUser.organizationId)
+      .maybeSingle();
 
-    if (!bucketName || !accessKeyId || !secretAccessKey) {
+    if (settings && !settings.enabled) {
       return NextResponse.json(
-        { error: "AWS S3 is not configured" },
-        { status: 500 }
+        { error: "File storage is disabled for this organization" },
+        { status: 403 }
       );
     }
 
-    // Initialize S3 client
-    const s3Client = new S3Client({
-      region,
-      credentials: {
-        accessKeyId,
-        secretAccessKey,
-      },
-    });
+    // Build the S3 key based on org settings and user role
+    const orgPrefix =
+      normalizeS3Prefix(settings?.s3_prefix) ||
+      `org/${authUser.organizationId}`;
 
-    // Create the folder by uploading an empty object with a trailing slash
-    // S3 uses trailing slash to indicate a folder/prefix
-    const orgPrefix = `org_${profile.organization_id}`;
-    const isPrivileged =
-      profile.role === "super_admin" || profile.role === "staff";
+    // Sanitize the folder path
+    const safeFolderPath = sanitizeS3KeyPart(folderPath);
 
     let s3Key: string;
 
-    if (isPrivileged) {
+    if (isPrivilegedRole(authUser.role)) {
       // Staff/admin: create folder in org directory
-      s3Key = `${orgPrefix}/${folderPath}/`;
+      s3Key = `${orgPrefix}/${safeFolderPath}/`;
     } else {
       // Client: create folder in their user directory
-      s3Key = `${orgPrefix}/user_${user.id}/${folderPath}/`;
+      s3Key = `${orgPrefix}/clients/${authUser.id}/${safeFolderPath}/`;
     }
 
-    // Upload empty object to create the folder
-    const command = new PutObjectCommand({
-      Bucket: bucketName,
-      Key: s3Key,
-      Body: "",
-      ContentType: "application/x-directory",
+    // Create the folder by uploading an empty object with a trailing slash
+    // S3 uses trailing slash to indicate a folder/prefix
+    await uploadObject({
+      key: s3Key,
+      body: Buffer.from(""),
+      contentType: "application/x-directory",
+      metadata: {
+        organizationId: authUser.organizationId,
+        createdBy: authUser.id,
+        folderName: safeFolderPath,
+      },
     });
-
-    await s3Client.send(command);
 
     return NextResponse.json(
       {

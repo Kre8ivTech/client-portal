@@ -34,6 +34,7 @@ import {
   HelpCircle,
   HardDrive,
   Mail,
+  CheckSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -63,6 +64,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: "Support",
     items: [
       { href: "/dashboard/projects", icon: FolderKanban, label: "Projects" },
+      { href: "/dashboard/tasks", icon: CheckSquare, label: "Tasks" },
       { href: "/dashboard/tickets", icon: Ticket, label: "Support Tickets" },
       { href: "/dashboard/services", icon: Layers, label: "Services" },
       { href: "/dashboard/service", icon: Wrench, label: "Service Requests" },
@@ -133,6 +135,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
 // Note: Staff without is_account_manager flag cannot see invoices.
 function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: boolean): string[] {
   const supportClient = [
+    "/dashboard/tasks",
     "/dashboard/tickets",
     "/dashboard/service",
     "/dashboard/contracts",

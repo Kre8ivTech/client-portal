@@ -57,6 +57,11 @@ type Profile = {
 
 type NavItem = { href: string; icon: LucideIcon; label: string };
 
+// Navigation structure follows the logical grouping requested in the problem statement.
+// Note: Some items appear in multiple sections per requirements:
+//   - Tickets appear in both Services (as "Support Tickets") and Support (as "Tickets")
+// Hash fragments (e.g., #tasks, #proposals) are used for sub-sections that don't have dedicated routes yet.
+// These should be implemented with proper client-side routing or tab navigation in the future.
 const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Main",

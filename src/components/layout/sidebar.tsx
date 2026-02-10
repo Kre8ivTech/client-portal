@@ -354,6 +354,21 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
   }
 }
 
+// Helper function to load collapsed sections from localStorage
+function getInitialCollapsedSections(): Set<string> {
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem("sidebar-collapsed-sections");
+    if (stored) {
+      try {
+        return new Set(JSON.parse(stored));
+      } catch {
+        return new Set();
+      }
+    }
+  }
+  return new Set();
+}
+
 export type SidebarBranding = {
   app_name: string;
   tagline: string | null;
@@ -396,24 +411,13 @@ export function DashboardSidebar({
   );
 
   // State to track which sections are collapsed
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => {
-    // Initialize from localStorage if available
-    if (typeof window !== "undefined") {
-      const stored = localStorage.getItem("sidebar-collapsed-sections");
-      if (stored) {
-        try {
-          return new Set(JSON.parse(stored));
-        } catch {
-          return new Set();
-        }
-      }
-    }
-    return new Set();
-  });
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(getInitialCollapsedSections);
 
   // Persist collapsed state to localStorage
   useEffect(() => {
-    localStorage.setItem("sidebar-collapsed-sections", JSON.stringify(Array.from(collapsedSections)));
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sidebar-collapsed-sections", JSON.stringify(Array.from(collapsedSections)));
+    }
   }, [collapsedSections]);
 
   const toggleSection = (label: string) => {
@@ -456,8 +460,8 @@ export function DashboardSidebar({
 
           return (
             <Collapsible key={group.label} open={isOpen} onOpenChange={() => toggleSection(group.label)}>
-              <CollapsibleTrigger className="w-full group">
-                <p className="px-3 mb-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider flex items-center gap-2 cursor-pointer hover:text-sidebar-foreground transition-colors">
+              <CollapsibleTrigger asChild>
+                <button className="w-full px-3 mb-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider flex items-center gap-2 cursor-pointer hover:text-sidebar-foreground transition-colors bg-transparent border-0 text-left">
                   <ChevronDown
                     size={14}
                     className={cn(
@@ -465,13 +469,13 @@ export function DashboardSidebar({
                       isOpen ? "rotate-0" : "-rotate-90",
                     )}
                   />
-                  {group.label}
+                  <span>{group.label}</span>
                   {showAdminBadge && (
                     <span className="rounded bg-sidebar-accent/20 px-1.5 py-0.5 text-[10px] font-medium text-sidebar-accent">
                       Admin
                     </span>
                   )}
-                </p>
+                </button>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <ul className="space-y-0.5">

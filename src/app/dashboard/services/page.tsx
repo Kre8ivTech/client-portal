@@ -3,33 +3,12 @@ import { ClientServiceList } from "@/components/services/client-service-list";
 import { Button } from "@/components/ui/button";
 import { Package } from "lucide-react";
 import Link from "next/link";
+import { isMissingColumnError } from "@/lib/utils/error-handling";
 
 export const metadata = {
   title: "Services | KT Portal",
   description: "Browse and request available services",
 };
-
-/**
- * Helper function to detect if an error is due to a missing column
- */
-function isMissingColumnError(error: any, column: string): boolean {
-  if (!error) return false;
-  
-  // Check for error message first - it should contain the column name
-  const message = error.message;
-  if (!message) return false;
-  const m = message.toLowerCase();
-  const col = column.toLowerCase();
-  
-  // Check for PostgreSQL error code 42703 (undefined_column) with column name in message
-  if (error.code === '42703' && m.includes(col)) return true;
-  
-  // Check for error message patterns
-  return (
-    (m.includes("schema cache") && (m.includes(`'${col}'`) || m.includes(`"${col}"`))) ||
-    (m.includes("does not exist") && m.includes(col))
-  );
-}
 
 export default async function ServicesPage() {
   const supabase = await createServerSupabaseClient();

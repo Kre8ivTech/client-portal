@@ -89,6 +89,14 @@ describe('Services API Error Handling', () => {
       expect(isMissingColumnError(error, 'is_global')).toBe(false)
     })
 
+    it('should match when column is missing even with hint text present', () => {
+      const error = {
+        code: '42703',
+        message: 'column services.is_global does not exist, hint: check migration status'
+      }
+      expect(isMissingColumnError(error, 'is_global')).toBe(true)
+    })
+
     it('should not match table does not exist error', () => {
       const error = {
         message: 'table is_global does not exist'

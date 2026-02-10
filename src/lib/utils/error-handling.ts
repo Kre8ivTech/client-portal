@@ -51,7 +51,8 @@ export function isMissingColumnError(error: any, column: string): boolean {
   }
   
   // Check for schema cache error patterns
-  if (m.includes("schema cache") && (m.includes(`'${column.toLowerCase()}'`) || m.includes(`"${column.toLowerCase()}"`))) {
+  const colLower = column.toLowerCase();
+  if (m.includes("schema cache") && (m.includes(`'${colLower}'`) || m.includes(`"${colLower}"`))) {
     return true;
   }
   

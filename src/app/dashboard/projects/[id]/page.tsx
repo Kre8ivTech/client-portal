@@ -305,46 +305,6 @@ export default async function ProjectWorkspacePage({
               {activeFiles.length > 0 && (
                 <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{activeFiles.length}</span>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Team Tab */}
-        <TabsContent value="team">
-          <ProjectMembersPanel
-            projectId={project.id}
-            members={activeMembers}
-            canEdit={canEdit}
-          />
-        </TabsContent>
-
-        {/* Organizations Tab */}
-        <TabsContent value="organizations">
-          <ProjectOrganizationsPanel
-            projectId={project.id}
-            organizations={assignedOrgs}
-            canEdit={canEdit}
-          />
-        </TabsContent>
-
-        {/* Settings Tab */}
-        {canEdit && (
-          <TabsContent value="settings">
-            <ProjectSettingsForm project={project} />
-          </TabsContent>
-        )}
-      </Tabs>
-
-      {/* Workspace Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <div className="border-b -mx-1">
-          <TabsList className="bg-transparent h-auto p-0 w-full justify-start overflow-x-auto">
-            <TabsTrigger
-              value="overview"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 gap-2"
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              <span className="hidden sm:inline">Overview</span>
             </TabsTrigger>
             <TabsTrigger
               value="activity"

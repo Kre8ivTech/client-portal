@@ -71,10 +71,6 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Services",
     items: [
-      { href: "/dashboard/projects", icon: FolderKanban, label: "Projects" },
-      { href: "/dashboard/projects/tasks", icon: CheckSquare, label: "Project Tasks" },
-      { href: "/dashboard/projects/timeline", icon: Calendar, label: "Project Timeline" },
-      { href: "/dashboard/projects/communication", icon: MessageSquare, label: "Project Forum" },
       { href: "/dashboard/tasks", icon: CheckSquare, label: "Tasks" },
       { href: "/dashboard/services/current", icon: Package, label: "Current Services" },
       { href: "/dashboard/services", icon: Layers, label: "Service Catalog" },
@@ -87,9 +83,9 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: "Projects",
     items: [
       { href: "/dashboard/projects", icon: FolderKanban, label: "Dashboard" },
-      { href: "/dashboard/projects#tasks", icon: ClipboardList, label: "Task Board" },
-      { href: "/dashboard/projects#timeline", icon: CalendarClock, label: "Timeline" },
-      { href: "/dashboard/projects#communication", icon: MessagesSquare, label: "Communication" },
+      { href: "/dashboard/projects/tasks", icon: CheckSquare, label: "Project Tasks" },
+      { href: "/dashboard/projects/timeline", icon: Calendar, label: "Project Timeline" },
+      { href: "/dashboard/projects/communication", icon: MessageSquare, label: "Project Forum" },
     ],
   },
   {

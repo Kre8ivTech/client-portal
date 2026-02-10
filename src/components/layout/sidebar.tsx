@@ -61,8 +61,6 @@ type Profile = {
 type NavItem = { href: string; icon: LucideIcon; label: string };
 
 // Navigation structure follows the logical grouping requested in the problem statement.
-// Note: Some items appear in multiple sections per requirements:
-//   - Tickets appear in both Services (as "Support Tickets") and Support (as "Tickets")
 // Hash fragments (e.g., #tasks, #proposals) are used for sub-sections that don't have dedicated routes yet.
 // These should be implemented with proper client-side routing or tab navigation in the future.
 const navGroups: { label: string; items: NavItem[] }[] = [
@@ -78,15 +76,11 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/projects/timeline", icon: Calendar, label: "Project Timeline" },
       { href: "/dashboard/projects/communication", icon: MessageSquare, label: "Project Forum" },
       { href: "/dashboard/tasks", icon: CheckSquare, label: "Tasks" },
-      { href: "/dashboard/tickets", icon: Ticket, label: "Support Tickets" },
       { href: "/dashboard/services/current", icon: Package, label: "Current Services" },
       { href: "/dashboard/services", icon: Layers, label: "Service Catalog" },
       { href: "/dashboard/service", icon: Wrench, label: "Service Requests" },
       { href: "/dashboard/contracts", icon: ClipboardList, label: "Contracts" },
       { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
-      { href: "/dashboard/service", icon: Wrench, label: "Service Requests" },
-      { href: "/dashboard/tickets", icon: Ticket, label: "Support Tickets" },
-      { href: "/dashboard/services", icon: Layers, label: "Services" },
     ],
   },
   {
@@ -340,11 +334,6 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/profile",
         "/dashboard/settings#security",
         "/dashboard/settings#notifications",
-      ];
-    case "client":
-      return ["/dashboard", ...supportClient, "/dashboard/projects", ...projectPages, ...accountBase];
-        ...accountBase,
-        ...settingsBase,
       ];
     case "client":
       return [

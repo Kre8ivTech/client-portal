@@ -312,7 +312,7 @@ export function ProjectTasksDetail({
 
       if (error) throw error
 
-      setTasks([data, ...tasks])
+      setTasks((prev) => [data, ...prev])
       setIsCreateDialogOpen(false)
       setNewTask({
         title: '',
@@ -348,8 +348,8 @@ export function ProjectTasksDetail({
       if (error) throw error
 
       // Optimistically update local state
-      setTasks(
-        tasks.map((t) =>
+      setTasks((prev) =>
+        prev.map((t) =>
           t.id === taskId
             ? {
                 ...t,
@@ -380,7 +380,7 @@ export function ProjectTasksDetail({
       if (error) throw error
 
       // Remove from local state
-      setTasks(tasks.filter((t) => t.id !== taskId))
+      setTasks((prev) => prev.filter((t) => t.id !== taskId))
       router.refresh()
     } catch (error) {
       console.error('Failed to delete task:', error)

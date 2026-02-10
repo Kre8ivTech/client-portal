@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Progress } from '@/components/ui/progress'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -41,12 +40,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs'
-import {
   Plus,
   Loader2,
   MoreHorizontal,
@@ -59,7 +52,6 @@ import {
   XCircle,
   Calendar,
   User,
-  Filter,
   Search,
   AlertCircle,
 } from 'lucide-react'
@@ -104,28 +96,11 @@ type StaffUser = {
   project_role?: string
 }
 
-type Project = {
-  id: string
-  project_number: string
-  name: string
-  description: string | null
-  status: string
-  created_by: string
-  organization_id: string
-  organizations: {
-    id: string
-    name: string
-  }
-}
-
 interface ProjectTasksDetailProps {
   projectId: string
-  project: Project
   tasks: ProjectTask[]
   members: StaffUser[]
   canEdit: boolean
-  userRole: string
-  userId: string
   highlightedTaskId?: string
 }
 
@@ -163,12 +138,9 @@ function getPriorityBadgeClass(priority: string): string {
 
 export function ProjectTasksDetail({
   projectId,
-  project,
   tasks: initialTasks,
   members,
   canEdit,
-  userRole,
-  userId,
   highlightedTaskId,
 }: ProjectTasksDetailProps) {
   const [tasks, setTasks] = useState(initialTasks)
@@ -177,7 +149,6 @@ export function ProjectTasksDetail({
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterPriority, setFilterPriority] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',
@@ -316,7 +287,7 @@ export function ProjectTasksDetail({
 
       if (error) throw error
 
-      setTasks([data, ...tasks])
+      setTasks((prev) => [data, ...prev])
       setIsCreateDialogOpen(false)
       setNewTask({
         title: '',
@@ -342,6 +313,8 @@ export function ProjectTasksDetail({
       }
       if (newStatus === 'done') {
         update.completed_at = new Date().toISOString()
+      } else {
+        update.completed_at = null
       }
 
       const { error } = await supabase
@@ -352,13 +325,13 @@ export function ProjectTasksDetail({
       if (error) throw error
 
       // Optimistically update local state
-      setTasks(
-        tasks.map((t) =>
+      setTasks((prev) =>
+        prev.map((t) =>
           t.id === taskId
             ? {
                 ...t,
                 status: newStatus,
-                completed_at: newStatus === 'done' ? new Date().toISOString() : t.completed_at,
+                completed_at: newStatus === 'done' ? new Date().toISOString() : null,
               }
             : t
         )
@@ -384,7 +357,7 @@ export function ProjectTasksDetail({
       if (error) throw error
 
       // Remove from local state
-      setTasks(tasks.filter((t) => t.id !== taskId))
+      setTasks((prev) => prev.filter((t) => t.id !== taskId))
       router.refresh()
     } catch (error) {
       console.error('Failed to delete task:', error)

@@ -33,13 +33,31 @@ export default async function NewServiceRequestPage() {
     return <div>No organization associated with your account</div>
   }
 
-  // Fetch active services - RLS automatically handles access
-  const { data: services } = await (supabase as any)
+  // Fetch active services - include global services and organization-specific services
+  let { data: services, error: servicesError } = await (supabase as any)
     .from('services')
     .select('*')
     .eq('is_active', true)
     .order('display_order', { ascending: true })
     .order('name', { ascending: true })
+
+  // If the query succeeded, filter to include:
+  // 1. Services from user's organization
+  // 2. Global services (is_global = true)
+  // 3. Parent org services (for white-label clients)
+  // Note: For clients, RLS may already filter, but we ensure global services are included
+  if (services && p.organization_id) {
+    // If is_global column doesn't exist yet, all services are treated as org-specific
+    services = services.filter((s: any) => {
+      // Include if it's a global service
+      if (s.is_global === true) return true
+      // Include if it belongs to the user's organization
+      if (s.organization_id === p.organization_id) return true
+      // For staff/admin, include all services
+      if (isStaffOrAdmin) return true
+      return false
+    })
+  }
 
   // Fetch organizations for staff/admin to assign
   let organizations: { id: string; name: string }[] = []

@@ -1,0 +1,767 @@
+'use client'
+
+import { useState, useMemo, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useQuery } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import {
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  ExternalLink,
+  Circle,
+  Clock,
+  Eye,
+  CheckCircle2,
+  XCircle,
+  Filter,
+  Search,
+  Loader2,
+  Calendar,
+  User,
+  FolderKanban,
+} from 'lucide-react'
+import {
+  TASK_STATUS_OPTIONS,
+  TASK_PRIORITY_OPTIONS,
+} from '@/lib/validators/project'
+
+type Task = {
+  id: string
+  title: string
+  description: string | null
+  status: string
+  priority: string
+  start_date: string | null
+  due_date: string | null
+  completed_at: string | null
+  progress: number | null
+  created_at: string
+  updated_at: string
+  project: {
+    id: string
+    project_number: string
+    name: string
+    status: string
+    priority: string
+    organization_id: string
+    organizations: {
+      id: string
+      name: string
+    }
+  }
+  assignee: {
+    id: string
+    email: string
+    profiles: {
+      name: string | null
+      avatar_url: string | null
+    } | null
+  } | null
+  creator: {
+    id: string
+    email: string
+    profiles: {
+      name: string | null
+      avatar_url: string | null
+    } | null
+  }
+}
+
+type Project = {
+  id: string
+  project_number: string
+  name: string
+  status: string
+  priority: string
+}
+
+interface ProjectsTasksTableProps {
+  tasks: Task[]
+  projects: Project[]
+  userRole: string
+  userId: string
+}
+
+type SortField =
+  | 'priority'
+  | 'due_date'
+  | 'project'
+  | 'status'
+  | 'created_at'
+  | 'title'
+type SortDirection = 'asc' | 'desc'
+
+function getStatusIcon(status: string) {
+  switch (status) {
+    case 'todo':
+      return <Circle className="h-4 w-4 text-slate-400" />
+    case 'in_progress':
+      return <Clock className="h-4 w-4 text-blue-500" />
+    case 'in_review':
+      return <Eye className="h-4 w-4 text-amber-500" />
+    case 'done':
+      return <CheckCircle2 className="h-4 w-4 text-green-500" />
+    case 'cancelled':
+      return <XCircle className="h-4 w-4 text-red-400" />
+    default:
+      return <Circle className="h-4 w-4 text-slate-400" />
+  }
+}
+
+function getPriorityBadgeClass(priority: string): string {
+  switch (priority) {
+    case 'critical':
+      return 'bg-red-100 text-red-700 border-red-200'
+    case 'high':
+      return 'bg-orange-100 text-orange-700 border-orange-200'
+    case 'medium':
+      return 'bg-blue-100 text-blue-700 border-blue-200'
+    case 'low':
+      return 'bg-slate-100 text-slate-700 border-slate-200'
+    default:
+      return ''
+  }
+}
+
+function getPriorityValue(priority: string): number {
+  switch (priority) {
+    case 'critical':
+      return 4
+    case 'high':
+      return 3
+    case 'medium':
+      return 2
+    case 'low':
+      return 1
+    default:
+      return 0
+  }
+}
+
+export function ProjectsTasksTable({
+  tasks: initialTasks,
+  projects: initialProjects,
+  userRole,
+  userId,
+}: ProjectsTasksTableProps) {
+  const router = useRouter()
+  const supabase = createClient()
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [priorityFilter, setPriorityFilter] = useState<string>('all')
+  const [projectFilter, setProjectFilter] = useState<string>('all')
+  const [assigneeFilter, setAssigneeFilter] = useState<string>('all')
+  const [sortField, setSortField] = useState<SortField>('due_date')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+
+  // AJAX data fetching with React Query
+  const { data: tasks, isLoading: isLoadingTasks } = useQuery({
+    queryKey: ['project_tasks', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('project_tasks')
+        .select(
+          `
+          id,
+          title,
+          description,
+          status,
+          priority,
+          start_date,
+          due_date,
+          completed_at,
+          progress,
+          created_at,
+          updated_at,
+          project:projects!inner (
+            id,
+            project_number,
+            name,
+            status,
+            priority,
+            organization_id,
+            organizations:organizations!inner (
+              id,
+              name
+            )
+          ),
+          assignee:users!assigned_to (
+            id,
+            email,
+            profiles:profiles!user_id (
+              name,
+              avatar_url
+            )
+          ),
+          creator:users!created_by (
+            id,
+            email,
+            profiles:profiles!user_id (
+              name,
+              avatar_url
+            )
+          )
+        `
+        )
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      return data as Task[]
+    },
+    initialData: initialTasks,
+    refetchInterval: 30000, // Refetch every 30 seconds for real-time updates
+  })
+
+  const { data: projects } = useQuery({
+    queryKey: ['projects', 'list'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, project_number, name, status, priority')
+        .order('name', { ascending: true })
+
+      if (error) throw error
+      return data as Project[]
+    },
+    initialData: initialProjects,
+  })
+
+  // Get unique assignees for filter dropdown
+  const assignees = useMemo(() => {
+    const assigneeMap = new Map()
+    tasks?.forEach((task) => {
+      if (task.assignee) {
+        if (!assigneeMap.has(task.assignee.id)) {
+          assigneeMap.set(task.assignee.id, task.assignee)
+        }
+      }
+    })
+    return Array.from(assigneeMap.values())
+  }, [tasks])
+
+  // Filter and sort tasks
+  const filteredAndSortedTasks = useMemo(() => {
+    if (!tasks) return []
+
+    let filtered = tasks
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(
+        (task) =>
+          task.title.toLowerCase().includes(query) ||
+          task.description?.toLowerCase().includes(query) ||
+          task.project.name.toLowerCase().includes(query) ||
+          task.project.project_number.toLowerCase().includes(query)
+      )
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((task) => task.status === statusFilter)
+    }
+
+    // Priority filter
+    if (priorityFilter !== 'all') {
+      filtered = filtered.filter((task) => task.priority === priorityFilter)
+    }
+
+    // Project filter
+    if (projectFilter !== 'all') {
+      filtered = filtered.filter((task) => task.project.id === projectFilter)
+    }
+
+    // Assignee filter
+    if (assigneeFilter !== 'all') {
+      if (assigneeFilter === 'unassigned') {
+        filtered = filtered.filter((task) => !task.assignee)
+      } else {
+        filtered = filtered.filter(
+          (task) => task.assignee?.id === assigneeFilter
+        )
+      }
+    }
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      let aValue: any
+      let bValue: any
+
+      switch (sortField) {
+        case 'priority':
+          aValue = getPriorityValue(a.priority)
+          bValue = getPriorityValue(b.priority)
+          break
+        case 'due_date':
+          aValue = a.due_date ? new Date(a.due_date).getTime() : Infinity
+          bValue = b.due_date ? new Date(b.due_date).getTime() : Infinity
+          break
+        case 'project':
+          aValue = a.project.name
+          bValue = b.project.name
+          break
+        case 'status':
+          aValue = a.status
+          bValue = b.status
+          break
+        case 'title':
+          aValue = a.title
+          bValue = b.title
+          break
+        case 'created_at':
+          aValue = new Date(a.created_at).getTime()
+          bValue = new Date(b.created_at).getTime()
+          break
+        default:
+          return 0
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1
+      return 0
+    })
+
+    return sorted
+  }, [
+    tasks,
+    searchQuery,
+    statusFilter,
+    priorityFilter,
+    projectFilter,
+    assigneeFilter,
+    sortField,
+    sortDirection,
+  ])
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />
+    }
+    return sortDirection === 'asc' ? (
+      <ArrowUp className="ml-2 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-2 h-4 w-4" />
+    )
+  }
+
+  const handleClearFilters = useCallback(() => {
+    setSearchQuery('')
+    setStatusFilter('all')
+    setPriorityFilter('all')
+    setProjectFilter('all')
+    setAssigneeFilter('all')
+  }, [])
+
+  // Calculate stats
+  const stats = useMemo(() => {
+    if (!tasks) return { total: 0, active: 0, overdue: 0, completed: 0 }
+
+    const now = new Date()
+    return {
+      total: tasks.length,
+      active:
+        tasks.filter(
+          (t) => t.status === 'in_progress' || t.status === 'in_review'
+        ).length || 0,
+      overdue:
+        tasks.filter(
+          (t) =>
+            t.due_date &&
+            new Date(t.due_date) < now &&
+            t.status !== 'done' &&
+            t.status !== 'cancelled'
+        ).length || 0,
+      completed: tasks.filter((t) => t.status === 'done').length || 0,
+    }
+  }, [tasks])
+
+  const hasActiveFilters =
+    searchQuery ||
+    statusFilter !== 'all' ||
+    priorityFilter !== 'all' ||
+    projectFilter !== 'all' ||
+    assigneeFilter !== 'all'
+
+  return (
+    <div className="space-y-6">
+      {/* Stats */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Total Tasks</CardDescription>
+            <CardTitle className="text-3xl">{stats.total}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Active</CardDescription>
+            <CardTitle className="text-3xl text-blue-600">
+              {stats.active}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Overdue</CardDescription>
+            <CardTitle className="text-3xl text-red-600">
+              {stats.overdue}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardDescription>Completed</CardDescription>
+            <CardTitle className="text-3xl text-green-600">
+              {stats.completed}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Filters</CardTitle>
+              <CardDescription>
+                Filter and search tasks across all projects
+              </CardDescription>
+            </div>
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearFilters}
+                className="gap-2"
+              >
+                <Filter className="h-4 w-4" />
+                Clear Filters
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
+            <div className="lg:col-span-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search tasks..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            <Select value={projectFilter} onValueChange={setProjectFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Projects" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Projects</SelectItem>
+                {projects?.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                {TASK_STATUS_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Priorities" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Priorities</SelectItem>
+                {TASK_PRIORITY_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Assignees" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Assignees</SelectItem>
+                <SelectItem value="unassigned">Unassigned</SelectItem>
+                {assignees.map((assignee) => (
+                  <SelectItem key={assignee.id} value={assignee.id}>
+                    {assignee.profiles?.name ?? assignee.email}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tasks Table */}
+      <Card>
+        <CardContent className="pt-6">
+          {isLoadingTasks ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredAndSortedTasks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Filter className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No tasks found</h3>
+              <p className="text-sm text-muted-foreground">
+                {hasActiveFilters
+                  ? 'Try adjusting your filters'
+                  : 'No tasks have been created yet'}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[30%]">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSort('title')}
+                        className="-ml-3"
+                      >
+                        Task
+                        {getSortIcon('title')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="w-[15%]">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSort('project')}
+                        className="-ml-3"
+                      >
+                        Project
+                        {getSortIcon('project')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="w-[10%]">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSort('priority')}
+                        className="-ml-3"
+                      >
+                        Priority
+                        {getSortIcon('priority')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="w-[10%]">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSort('status')}
+                        className="-ml-3"
+                      >
+                        Status
+                        {getSortIcon('status')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="w-[12%]">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleSort('due_date')}
+                        className="-ml-3"
+                      >
+                        Due Date
+                        {getSortIcon('due_date')}
+                      </Button>
+                    </TableHead>
+                    <TableHead className="w-[15%]">Assignee</TableHead>
+                    <TableHead className="text-right w-[8%]">
+                      Actions
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAndSortedTasks.map((task) => {
+                    const isOverdue =
+                      task.due_date &&
+                      new Date(task.due_date) < new Date() &&
+                      task.status !== 'done' &&
+                      task.status !== 'cancelled'
+                    const assigneeName =
+                      task.assignee?.profiles?.name ?? task.assignee?.email
+
+                    return (
+                      <TableRow
+                        key={task.id}
+                        className={
+                          isOverdue ? 'bg-red-50/50 hover:bg-red-50' : ''
+                        }
+                      >
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="font-medium line-clamp-2">
+                              {task.title}
+                            </div>
+                            {task.description && (
+                              <div className="text-sm text-muted-foreground line-clamp-1">
+                                {task.description}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            href={`/dashboard/projects/${task.project.id}`}
+                            className="flex items-center gap-2 text-sm hover:underline group"
+                          >
+                            <FolderKanban className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                            <span className="truncate">{task.project.name}</span>
+                          </Link>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {task.project.project_number}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={getPriorityBadgeClass(task.priority)}
+                          >
+                            {task.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {getStatusIcon(task.status)}
+                            <span className="text-sm capitalize">
+                              {task.status.replace('_', ' ')}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {task.due_date ? (
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-3 w-3 text-muted-foreground" />
+                              <span
+                                className={
+                                  isOverdue ? 'text-red-600 font-medium' : ''
+                                }
+                              >
+                                {new Date(task.due_date).toLocaleDateString(
+                                  'en-US',
+                                  {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                  }
+                                )}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {task.assignee ? (
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage
+                                  src={
+                                    task.assignee.profiles?.avatar_url || ''
+                                  }
+                                />
+                                <AvatarFallback className="text-xs">
+                                  {assigneeName?.[0]?.toUpperCase() || '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm truncate">
+                                {assigneeName}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              Unassigned
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link
+                              href={`/dashboard/projects/${task.project.id}/tasks?taskId=${task.id}`}
+                            >
+                              View
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Results count */}
+          {!isLoadingTasks && filteredAndSortedTasks.length > 0 && (
+            <div className="mt-4 text-sm text-muted-foreground text-center">
+              Showing {filteredAndSortedTasks.length} of {tasks?.length || 0}{' '}
+              tasks
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}

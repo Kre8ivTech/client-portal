@@ -38,7 +38,7 @@ export default async function SecuritySettingsPage() {
         <p className="text-muted-foreground mt-2">Manage your account security and authentication settings.</p>
       </div>
 
-      <div className="grid gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Personal Security - Available to all users */}
         <PersonalSecuritySettings userEmail={user.email || ""} />
 

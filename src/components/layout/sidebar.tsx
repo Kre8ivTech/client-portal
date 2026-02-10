@@ -34,6 +34,9 @@ import {
   HelpCircle,
   HardDrive,
   Mail,
+  CheckSquare,
+  Package,
+  Calendar,
   Folder,
   CalendarClock,
   MessagesSquare,
@@ -70,6 +73,17 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Services",
     items: [
+      { href: "/dashboard/projects", icon: FolderKanban, label: "Projects" },
+      { href: "/dashboard/projects/tasks", icon: CheckSquare, label: "Project Tasks" },
+      { href: "/dashboard/projects/timeline", icon: Calendar, label: "Project Timeline" },
+      { href: "/dashboard/projects/communication", icon: MessageSquare, label: "Project Forum" },
+      { href: "/dashboard/tasks", icon: CheckSquare, label: "Tasks" },
+      { href: "/dashboard/tickets", icon: Ticket, label: "Support Tickets" },
+      { href: "/dashboard/services/current", icon: Package, label: "Current Services" },
+      { href: "/dashboard/services", icon: Layers, label: "Service Catalog" },
+      { href: "/dashboard/service", icon: Wrench, label: "Service Requests" },
+      { href: "/dashboard/contracts", icon: ClipboardList, label: "Contracts" },
+      { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
       { href: "/dashboard/service", icon: Wrench, label: "Service Requests" },
       { href: "/dashboard/tickets", icon: Ticket, label: "Support Tickets" },
       { href: "/dashboard/services", icon: Layers, label: "Services" },
@@ -168,6 +182,16 @@ const navGroups: { label: string; items: NavItem[] }[] = [
 // super_admin = full + Tenants + Audit.
 // Note: Staff without is_account_manager flag cannot see invoices.
 function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: boolean): string[] {
+  const projectPages = [
+    "/dashboard/projects/tasks",
+    "/dashboard/projects/timeline",
+    "/dashboard/projects/communication",
+  ];
+  const supportClient = [
+    "/dashboard/tasks",
+    "/dashboard/tickets",
+    "/dashboard/services/current",
+    "/dashboard/services",
   // Base client navigation
   const servicesClient = [
     "/dashboard/service",
@@ -249,6 +273,8 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         integrations,
         capacity,
         "/dashboard/clients",
+        "/dashboard/projects",
+        ...projectPages,
         ...adminStaff,
         "/dashboard/admin/staff-management",
         "/dashboard/admin/permissions",
@@ -271,6 +297,9 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         ...communicationsClient,
         ...supportClient,
         ...(isAccountManager ? accountBase : accountBaseNoInvoices),
+        "/dashboard/settings/email-templates",
+        "/dashboard/projects",
+        ...projectPages,
         ...settingsBase,
         emailTemplates,
         capacity,
@@ -293,6 +322,8 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         ...settingsBase,
         whiteLabel,
         "/dashboard/clients",
+        "/dashboard/projects",
+        ...projectPages,
         "/dashboard/plans",
         "/dashboard/reports",
       ];
@@ -304,6 +335,17 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         ...filesClient,
         ...communicationsClient,
         ...supportClient,
+        "/dashboard/projects",
+        ...projectPages,
+        "/dashboard/invoices",
+        "/dashboard/settings",
+        "/dashboard/settings/file-storage",
+        "/dashboard/profile",
+        "/dashboard/settings#security",
+        "/dashboard/settings#notifications",
+      ];
+    case "client":
+      return ["/dashboard", ...supportClient, "/dashboard/projects", ...projectPages, ...accountBase];
         ...accountBase,
         ...settingsBase,
       ];

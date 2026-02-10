@@ -18,13 +18,16 @@ export async function GET(request: NextRequest) {
     const { data: notifications, error } = await (supabase as any)
       .from('user_notifications')
       .select('*')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('Error fetching user notifications:', error)
+      // Return empty array instead of error to prevent page breaks
+      return NextResponse.json({ data: [] })
     }
 
-    return NextResponse.json({ data: notifications })
+    return NextResponse.json({ data: notifications || [] })
   } catch (error) {
     console.error('Error fetching notifications:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

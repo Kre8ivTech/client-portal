@@ -37,6 +37,9 @@ import {
   CheckSquare,
   Package,
   Calendar,
+  Folder,
+  CalendarClock,
+  MessagesSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -57,13 +60,18 @@ type Profile = {
 
 type NavItem = { href: string; icon: LucideIcon; label: string };
 
+// Navigation structure follows the logical grouping requested in the problem statement.
+// Note: Some items appear in multiple sections per requirements:
+//   - Tickets appear in both Services (as "Support Tickets") and Support (as "Tickets")
+// Hash fragments (e.g., #tasks, #proposals) are used for sub-sections that don't have dedicated routes yet.
+// These should be implemented with proper client-side routing or tab navigation in the future.
 const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Main",
     items: [{ href: "/dashboard", icon: Home, label: "Dashboard" }],
   },
   {
-    label: "Support",
+    label: "Services",
     items: [
       { href: "/dashboard/projects", icon: FolderKanban, label: "Projects" },
       { href: "/dashboard/projects/tasks", icon: CheckSquare, label: "Project Tasks" },
@@ -76,7 +84,37 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/service", icon: Wrench, label: "Service Requests" },
       { href: "/dashboard/contracts", icon: ClipboardList, label: "Contracts" },
       { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
+      { href: "/dashboard/service", icon: Wrench, label: "Service Requests" },
+      { href: "/dashboard/tickets", icon: Ticket, label: "Support Tickets" },
+      { href: "/dashboard/services", icon: Layers, label: "Services" },
+    ],
+  },
+  {
+    label: "Projects",
+    items: [
+      { href: "/dashboard/projects", icon: FolderKanban, label: "Dashboard" },
+      { href: "/dashboard/projects#tasks", icon: ClipboardList, label: "Task Board" },
+      { href: "/dashboard/projects#timeline", icon: CalendarClock, label: "Timeline" },
+      { href: "/dashboard/projects#communication", icon: MessagesSquare, label: "Communication" },
+    ],
+  },
+  {
+    label: "Files",
+    items: [
+      { href: "/dashboard/contracts", icon: FileText, label: "Contracts" },
+      { href: "/dashboard/files", icon: Folder, label: "Storage" },
+    ],
+  },
+  {
+    label: "Communications",
+    items: [
       { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },
+    ],
+  },
+  {
+    label: "Support",
+    items: [
+      { href: "/dashboard/tickets", icon: Ticket, label: "Tickets" },
       { href: "/dashboard/kb", icon: BookOpen, label: "Knowledge Base" },
       { href: "/dashboard/user-guide", icon: HelpCircle, label: "User Guide" },
     ],
@@ -84,21 +122,22 @@ const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Account",
     items: [
-      { href: "/dashboard/invoices", icon: FileText, label: "Invoices" },
-      { href: "/dashboard/vault", icon: Lock, label: "Secure Vault" },
-      { href: "/dashboard/billing", icon: CreditCard, label: "Billing & Plans" },
       { href: "/dashboard/profile", icon: User, label: "Profile" },
+      { href: "/dashboard/billing", icon: CreditCard, label: "Billing & Plans" },
+      { href: "/dashboard/invoices", icon: FileText, label: "Invoices & Payments" },
+      { href: "/dashboard/invoices#proposals", icon: FileEdit, label: "Proposals" },
+      { href: "/dashboard/vault", icon: Lock, label: "Password Vault" },
     ],
   },
   {
     label: "Settings",
     items: [
       { href: "/dashboard/settings", icon: Settings, label: "General" },
-      { href: "/dashboard/settings/white-label", icon: Palette, label: "White Label" },
       { href: "/dashboard/settings/security", icon: Shield, label: "Security" },
       { href: "/dashboard/settings/notifications", icon: Bell, label: "Notifications" },
+      { href: "/dashboard/settings/file-storage", icon: HardDrive, label: "Storage" },
+      { href: "/dashboard/settings/white-label", icon: Palette, label: "White Label" },
       { href: "/dashboard/settings/email-templates", icon: Mail, label: "Email Templates" },
-      { href: "/dashboard/settings/file-storage", icon: HardDrive, label: "File Storage" },
       { href: "/dashboard/integrations", icon: Plug, label: "Integrations" },
     ],
   },
@@ -133,11 +172,14 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/admin/settings/sla", icon: Clock, label: "SLA Settings" },
       { href: "/dashboard/admin/settings/auth", icon: Shield, label: "Auth Settings" },
       { href: "/dashboard/audit", icon: History, label: "Audit Log" },
+      { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
     ],
   },
 ];
 
-// Role visibility: client = Support + Account; partner = + White Label + Clients + Reports; staff = + Capacity + User Mgmt + Financials + Reports + Time + Forms; super_admin = full + Tenants + Audit.
+// Role visibility: client = Services + Projects + Files + Communications + Support + Account + Settings (basic); 
+// partner = + White Label + Clients + Reports; staff = + Capacity + User Mgmt + Financials + Reports + Time + Forms; 
+// super_admin = full + Tenants + Audit.
 // Note: Staff without is_account_manager flag cannot see invoices.
 function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: boolean): string[] {
   const projectPages = [
@@ -150,25 +192,54 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     "/dashboard/tickets",
     "/dashboard/services/current",
     "/dashboard/services",
+  // Base client navigation
+  const servicesClient = [
     "/dashboard/service",
-    "/dashboard/contracts",
-    "/dashboard/messages",
-    "/dashboard/kb",
+    "/dashboard/tickets",
   ];
-  const userGuide = "/dashboard/user-guide";
+  const projectsClient = [
+    "/dashboard/projects",
+    "/dashboard/projects#tasks",
+    "/dashboard/projects#timeline",
+    "/dashboard/projects#communication",
+  ];
+  const filesClient = [
+    "/dashboard/contracts",
+    "/dashboard/files",
+  ];
+  const communicationsClient = [
+    "/dashboard/messages",
+  ];
+  const supportClient = [
+    "/dashboard/tickets",
+    "/dashboard/kb",
+    "/dashboard/user-guide",
+  ];
   const accountBase = [
-    "/dashboard/invoices",
-    "/dashboard/settings",
-    "/dashboard/vault",
-    "/dashboard/billing",
-    "/dashboard/settings/security",
-    "/dashboard/settings/file-storage",
     "/dashboard/profile",
-    "/dashboard/settings/notifications",
+    "/dashboard/billing",
+    "/dashboard/invoices",
+    "/dashboard/invoices#proposals",
+    "/dashboard/vault",
   ];
   // Account items without invoices (for non-account-manager staff)
-  const accountBaseNoInvoices = accountBase.filter((href) => href !== "/dashboard/invoices");
+  const accountBaseNoInvoices = [
+    "/dashboard/profile",
+    "/dashboard/billing",
+    "/dashboard/vault",
+  ];
+  const settingsBase = [
+    "/dashboard/settings",
+    "/dashboard/settings/security",
+    "/dashboard/settings/notifications",
+    "/dashboard/settings/file-storage",
+  ];
   const whiteLabel = "/dashboard/settings/white-label";
+  const emailTemplates = "/dashboard/settings/email-templates";
+  const integrations = "/dashboard/integrations";
+  const services = "/dashboard/services";
+  const capacity = "/dashboard/capacity";
+  
   const adminStaff = [
     "/dashboard/users",
     "/dashboard/plans",
@@ -189,13 +260,18 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     case "super_admin":
       return [
         "/dashboard",
+        ...servicesClient,
+        services,
+        ...projectsClient,
+        ...filesClient,
+        ...communicationsClient,
         ...supportClient,
-        userGuide,
-        "/dashboard/capacity",
         ...accountBase,
+        ...settingsBase,
         whiteLabel,
-        "/dashboard/settings/email-templates",
-        "/dashboard/integrations",
+        emailTemplates,
+        integrations,
+        capacity,
         "/dashboard/clients",
         "/dashboard/projects",
         ...projectPages,
@@ -214,13 +290,19 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
       // Staff with account manager flag sees invoices, otherwise they don't
       return [
         "/dashboard",
+        ...servicesClient,
+        services,
+        ...projectsClient,
+        ...filesClient,
+        ...communicationsClient,
         ...supportClient,
-        userGuide,
-        "/dashboard/capacity",
         ...(isAccountManager ? accountBase : accountBaseNoInvoices),
         "/dashboard/settings/email-templates",
         "/dashboard/projects",
         ...projectPages,
+        ...settingsBase,
+        emailTemplates,
+        capacity,
         ...adminStaff,
         "/dashboard/admin/staff-management",
         "/dashboard/admin/services",
@@ -230,8 +312,14 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     case "partner":
       return [
         "/dashboard",
+        ...servicesClient,
+        services,
+        ...projectsClient,
+        ...filesClient,
+        ...communicationsClient,
         ...supportClient,
         ...accountBase,
+        ...settingsBase,
         whiteLabel,
         "/dashboard/clients",
         "/dashboard/projects",
@@ -242,6 +330,10 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     case "partner_staff":
       return [
         "/dashboard",
+        ...servicesClient,
+        ...projectsClient,
+        ...filesClient,
+        ...communicationsClient,
         ...supportClient,
         "/dashboard/projects",
         ...projectPages,
@@ -254,6 +346,20 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
       ];
     case "client":
       return ["/dashboard", ...supportClient, "/dashboard/projects", ...projectPages, ...accountBase];
+        ...accountBase,
+        ...settingsBase,
+      ];
+    case "client":
+      return [
+        "/dashboard",
+        ...servicesClient,
+        ...projectsClient,
+        ...filesClient,
+        ...communicationsClient,
+        ...supportClient,
+        ...accountBase,
+        ...settingsBase,
+      ];
     default:
       return [];
   }

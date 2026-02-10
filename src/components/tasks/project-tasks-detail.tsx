@@ -163,12 +163,9 @@ function getPriorityBadgeClass(priority: string): string {
 
 export function ProjectTasksDetail({
   projectId,
-  project,
   tasks: initialTasks,
   members,
   canEdit,
-  userRole,
-  userId,
   highlightedTaskId,
 }: ProjectTasksDetailProps) {
   const [tasks, setTasks] = useState(initialTasks)

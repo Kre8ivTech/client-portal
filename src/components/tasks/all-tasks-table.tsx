@@ -94,7 +94,7 @@ interface AllTasksTableProps {
   userId: string
 }
 
-type SortField = 'priority' | 'due_date' | 'project' | 'status' | 'created_at'
+type SortField = 'priority' | 'due_date' | 'project' | 'status'
 type SortDirection = 'asc' | 'desc'
 
 function getStatusIcon(status: string) {
@@ -217,10 +217,6 @@ export function AllTasksTable({ tasks, userRole, userId }: AllTasksTableProps) {
         case 'status':
           aValue = a.status
           bValue = b.status
-          break
-        case 'created_at':
-          aValue = new Date(a.created_at).getTime()
-          bValue = new Date(b.created_at).getTime()
           break
         default:
           return 0

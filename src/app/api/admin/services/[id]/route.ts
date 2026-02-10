@@ -18,7 +18,7 @@ function isMissingColumnError(error: any, column: string) {
   return (
     (m.includes('schema cache') &&
       (m.includes(`'${col}'`) || m.includes(`"${col}"`))) ||
-    (m.includes('does not exist') && (m.includes(col) || m.includes(`${col}"`)))
+    (m.includes('does not exist') && m.includes(col))
   )
 }
 

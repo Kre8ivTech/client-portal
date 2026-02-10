@@ -50,9 +50,14 @@ export default async function ServicesPage() {
           .toLowerCase()
           .includes("is_global")
       ) ||
-      String(error.message || "")
-        .toLowerCase()
-        .includes("does not exist")
+      (
+        String(error.message || "")
+          .toLowerCase()
+          .includes("does not exist") &&
+        String(error.message || "")
+          .toLowerCase()
+          .includes("is_global")
+      )
     )
   ) {
     ({ data: services, error } = await supabase

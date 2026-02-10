@@ -3,6 +3,16 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   FolderIcon,
   FolderOpen,
@@ -13,6 +23,7 @@ import {
   Loader2,
   RefreshCw,
   Home,
+  FolderPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -46,6 +57,9 @@ export function FolderTree() {
   const [currentData, setCurrentData] = useState<FolderData | null>(null);
   const [loading, setLoading] = useState(false);
   const [initialLoaded, setInitialLoaded] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const fetchFolder = useCallback(async (prefix: string) => {
     setLoading(true);
@@ -88,6 +102,50 @@ export function FolderTree() {
     const target = breadcrumb[index];
     setBreadcrumb((prev) => prev.slice(0, index + 1));
     fetchFolder(target.prefix);
+  };
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) {
+      toast.error("Folder name cannot be empty");
+      return;
+    }
+
+    // Validate folder name (no slashes, special characters)
+    if (!/^[a-zA-Z0-9-_ ]+$/.test(newFolderName)) {
+      toast.error("Folder name can only contain letters, numbers, spaces, hyphens, and underscores");
+      return;
+    }
+
+    setCreating(true);
+    try {
+      const currentPrefix = breadcrumb[breadcrumb.length - 1].prefix;
+      const folderPath = currentPrefix ? `${currentPrefix}/${newFolderName}` : newFolderName;
+
+      const res = await fetch("/api/files/create-folder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ folderPath }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(json.error || "Failed to create folder");
+      }
+
+      toast.success(`Folder "${newFolderName}" created successfully`);
+      setIsCreateDialogOpen(false);
+      setNewFolderName("");
+
+      // Refresh current folder view
+      await fetchFolder(currentPrefix);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create folder"
+      );
+    } finally {
+      setCreating(false);
+    }
   };
 
   const formatSize = (bytes: number) => {
@@ -160,7 +218,65 @@ export function FolderTree() {
           </span>
         ))}
 
-        <div className="ml-auto">
+        <div className="ml-auto flex gap-2">
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                <FolderPlus className="h-4 w-4 mr-2" />
+                New Folder
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Folder</DialogTitle>
+                <DialogDescription>
+                  Create a new folder in {breadcrumb[breadcrumb.length - 1].label === "Root" ? "the root directory" : breadcrumb[breadcrumb.length - 1].label}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label htmlFor="folder-name" className="text-sm font-medium">
+                    Folder Name
+                  </label>
+                  <Input
+                    id="folder-name"
+                    placeholder="Enter folder name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !creating) {
+                        handleCreateFolder();
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Use letters, numbers, spaces, hyphens, and underscores only
+                  </p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsCreateDialogOpen(false);
+                    setNewFolderName("");
+                  }}
+                  disabled={creating}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreateFolder}
+                  disabled={!newFolderName.trim() || creating}
+                >
+                  {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create Folder
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <Button
             variant="ghost"
             size="sm"

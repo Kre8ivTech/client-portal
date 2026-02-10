@@ -40,10 +40,13 @@ import {
   Folder,
   CalendarClock,
   MessagesSquare,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getActiveNavHref } from "@/lib/navigation/get-active-nav-href";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useState, useEffect } from "react";
 
 // Merged shape: users (id, organization_id, email, role, is_account_manager) + user_profiles (name, avatar_url, organization_name, organization_slug)
 type Profile = {
@@ -350,6 +353,21 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
   }
 }
 
+// Helper function to load collapsed sections from localStorage
+function getInitialCollapsedSections(): Set<string> {
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem("sidebar-collapsed-sections");
+    if (stored) {
+      try {
+        return new Set(JSON.parse(stored));
+      } catch {
+        return new Set();
+      }
+    }
+  }
+  return new Set();
+}
+
 export type SidebarBranding = {
   app_name: string;
   tagline: string | null;
@@ -391,6 +409,28 @@ export function DashboardSidebar({
     visibleNavGroups.flatMap((g) => g.items.map((i) => i.href)),
   );
 
+  // State to track which sections are collapsed
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(getInitialCollapsedSections);
+
+  // Persist collapsed state to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sidebar-collapsed-sections", JSON.stringify(Array.from(collapsedSections)));
+    }
+  }, [collapsedSections]);
+
+  const toggleSection = (label: string) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+      }
+      return next;
+    });
+  };
+
   return (
     <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground flex-shrink-0 border-r border-sidebar-muted/30">
       <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-muted/30">
@@ -415,39 +455,51 @@ export function DashboardSidebar({
           const items = group.items;
           const isAdminGroup = group.label === "Admin";
           const showAdminBadge = isAdminGroup && role === "super_admin";
+          const isOpen = !collapsedSections.has(group.label);
 
           return (
-            <div key={group.label}>
-              <p className="px-3 mb-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider flex items-center gap-2">
-                {group.label}
-                {showAdminBadge && (
-                  <span className="rounded bg-sidebar-accent/20 px-1.5 py-0.5 text-[10px] font-medium text-sidebar-accent">
-                    Admin
-                  </span>
-                )}
-              </p>
-              <ul className="space-y-0.5">
-                {items.map((item) => {
-                  const isActive = item.href === activeHref;
-                  return (
-                    <li key={item.href}>
-                      <Link
-                        href={item.href}
-                        className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                          isActive
-                            ? "bg-sidebar-accent text-white"
-                            : "text-sidebar-foreground/80 hover:bg-sidebar-muted/20 hover:text-sidebar-foreground",
-                        )}
-                      >
-                        <item.icon size={18} />
-                        <span className="truncate">{item.label}</span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+            <Collapsible key={group.label} open={isOpen} onOpenChange={() => toggleSection(group.label)}>
+              <CollapsibleTrigger asChild>
+                <button className="w-full px-3 mb-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider flex items-center gap-2 cursor-pointer hover:text-sidebar-foreground transition-colors bg-transparent border-0 text-left">
+                  <ChevronDown
+                    size={14}
+                    className={cn(
+                      "transition-transform duration-200",
+                      isOpen ? "rotate-0" : "-rotate-90",
+                    )}
+                  />
+                  <span>{group.label}</span>
+                  {showAdminBadge && (
+                    <span className="rounded bg-sidebar-accent/20 px-1.5 py-0.5 text-[10px] font-medium text-sidebar-accent">
+                      Admin
+                    </span>
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <ul className="space-y-0.5">
+                  {items.map((item) => {
+                    const isActive = item.href === activeHref;
+                    return (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          className={cn(
+                            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                            isActive
+                              ? "bg-sidebar-accent text-white"
+                              : "text-sidebar-foreground/80 hover:bg-sidebar-muted/20 hover:text-sidebar-foreground",
+                          )}
+                        >
+                          <item.icon size={18} />
+                          <span className="truncate">{item.label}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </CollapsibleContent>
+            </Collapsible>
           );
         })}
       </nav>

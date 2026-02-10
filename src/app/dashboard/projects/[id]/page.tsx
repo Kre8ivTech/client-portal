@@ -19,11 +19,11 @@ import {
 } from 'lucide-react'
 import nextDynamic from 'next/dynamic'
 
-const ProjectOverview = dynamic(() => import('@/components/projects/workspace/project-overview').then(m => ({ default: m.ProjectOverview })))
-const ProjectTasksBoard = dynamic(() => import('@/components/projects/workspace/project-tasks-board').then(m => ({ default: m.ProjectTasksBoard })))
-const ProjectFilesManager = dynamic(() => import('@/components/projects/workspace/project-files-manager').then(m => ({ default: m.ProjectFilesManager })))
-const ProjectActivityFeed = dynamic(() => import('@/components/projects/workspace/project-activity-feed').then(m => ({ default: m.ProjectActivityFeed })))
-const ProjectCalendar = dynamic(() => import('@/components/projects/workspace/project-calendar').then(m => ({ default: m.ProjectCalendar })))
+const ProjectOverview = nextDynamic(() => import('@/components/projects/workspace/project-overview').then(m => ({ default: m.ProjectOverview })))
+const ProjectTasksBoard = nextDynamic(() => import('@/components/projects/workspace/project-tasks-board').then(m => ({ default: m.ProjectTasksBoard })))
+const ProjectFilesManager = nextDynamic(() => import('@/components/projects/workspace/project-files-manager').then(m => ({ default: m.ProjectFilesManager })))
+const ProjectActivityFeed = nextDynamic(() => import('@/components/projects/workspace/project-activity-feed').then(m => ({ default: m.ProjectActivityFeed })))
+const ProjectCalendar = nextDynamic(() => import('@/components/projects/workspace/project-calendar').then(m => ({ default: m.ProjectCalendar })))
 import { ProjectMembersPanel } from '@/components/projects/project-members-panel'
 import { ProjectOrganizationsPanel } from '@/components/projects/project-organizations-panel'
 import { ProjectSettingsForm } from '@/components/projects/project-settings-form'

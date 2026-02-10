@@ -23,19 +23,20 @@ export default function ProfilePage() {
       const [{ data: userData }, { data: profileData }] = await Promise.all([
         (supabase as any).from("users").select("id, email, role").eq("id", authUser.id).single(),
         (supabase as any)
-          .from("user_profiles")
-          .select("id, name, avatar_url, organization_name, organization_slug")
-          .eq("id", authUser.id)
+          .from("profiles")
+          .select("*")
+          .eq("user_id", authUser.id)
           .single(),
       ]);
 
       const userRow = userData as { id: string; email: string; role: string } | null;
       const profileRow = profileData as {
-        id: string;
+        user_id: string;
         name: string | null;
         avatar_url: string | null;
-        organization_name: string | null;
-        organization_slug: string | null;
+        phone: string | null;
+        business_address: any;
+        mailing_address: any;
       } | null;
 
       if (userRow && profileRow) {
@@ -45,8 +46,9 @@ export default function ProfilePage() {
           role: userRow.role,
           name: profileRow.name,
           avatar_url: profileRow.avatar_url,
-          organization_name: profileRow.organization_name,
-          organization_slug: profileRow.organization_slug,
+          phone: profileRow.phone,
+          business_address: profileRow.business_address,
+          mailing_address: profileRow.mailing_address,
         });
       }
     }
@@ -90,7 +92,13 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <ProfileForm defaultName={profile?.name ?? ""} userEmail={user?.email ?? ""} />
+          <ProfileForm
+            defaultName={profile?.name ?? ""}
+            userEmail={user?.email ?? ""}
+            defaultPhone={profile?.phone ?? ""}
+            defaultBusinessAddress={profile?.business_address ?? {}}
+            defaultMailingAddress={profile?.mailing_address ?? {}}
+          />
         </CardContent>
       </Card>
     </div>

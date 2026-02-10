@@ -35,6 +35,7 @@ export default function ProfilePage() {
         name: string | null;
         avatar_url: string | null;
         phone: string | null;
+        whatsapp_number: string | null;
         business_address: any;
         mailing_address: any;
       } | null;
@@ -47,6 +48,7 @@ export default function ProfilePage() {
           name: profileRow.name,
           avatar_url: profileRow.avatar_url,
           phone: profileRow.phone,
+          whatsapp_number: profileRow.whatsapp_number,
           business_address: profileRow.business_address,
           mailing_address: profileRow.mailing_address,
         });
@@ -96,6 +98,7 @@ export default function ProfilePage() {
             defaultName={profile?.name ?? ""}
             userEmail={user?.email ?? ""}
             defaultPhone={profile?.phone ?? ""}
+            defaultWhatsappNumber={profile?.whatsapp_number ?? ""}
             defaultBusinessAddress={profile?.business_address ?? {}}
             defaultMailingAddress={profile?.mailing_address ?? {}}
           />

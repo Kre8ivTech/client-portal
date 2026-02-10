@@ -35,6 +35,8 @@ import {
   HardDrive,
   Mail,
   CheckSquare,
+  Package,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -69,7 +71,8 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/projects/communication", icon: MessageSquare, label: "Project Forum" },
       { href: "/dashboard/tasks", icon: CheckSquare, label: "Tasks" },
       { href: "/dashboard/tickets", icon: Ticket, label: "Support Tickets" },
-      { href: "/dashboard/services", icon: Layers, label: "Services" },
+      { href: "/dashboard/services/current", icon: Package, label: "Current Services" },
+      { href: "/dashboard/services", icon: Layers, label: "Service Catalog" },
       { href: "/dashboard/service", icon: Wrench, label: "Service Requests" },
       { href: "/dashboard/contracts", icon: ClipboardList, label: "Contracts" },
       { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
@@ -145,6 +148,8 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
   const supportClient = [
     "/dashboard/tasks",
     "/dashboard/tickets",
+    "/dashboard/services/current",
+    "/dashboard/services",
     "/dashboard/service",
     "/dashboard/contracts",
     "/dashboard/messages",

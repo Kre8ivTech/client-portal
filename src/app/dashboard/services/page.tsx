@@ -41,7 +41,12 @@ export default async function ServicesPage() {
   if (
     error &&
     (
-      (error as any).code === '42703' || // PostgreSQL error code for undefined_column
+      (
+        (error as any).code === '42703' && // PostgreSQL error code for undefined_column
+        String(error.message || "")
+          .toLowerCase()
+          .includes("is_global")
+      ) ||
       (
         String(error.message || "")
           .toLowerCase()

@@ -200,6 +200,9 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
   const supportClient = [
     "/dashboard/tickets",
     "/dashboard/kb",
+  ];
+  const supportAdminStaff = [
+    ...supportClient,
     "/dashboard/user-guide",
   ];
   const accountBase = [
@@ -252,7 +255,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         ...projectsClient,
         ...filesClient,
         ...communicationsClient,
-        ...supportClient,
+        ...supportAdminStaff,
         ...accountBase,
         ...settingsBase,
         whiteLabel,
@@ -282,7 +285,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         ...projectsClient,
         ...filesClient,
         ...communicationsClient,
-        ...supportClient,
+        ...supportAdminStaff,
         ...(isAccountManager ? accountBase : accountBaseNoInvoices),
         "/dashboard/settings/email-templates",
         "/dashboard/projects",

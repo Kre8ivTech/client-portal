@@ -79,7 +79,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/services/current", icon: Package, label: "Current Services" },
       { href: "/dashboard/services", icon: Layers, label: "Service Catalog" },
       { href: "/dashboard/service", icon: Wrench, label: "Service Requests" },
-      { href: "/dashboard/plans", icon: Layers, label: "Service Plans" },
+      { href: "/dashboard/plans", icon: CreditCard, label: "Service Plans" },
       { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
     ],
   },

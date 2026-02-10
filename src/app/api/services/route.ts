@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-function isMissingColumnSchemaCacheError(message: string | undefined, column: string) {
+function isMissingColumnError(error: any, column: string) {
+  if (!error) return false;
+  
+  // Check for PostgreSQL error code 42703 (undefined_column)
+  if (error.code === '42703') return true;
+  
+  // Check for error message patterns
+  const message = error.message;
   if (!message) return false;
   const m = message.toLowerCase();
+  const col = column.toLowerCase();
+  
   return (
-    m.includes("schema cache") && (m.includes(`'${column.toLowerCase()}'`) || m.includes(`"${column.toLowerCase()}"`))
+    (m.includes("schema cache") && (m.includes(`'${col}'`) || m.includes(`"${col}"`))) ||
+    (m.includes("does not exist") && (m.includes(col) || m.includes(`${col}"`)))
   );
 }
 
@@ -57,7 +67,7 @@ export async function GET(request: NextRequest) {
     let responseServices: any[] | null = services as any;
 
     // Backwards-compat: retry without is_global if DB hasn't been migrated yet.
-    if (error && isMissingColumnSchemaCacheError(error.message, "is_global")) {
+    if (error && isMissingColumnError(error, "is_global")) {
       let retryQuery = supabase
         .from("services")
         .select(baseSelect)

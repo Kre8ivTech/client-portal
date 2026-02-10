@@ -3,12 +3,22 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { serviceSchema } from '@/lib/validators/service'
 import { createStripeProduct } from '@/lib/stripe'
 
-function isMissingColumnSchemaCacheError(message: string | undefined, column: string) {
+function isMissingColumnError(error: any, column: string) {
+  if (!error) return false
+  
+  // Check for PostgreSQL error code 42703 (undefined_column)
+  if (error.code === '42703') return true
+  
+  // Check for error message patterns
+  const message = error.message
   if (!message) return false
   const m = message.toLowerCase()
+  const col = column.toLowerCase()
+  
   return (
-    m.includes('schema cache') &&
-    (m.includes(`'${column.toLowerCase()}'`) || m.includes(`"${column.toLowerCase()}"`))
+    (m.includes('schema cache') &&
+      (m.includes(`'${col}'`) || m.includes(`"${col}"`))) ||
+    (m.includes('does not exist') && (m.includes(col) || m.includes(`${col}"`)))
   )
 }
 
@@ -163,7 +173,7 @@ export async function POST(request: NextRequest) {
       .single())
 
     // Backwards-compat: if DB schema doesn't have is_global yet, retry without it.
-    if (error && isMissingColumnSchemaCacheError(error.message, 'is_global')) {
+    if (error && isMissingColumnError(error, 'is_global')) {
       const retryData = { ...insertData }
       delete retryData.is_global
       ;({ data: service, error } = await (supabase as any)

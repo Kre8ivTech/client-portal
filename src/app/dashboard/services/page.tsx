@@ -37,14 +37,23 @@ export default async function ServicesPage() {
     .order("created_at", { ascending: false });
 
   // Backwards-compat: if DB hasn't been migrated yet, retry without is_global.
+  // Check for PostgreSQL error 42703 (column does not exist) or schema cache errors
   if (
     error &&
-    String(error.message || "")
-      .toLowerCase()
-      .includes("schema cache") &&
-    String(error.message || "")
-      .toLowerCase()
-      .includes("is_global")
+    (
+      (error as any).code === '42703' || // PostgreSQL error code for undefined_column
+      (
+        String(error.message || "")
+          .toLowerCase()
+          .includes("schema cache") &&
+        String(error.message || "")
+          .toLowerCase()
+          .includes("is_global")
+      ) ||
+      String(error.message || "")
+        .toLowerCase()
+        .includes("does not exist")
+    )
   ) {
     ({ data: services, error } = await supabase
       .from("services")

@@ -3,12 +3,22 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { serviceSchema } from '@/lib/validators/service'
 import { updateStripeProduct, createStripeProduct, archiveStripeProduct } from '@/lib/stripe'
 
-function isMissingColumnSchemaCacheError(message: string | undefined, column: string) {
+function isMissingColumnError(error: any, column: string) {
+  if (!error) return false
+  
+  // Check for PostgreSQL error code 42703 (undefined_column)
+  if (error.code === '42703') return true
+  
+  // Check for error message patterns
+  const message = error.message
   if (!message) return false
   const m = message.toLowerCase()
+  const col = column.toLowerCase()
+  
   return (
-    m.includes('schema cache') &&
-    (m.includes(`'${column.toLowerCase()}'`) || m.includes(`"${column.toLowerCase()}"`))
+    (m.includes('schema cache') &&
+      (m.includes(`'${col}'`) || m.includes(`"${col}"`))) ||
+    (m.includes('does not exist') && (m.includes(col) || m.includes(`${col}"`)))
   )
 }
 
@@ -80,7 +90,7 @@ export async function PATCH(
     ;({ data: service, error } = await updateQuery.select().single())
 
     // Backwards-compat: retry without is_global if column doesn't exist yet.
-    if (error && isMissingColumnSchemaCacheError(error.message, 'is_global')) {
+    if (error && isMissingColumnError(error, 'is_global')) {
       const retryData = { ...updateData }
       delete retryData.is_global
       const retryQuery = (supabase as any)

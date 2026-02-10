@@ -174,7 +174,6 @@ export function ProjectTasksDetail({
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterPriority, setFilterPriority] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [viewMode, setViewMode] = useState<'list' | 'board'>('list')
   const [newTask, setNewTask] = useState({
     title: '',
     description: '',

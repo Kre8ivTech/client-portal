@@ -187,21 +187,18 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     "/dashboard/projects/timeline",
     "/dashboard/projects/communication",
   ];
-  const supportClient = [
-    "/dashboard/tasks",
-    "/dashboard/tickets",
-    "/dashboard/services/current",
-    "/dashboard/services",
+
   // Base client navigation
   const servicesClient = [
     "/dashboard/service",
     "/dashboard/tickets",
+    "/dashboard/services/current",
   ];
   const projectsClient = [
     "/dashboard/projects",
-    "/dashboard/projects#tasks",
-    "/dashboard/projects#timeline",
-    "/dashboard/projects#communication",
+    "/dashboard/projects/tasks",
+    "/dashboard/projects/timeline",
+    "/dashboard/projects/communication",
   ];
   const filesClient = [
     "/dashboard/contracts",

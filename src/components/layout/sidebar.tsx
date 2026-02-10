@@ -206,8 +206,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     "/dashboard/kb",
   ];
   const supportAdminStaff = [
-    "/dashboard/tickets",
-    "/dashboard/kb",
+    ...supportClient,
     "/dashboard/user-guide",
   ];
   const accountBase = [

@@ -70,7 +70,7 @@ export default function BillingDisputePage() {
 
   if (isSuccess) {
     return (
-      <div className="max-w-2xl mx-auto py-12">
+      <div className="py-12">
         <Card className="border-green-200 bg-green-50/50">
           <CardContent className="pt-6 flex flex-col items-center text-center space-y-4">
             <CheckCircle2 className="h-12 w-12 text-green-500" />
@@ -90,7 +90,7 @@ export default function BillingDisputePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <Link 
         href="/dashboard/billing" 
         className="flex items-center gap-2 text-sm text-slate-500 hover:text-primary transition-colors mb-4 w-fit"

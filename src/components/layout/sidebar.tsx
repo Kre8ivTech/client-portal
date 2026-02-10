@@ -64,6 +64,9 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: "Support",
     items: [
       { href: "/dashboard/projects", icon: FolderKanban, label: "Projects" },
+      { href: "/dashboard/projects/tasks", icon: CheckSquare, label: "Project Tasks" },
+      { href: "/dashboard/projects/timeline", icon: Calendar, label: "Project Timeline" },
+      { href: "/dashboard/projects/communication", icon: MessageSquare, label: "Project Forum" },
       { href: "/dashboard/tasks", icon: CheckSquare, label: "Tasks" },
       { href: "/dashboard/tickets", icon: Ticket, label: "Support Tickets" },
       { href: "/dashboard/services", icon: Layers, label: "Services" },
@@ -134,6 +137,11 @@ const navGroups: { label: string; items: NavItem[] }[] = [
 // Role visibility: client = Support + Account; partner = + White Label + Clients + Reports; staff = + Capacity + User Mgmt + Financials + Reports + Time + Forms; super_admin = full + Tenants + Audit.
 // Note: Staff without is_account_manager flag cannot see invoices.
 function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: boolean): string[] {
+  const projectPages = [
+    "/dashboard/projects/tasks",
+    "/dashboard/projects/timeline",
+    "/dashboard/projects/communication",
+  ];
   const supportClient = [
     "/dashboard/tasks",
     "/dashboard/tickets",
@@ -185,6 +193,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/integrations",
         "/dashboard/clients",
         "/dashboard/projects",
+        ...projectPages,
         ...adminStaff,
         "/dashboard/admin/staff-management",
         "/dashboard/admin/permissions",
@@ -206,6 +215,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         ...(isAccountManager ? accountBase : accountBaseNoInvoices),
         "/dashboard/settings/email-templates",
         "/dashboard/projects",
+        ...projectPages,
         ...adminStaff,
         "/dashboard/admin/staff-management",
         "/dashboard/admin/services",
@@ -220,6 +230,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         whiteLabel,
         "/dashboard/clients",
         "/dashboard/projects",
+        ...projectPages,
         "/dashboard/plans",
         "/dashboard/reports",
       ];
@@ -228,6 +239,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard",
         ...supportClient,
         "/dashboard/projects",
+        ...projectPages,
         "/dashboard/invoices",
         "/dashboard/settings",
         "/dashboard/settings/file-storage",
@@ -236,7 +248,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/settings#notifications",
       ];
     case "client":
-      return ["/dashboard", ...supportClient, "/dashboard/projects", ...accountBase];
+      return ["/dashboard", ...supportClient, "/dashboard/projects", ...projectPages, ...accountBase];
     default:
       return [];
   }

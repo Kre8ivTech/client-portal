@@ -9,6 +9,28 @@ export const metadata = {
   description: "Browse and request available services",
 };
 
+/**
+ * Helper function to detect if an error is due to a missing column
+ */
+function isMissingColumnError(error: any, column: string): boolean {
+  if (!error) return false;
+  
+  // Check for error message first - it should contain the column name
+  const message = error.message;
+  if (!message) return false;
+  const m = message.toLowerCase();
+  const col = column.toLowerCase();
+  
+  // Check for PostgreSQL error code 42703 (undefined_column) with column name in message
+  if (error.code === '42703' && m.includes(col)) return true;
+  
+  // Check for error message patterns
+  return (
+    (m.includes("schema cache") && (m.includes(`'${col}'`) || m.includes(`"${col}"`))) ||
+    (m.includes("does not exist") && m.includes(col))
+  );
+}
+
 export default async function ServicesPage() {
   const supabase = await createServerSupabaseClient();
 
@@ -37,34 +59,7 @@ export default async function ServicesPage() {
     .order("created_at", { ascending: false });
 
   // Backwards-compat: if DB hasn't been migrated yet, retry without is_global.
-  // Check for PostgreSQL error 42703 (column does not exist) or schema cache errors
-  if (
-    error &&
-    (
-      (
-        (error as any).code === '42703' && // PostgreSQL error code for undefined_column
-        String(error.message || "")
-          .toLowerCase()
-          .includes("is_global")
-      ) ||
-      (
-        String(error.message || "")
-          .toLowerCase()
-          .includes("schema cache") &&
-        String(error.message || "")
-          .toLowerCase()
-          .includes("is_global")
-      ) ||
-      (
-        String(error.message || "")
-          .toLowerCase()
-          .includes("does not exist") &&
-        String(error.message || "")
-          .toLowerCase()
-          .includes("is_global")
-      )
-    )
-  ) {
+  if (error && isMissingColumnError(error, "is_global")) {
     ({ data: services, error } = await supabase
       .from("services")
       .select(baseSelect)

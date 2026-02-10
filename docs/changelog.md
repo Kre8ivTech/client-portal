@@ -118,6 +118,9 @@ kt-portal/
 
 ## [Unreleased]
 
+### Fixed
+- **Auth Settings Logging** (2026-02-10) — Improved error handling for missing authentication settings columns. Changed log level from WARN to INFO when columns don't exist in preview/staging environments. Migration `20260204140000_auth_sso_mfa_recaptcha.sql` adds required SSO, MFA, and reCAPTCHA columns and will be applied automatically on next production deployment.
+
 ### Planned
 - Wireframes and UI mockups
 - Database ERD diagram

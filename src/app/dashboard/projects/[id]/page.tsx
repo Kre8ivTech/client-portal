@@ -20,7 +20,7 @@ import {
 import nextDynamic from 'next/dynamic'
 
 const ProjectOverview = nextDynamic(() => import('@/components/projects/workspace/project-overview').then(m => ({ default: m.ProjectOverview })))
-const ProjectTasksBoard = nextDynamic(() => import('@/components/projects/workspace/project-tasks-board').then(m => ({ default: m.ProjectTasksBoard })))
+const ProjectTasksTable = nextDynamic(() => import('@/components/projects/workspace/project-tasks-table').then(m => ({ default: m.ProjectTasksTable })))
 const ProjectFilesManager = nextDynamic(() => import('@/components/projects/workspace/project-files-manager').then(m => ({ default: m.ProjectFilesManager })))
 const ProjectActivityFeed = nextDynamic(() => import('@/components/projects/workspace/project-activity-feed').then(m => ({ default: m.ProjectActivityFeed })))
 const ProjectCalendar = nextDynamic(() => import('@/components/projects/workspace/project-calendar').then(m => ({ default: m.ProjectCalendar })))
@@ -357,7 +357,7 @@ export default async function ProjectWorkspacePage({
         </TabsContent>
 
         <TabsContent value="tasks" className="mt-6">
-          <ProjectTasksBoard
+          <ProjectTasksTable
             projectId={project.id}
             initialTasks={tasks}
             members={activeMembers}

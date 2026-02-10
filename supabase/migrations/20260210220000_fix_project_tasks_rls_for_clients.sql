@@ -68,8 +68,8 @@ USING (
     EXISTS (
         SELECT 1 FROM public.users u
         JOIN public.project_organizations po ON po.organization_id = u.organization_id
-        JOIN public.projects p ON p.id = po.project_id
         WHERE u.id = auth.uid()
+        AND u.role = 'client'
         AND po.project_id = project_tasks.project_id
         AND po.is_active = TRUE
     )
@@ -78,8 +78,8 @@ WITH CHECK (
     EXISTS (
         SELECT 1 FROM public.users u
         JOIN public.project_organizations po ON po.organization_id = u.organization_id
-        JOIN public.projects p ON p.id = po.project_id
         WHERE u.id = auth.uid()
+        AND u.role = 'client'
         AND po.project_id = project_tasks.project_id
         AND po.is_active = TRUE
     )

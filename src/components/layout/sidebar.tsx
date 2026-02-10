@@ -342,11 +342,6 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/settings#notifications",
       ];
     case "client":
-      return ["/dashboard", ...supportClient, "/dashboard/projects", ...projectPages, ...accountBase];
-        ...accountBase,
-        ...settingsBase,
-      ];
-    case "client":
       return [
         "/dashboard",
         ...servicesClient,

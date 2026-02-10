@@ -3,6 +3,13 @@
  */
 
 /**
+ * Escape special regex characters in a string
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Check if an error is due to a missing database column
  * 
  * This function detects PostgreSQL errors related to missing columns,
@@ -34,7 +41,7 @@ export function isMissingColumnError(error: any, column: string): boolean {
   const message = error.message;
   if (!message) return false;
   const m = message.toLowerCase();
-  const col = column.toLowerCase();
+  const col = escapeRegex(column.toLowerCase());
   
   // Check for PostgreSQL error code 42703 (undefined_column) with column name in message
   // Pattern: "column <table>.<column> does not exist" or "column <column> does not exist"
@@ -44,7 +51,7 @@ export function isMissingColumnError(error: any, column: string): boolean {
   }
   
   // Check for schema cache error patterns
-  if (m.includes("schema cache") && (m.includes(`'${col}'`) || m.includes(`"${col}"`))) {
+  if (m.includes("schema cache") && (m.includes(`'${column.toLowerCase()}'`) || m.includes(`"${column.toLowerCase()}"`))) {
     return true;
   }
   

@@ -37,11 +37,19 @@ export function isMissingColumnError(error: any, column: string): boolean {
   const col = column.toLowerCase();
   
   // Check for PostgreSQL error code 42703 (undefined_column) with column name in message
-  if (error.code === '42703' && m.includes(col)) return true;
+  // Pattern: "column <table>.<column> does not exist" or "column <column> does not exist"
+  if (error.code === '42703') {
+    const columnPattern = new RegExp(`column\\s+(?:\\w+\\.)?${col}\\s+does not exist`, 'i');
+    if (columnPattern.test(message)) return true;
+  }
   
-  // Check for error message patterns
-  return (
-    (m.includes("schema cache") && (m.includes(`'${col}'`) || m.includes(`"${col}"`))) ||
-    (m.includes("does not exist") && m.includes(col))
-  );
+  // Check for schema cache error patterns
+  if (m.includes("schema cache") && (m.includes(`'${col}'`) || m.includes(`"${col}"`))) {
+    return true;
+  }
+  
+  // Check for generic "does not exist" pattern with column name
+  // Pattern: "column <optional-table>.<column> does not exist"
+  const genericPattern = new RegExp(`column\\s+(?:\\w+\\.)?${col}\\s+does not exist`, 'i');
+  return genericPattern.test(message);
 }

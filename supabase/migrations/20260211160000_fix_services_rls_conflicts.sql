@@ -50,12 +50,12 @@ CREATE POLICY "Users can view services"
         )
       ))
       OR
-      -- Case 4: Staff/Admin/Partner can see ALL services in their org (including inactive)
+      -- Case 4: Staff/Partner can see ALL services in their org (including inactive)
       (organization_id = (
         SELECT organization_id
         FROM public.users
         WHERE id = auth.uid()
-          AND role IN ('super_admin', 'staff', 'partner')
+          AND role IN ('staff', 'partner')
       ))
       OR
       -- Case 5: Super admins can see ALL services across all organizations
@@ -76,4 +76,4 @@ CREATE INDEX IF NOT EXISTS idx_services_is_active ON public.services(is_active) 
 
 -- Add helpful comment
 COMMENT ON POLICY "Users can view services" ON public.services IS 
-  'Unified policy: global services (all users), active org services (members), active parent services (white-label), all org services (staff/admin), all services (super admin)';
+  'Unified policy: global services (all users), active org services (members), active parent services (white-label), all org services (staff/partner), all services (super admin)';

@@ -142,7 +142,7 @@ export function ProjectActivityFeed({
       .from('project_activity')
       .select(`
         *,
-        user:users!project_activity_user_id_fkey(id, email, profiles:profiles(name, avatar_url))
+        user:users!project_activity_user_id_fkey(id, email, profiles:profiles!user_id(name, avatar_url))
       `)
       .eq('project_id', projectId)
       .order('created_at', { ascending: false })
@@ -156,7 +156,7 @@ export function ProjectActivityFeed({
       .from('project_comments')
       .select(`
         *,
-        author:users!project_comments_author_id_fkey(id, email, profiles:profiles(name, avatar_url))
+        author:users!project_comments_author_id_fkey(id, email, profiles:profiles!user_id(name, avatar_url))
       `)
       .eq('project_id', projectId)
       .is('task_id', null)

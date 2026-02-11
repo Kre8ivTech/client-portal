@@ -88,7 +88,7 @@ export default async function ProjectWorkspacePage({
     .select(`
       *,
       organization:organizations!projects_organization_id_fkey(id, name),
-      creator:users!projects_created_by_fkey(id, email, profiles:profiles(name)),
+      creator:users!projects_created_by_fkey(id, email, profiles:profiles!user_id(name)),
       project_members(
         id,
         user_id,
@@ -151,7 +151,7 @@ export default async function ProjectWorkspacePage({
       .from('project_tasks')
       .select(`
         *,
-        assignee:users!project_tasks_assigned_to_fkey(id, email, profiles:profiles(name, avatar_url))
+        assignee:users!project_tasks_assigned_to_fkey(id, email, profiles:profiles!user_id(name, avatar_url))
       `)
       .eq('project_id', projectId)
       .order('sort_order', { ascending: true })
@@ -160,7 +160,7 @@ export default async function ProjectWorkspacePage({
       .from('project_files')
       .select(`
         *,
-        uploader:users!project_files_uploaded_by_fkey(id, email, profiles:profiles(name, avatar_url))
+        uploader:users!project_files_uploaded_by_fkey(id, email, profiles:profiles!user_id(name, avatar_url))
       `)
       .eq('project_id', projectId)
       .eq('is_deleted', false)
@@ -169,7 +169,7 @@ export default async function ProjectWorkspacePage({
       .from('project_activity')
       .select(`
         *,
-        user:users!project_activity_user_id_fkey(id, email, profiles:profiles(name, avatar_url))
+        user:users!project_activity_user_id_fkey(id, email, profiles:profiles!user_id(name, avatar_url))
       `)
       .eq('project_id', projectId)
       .order('created_at', { ascending: false })
@@ -178,7 +178,7 @@ export default async function ProjectWorkspacePage({
       .from('project_comments')
       .select(`
         *,
-        author:users!project_comments_author_id_fkey(id, email, profiles:profiles(name, avatar_url))
+        author:users!project_comments_author_id_fkey(id, email, profiles:profiles!user_id(name, avatar_url))
       `)
       .eq('project_id', projectId)
       .is('task_id', null)
@@ -198,7 +198,7 @@ export default async function ProjectWorkspacePage({
   if (canEdit) {
     const { data: staff } = await supabase
       .from('users')
-      .select('id, email, role, profiles:profiles(name, avatar_url)')
+      .select('id, email, role, profiles:profiles!user_id(name, avatar_url)')
       .in('role', ['super_admin', 'staff', 'partner', 'partner_staff'])
       .eq('status', 'active')
       .order('email', { ascending: true })

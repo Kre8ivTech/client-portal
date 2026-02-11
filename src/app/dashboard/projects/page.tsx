@@ -61,7 +61,7 @@ export default async function ProjectsPage() {
         id,
         user_id,
         role,
-        user:users!project_members_user_id_fkey(id, email, profiles:profiles(name, avatar_url))
+        user:users!project_members_user_id_fkey(id, email, profiles:profiles!user_id(name, avatar_url))
       ),
       project_organizations(
         id,
@@ -98,7 +98,7 @@ export default async function ProjectsPage() {
   if (canCreateProject) {
     const { data: staff } = await supabase
       .from("users")
-      .select("id, email, role, profiles:profiles(name, avatar_url)")
+      .select("id, email, role, profiles:profiles!user_id(name, avatar_url)")
       .in("role", ["super_admin", "staff", "partner", "partner_staff"])
       .eq("status", "active")
       .order("email", { ascending: true });
@@ -148,7 +148,7 @@ export default async function ProjectsPage() {
       estimated_budget_max,
       created_at,
       requested_by,
-      requester:users!project_requests_requested_by_fkey(id, email, profiles:profiles(name))
+      requester:users!project_requests_requested_by_fkey(id, email, profiles:profiles!user_id(name))
     `,
     )
     .order("created_at", { ascending: false });

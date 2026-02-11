@@ -54,8 +54,12 @@ export async function getAuthSettings(): Promise<AuthSettings> {
       .single();
 
     if (error) {
-      // Table or columns might not exist yet
-      console.warn("Auth settings fetch error:", error.message);
+      // Table or columns might not exist yet (e.g., migrations pending in preview environments)
+      if (error.message?.includes("does not exist")) {
+        console.info("Auth settings columns not found (using defaults):", error.message);
+      } else {
+        console.warn("Auth settings fetch error:", error.message);
+      }
       return defaultSettings;
     }
 

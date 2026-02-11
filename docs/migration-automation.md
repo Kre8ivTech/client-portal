@@ -298,6 +298,22 @@ If migrations re-run:
 - Verify network connectivity from Vercel
 - Check Supabase pooler connection limits
 
+### Expected Warnings in Preview Deployments
+
+**Symptom:** Console logs show: "Auth settings columns not found (using defaults): column app_settings.sso_google_enabled does not exist"
+
+**This is expected behavior** when:
+- Code is deployed to preview/staging environment
+- Migrations haven't been applied to that environment
+- The code is designed to handle this gracefully
+
+**Why this happens:**
+- Preview deployments skip migrations by design (line 286 in `scripts/run-migrations.ts`)
+- This prevents preview builds from modifying the production database
+- The application code detects missing columns and uses default settings
+
+**No action needed:** The application will work with default authentication settings until migrations are applied. Once deployed to production, migrations will run automatically and the warnings will stop.
+
 ## Alternative: GitHub Actions
 
 If you prefer GitHub Actions over Vercel build hooks:

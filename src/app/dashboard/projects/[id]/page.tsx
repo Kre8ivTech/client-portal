@@ -95,7 +95,7 @@ export default async function ProjectWorkspacePage({
         role,
         is_active,
         joined_at,
-        user:users!project_members_user_id_fkey(id, email, role, profiles:profiles(name, avatar_url))
+        user:users!project_members_user_id_fkey(id, email, role, profiles:profiles!user_id(name, avatar_url))
       ),
       project_organizations(
         id,

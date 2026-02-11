@@ -2,15 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { serviceSchema } from '@/lib/validators/service'
 import { createStripeProduct } from '@/lib/stripe'
-
-function isMissingColumnSchemaCacheError(message: string | undefined, column: string) {
-  if (!message) return false
-  const m = message.toLowerCase()
-  return (
-    m.includes('schema cache') &&
-    (m.includes(`'${column.toLowerCase()}'`) || m.includes(`"${column.toLowerCase()}"`))
-  )
-}
+import { isMissingColumnError } from '@/lib/utils/error-handling'
 
 // GET /api/admin/services - List all services
 export async function GET(request: NextRequest) {
@@ -163,7 +155,7 @@ export async function POST(request: NextRequest) {
       .single())
 
     // Backwards-compat: if DB schema doesn't have is_global yet, retry without it.
-    if (error && isMissingColumnSchemaCacheError(error.message, 'is_global')) {
+    if (error && isMissingColumnError(error, 'is_global')) {
       const retryData = { ...insertData }
       delete retryData.is_global
       ;({ data: service, error } = await (supabase as any)

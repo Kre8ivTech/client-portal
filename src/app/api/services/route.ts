@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-
-function isMissingColumnSchemaCacheError(message: string | undefined, column: string) {
-  if (!message) return false;
-  const m = message.toLowerCase();
-  return (
-    m.includes("schema cache") && (m.includes(`'${column.toLowerCase()}'`) || m.includes(`"${column.toLowerCase()}"`))
-  );
-}
+import { isMissingColumnError } from "@/lib/utils/error-handling";
 
 // GET /api/services - List available services for clients
 export async function GET(request: NextRequest) {
@@ -57,7 +50,7 @@ export async function GET(request: NextRequest) {
     let responseServices: any[] | null = services as any;
 
     // Backwards-compat: retry without is_global if DB hasn't been migrated yet.
-    if (error && isMissingColumnSchemaCacheError(error.message, "is_global")) {
+    if (error && isMissingColumnError(error, "is_global")) {
       let retryQuery = supabase
         .from("services")
         .select(baseSelect)

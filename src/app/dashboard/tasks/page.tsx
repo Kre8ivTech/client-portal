@@ -94,11 +94,7 @@ export default async function AllTasksPage() {
         </p>
       </div>
 
-      <AllTasksTable
-        tasks={tasks || []}
-        userRole={userData.role}
-        userId={userData.id}
-      />
+      <AllTasksTable tasks={tasks || []} />
     </div>
   )
 }

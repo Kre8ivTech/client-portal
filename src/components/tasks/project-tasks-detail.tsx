@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Progress } from '@/components/ui/progress'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -59,7 +58,6 @@ import {
   XCircle,
   Calendar,
   User,
-  Filter,
   Search,
   AlertCircle,
 } from 'lucide-react'
@@ -104,28 +102,11 @@ type StaffUser = {
   project_role?: string
 }
 
-type Project = {
-  id: string
-  project_number: string
-  name: string
-  description: string | null
-  status: string
-  created_by: string
-  organization_id: string
-  organizations: {
-    id: string
-    name: string
-  }
-}
-
 interface ProjectTasksDetailProps {
   projectId: string
-  project: Project
   tasks: ProjectTask[]
   members: StaffUser[]
   canEdit: boolean
-  userRole: string
-  userId: string
   highlightedTaskId?: string
 }
 
@@ -338,6 +319,8 @@ export function ProjectTasksDetail({
       }
       if (newStatus === 'done') {
         update.completed_at = new Date().toISOString()
+      } else {
+        update.completed_at = null
       }
 
       const { error } = await supabase
@@ -354,7 +337,7 @@ export function ProjectTasksDetail({
             ? {
                 ...t,
                 status: newStatus,
-                completed_at: newStatus === 'done' ? new Date().toISOString() : t.completed_at,
+                completed_at: newStatus === 'done' ? new Date().toISOString() : null,
               }
             : t
         )

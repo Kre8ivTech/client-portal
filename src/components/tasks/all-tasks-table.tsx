@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   Table,
@@ -90,8 +89,6 @@ type Task = {
 
 interface AllTasksTableProps {
   tasks: Task[]
-  userRole: string
-  userId: string
 }
 
 type SortField = 'priority' | 'due_date' | 'project' | 'status'
@@ -144,8 +141,7 @@ function getPriorityValue(priority: string): number {
   }
 }
 
-export function AllTasksTable({ tasks, userRole, userId }: AllTasksTableProps) {
-  const router = useRouter()
+export function AllTasksTable({ tasks }: AllTasksTableProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [priorityFilter, setPriorityFilter] = useState<string>('all')
@@ -207,8 +203,12 @@ export function AllTasksTable({ tasks, userRole, userId }: AllTasksTableProps) {
           bValue = getPriorityValue(b.priority)
           break
         case 'due_date':
-          aValue = a.due_date ? new Date(a.due_date).getTime() : Infinity
-          bValue = b.due_date ? new Date(b.due_date).getTime() : Infinity
+          // Handle null dates: always sort them last regardless of direction
+          if (!a.due_date && !b.due_date) return 0
+          if (!a.due_date) return 1
+          if (!b.due_date) return -1
+          aValue = new Date(a.due_date).getTime()
+          bValue = new Date(b.due_date).getTime()
           break
         case 'project':
           aValue = a.project.name
@@ -220,6 +220,11 @@ export function AllTasksTable({ tasks, userRole, userId }: AllTasksTableProps) {
           break
         default:
           return 0
+      }
+
+      // Special handling already done for due_date nulls above
+      if (sortField === 'due_date' && (!a.due_date || !b.due_date)) {
+        return 0 // Already handled
       }
 
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1
@@ -387,7 +392,10 @@ export function AllTasksTable({ tasks, userRole, userId }: AllTasksTableProps) {
               <Filter className="h-12 w-12 text-muted-foreground/50 mb-4" />
               <h3 className="text-lg font-semibold mb-2">No tasks found</h3>
               <p className="text-sm text-muted-foreground">
-                {searchQuery || statusFilter !== 'all' || priorityFilter !== 'all'
+                {searchQuery ||
+                  statusFilter !== 'all' ||
+                  priorityFilter !== 'all' ||
+                  projectFilter !== 'all'
                   ? 'Try adjusting your filters'
                   : 'No tasks have been created yet'}
               </p>

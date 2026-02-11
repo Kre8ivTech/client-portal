@@ -177,12 +177,9 @@ export default async function ProjectTasksPage({
 
       <ProjectTasksDetail
         projectId={id}
-        project={project}
         tasks={tasks || []}
         members={transformedMembers}
         canEdit={canEdit}
-        userRole={userData.role}
-        userId={userData.id}
         highlightedTaskId={taskId}
       />
     </div>

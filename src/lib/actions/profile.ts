@@ -10,6 +10,7 @@ export async function updateProfile(formData: FormData) {
   const name = (formData.get("name") as string)?.trim() ?? "";
   const avatarUrl = (formData.get("avatar_url") as string)?.trim();
   const phone = (formData.get("phone") as string)?.trim();
+  const whatsappNumber = (formData.get("whatsapp_number") as string)?.trim();
   const sameAsBusiness = formData.get("same_as_business") === "true";
 
   // Extract business address
@@ -46,6 +47,7 @@ export async function updateProfile(formData: FormData) {
   const updates: any = {
     name,
     phone: phone || null,
+    whatsapp_number: whatsappNumber || null,
     business_address: businessAddress,
     mailing_address: mailingAddress,
     updated_at: new Date().toISOString(),
@@ -67,6 +69,7 @@ export async function updateProfile(formData: FormData) {
     new_values: {
       name,
       phone: !!phone,
+      whatsapp_number: !!whatsappNumber,
       business_address: !!businessAddress.street,
       mailing_address: !!mailingAddress.street,
       avatar_url: avatarUrl !== undefined,

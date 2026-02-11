@@ -69,6 +69,16 @@ export function AuthSettings() {
         .eq("id", "00000000-0000-0000-0000-000000000001")
         .single();
 
+      if (error) {
+        // Columns may not exist yet if migrations haven't run
+        if (error.message?.includes("does not exist")) {
+          console.info("Auth settings columns not found, using defaults");
+        } else {
+          console.error("Failed to load auth settings:", error);
+        }
+        return;
+      }
+
       if (data) {
         setSettings({
           sso_google_enabled: data.sso_google_enabled ?? false,

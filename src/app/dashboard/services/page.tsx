@@ -3,6 +3,7 @@ import { ClientServiceList } from "@/components/services/client-service-list";
 import { Button } from "@/components/ui/button";
 import { Package } from "lucide-react";
 import Link from "next/link";
+import { isMissingColumnError } from "@/lib/utils/error-handling";
 
 export const metadata = {
   title: "Services | KT Portal",
@@ -37,15 +38,7 @@ export default async function ServicesPage() {
     .order("created_at", { ascending: false });
 
   // Backwards-compat: if DB hasn't been migrated yet, retry without is_global.
-  if (
-    error &&
-    String(error.message || "")
-      .toLowerCase()
-      .includes("schema cache") &&
-    String(error.message || "")
-      .toLowerCase()
-      .includes("is_global")
-  ) {
+  if (error && isMissingColumnError(error, "is_global")) {
     ({ data: services, error } = await supabase
       .from("services")
       .select(baseSelect)

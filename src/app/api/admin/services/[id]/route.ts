@@ -2,15 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { serviceSchema } from '@/lib/validators/service'
 import { updateStripeProduct, createStripeProduct, archiveStripeProduct } from '@/lib/stripe'
-
-function isMissingColumnSchemaCacheError(message: string | undefined, column: string) {
-  if (!message) return false
-  const m = message.toLowerCase()
-  return (
-    m.includes('schema cache') &&
-    (m.includes(`'${column.toLowerCase()}'`) || m.includes(`"${column.toLowerCase()}"`))
-  )
-}
+import { isMissingColumnError } from '@/lib/utils/error-handling'
 
 // PATCH /api/admin/services/[id] - Update service
 export async function PATCH(
@@ -80,7 +72,7 @@ export async function PATCH(
     ;({ data: service, error } = await updateQuery.select().single())
 
     // Backwards-compat: retry without is_global if column doesn't exist yet.
-    if (error && isMissingColumnSchemaCacheError(error.message, 'is_global')) {
+    if (error && isMissingColumnError(error, 'is_global')) {
       const retryData = { ...updateData }
       delete retryData.is_global
       const retryQuery = (supabase as any)

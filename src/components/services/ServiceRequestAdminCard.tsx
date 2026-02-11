@@ -22,7 +22,8 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { MoreVertical, CheckCircle2, XCircle, DollarSign, Calendar, User, AlertCircle } from 'lucide-react'
+import { MoreVertical, CheckCircle2, XCircle, DollarSign, Calendar, User, AlertCircle, MessageSquare } from 'lucide-react'
+import { AdminResponseForm } from './AdminResponseForm'
 import type { Database } from '@/types/database'
 
 type ServiceRequest = Database['public']['Tables']['service_requests']['Row'] & {
@@ -45,6 +46,7 @@ interface ServiceRequestAdminCardProps {
 
 export function ServiceRequestAdminCard({ request }: ServiceRequestAdminCardProps) {
   const [showApprovalDialog, setShowApprovalDialog] = useState(false)
+  const [showResponseDialog, setShowResponseDialog] = useState(false)
   const [approvalType, setApprovalType] = useState<'approve' | 'reject'>('approve')
   const [rejectionReason, setRejectionReason] = useState('')
   const [internalNotes, setInternalNotes] = useState('')
@@ -86,6 +88,7 @@ export function ServiceRequestAdminCard({ request }: ServiceRequestAdminCardProp
     if (!status) return 'bg-yellow-100 text-yellow-700 border-yellow-200'
     const colors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      responded: 'bg-purple-100 text-purple-700 border-purple-200',
       approved: 'bg-green-100 text-green-700 border-green-200',
       rejected: 'bg-red-100 text-red-700 border-red-200',
       converted: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -141,7 +144,7 @@ export function ServiceRequestAdminCard({ request }: ServiceRequestAdminCardProp
               </div>
             </div>
 
-            {request.status === 'pending' && (
+            {(request.status === 'pending' || request.status === 'responded') && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -149,6 +152,11 @@ export function ServiceRequestAdminCard({ request }: ServiceRequestAdminCardProp
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setShowResponseDialog(true)}>
+                    <MessageSquare className="h-4 w-4 mr-2 text-blue-600" />
+                    {request.status === 'responded' ? 'Update Response' : 'Respond with Details'}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => handleApproval('approve')}>
                     <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
                     Approve
@@ -273,6 +281,14 @@ export function ServiceRequestAdminCard({ request }: ServiceRequestAdminCardProp
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Response Dialog */}
+      <AdminResponseForm
+        serviceRequestId={request.id}
+        isOpen={showResponseDialog}
+        onClose={() => setShowResponseDialog(false)}
+        serviceRequestTitle={request.service?.name}
+      />
     </>
   )
 }

@@ -37,3 +37,19 @@ export const serviceRequestApprovalSchema = z.object({
 })
 
 export type ServiceRequestApprovalInput = z.infer<typeof serviceRequestApprovalSchema>
+
+// Admin response schema
+export const adminResponseSchema = z.object({
+  response_text: z.string().min(20, 'Response must be at least 20 characters').max(5000, 'Response too long'),
+  response_metadata: z.record(z.any()).optional().nullable(),
+})
+
+export type AdminResponseInput = z.infer<typeof adminResponseSchema>
+
+// Client feedback/approval schema
+export const clientFeedbackSchema = z.object({
+  response_text: z.string().min(10, 'Feedback must be at least 10 characters').max(5000, 'Feedback too long'),
+  is_approval: z.boolean().default(false),
+})
+
+export type ClientFeedbackInput = z.infer<typeof clientFeedbackSchema>

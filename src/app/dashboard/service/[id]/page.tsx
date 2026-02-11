@@ -8,6 +8,8 @@ import { ChevronLeft, Calendar, DollarSign, AlertCircle, Clock } from 'lucide-re
 import Link from 'next/link'
 
 import { CancelRequestButton } from '@/components/services/cancel-request-button'
+import { ClientResponseView } from '@/components/services/ClientResponseView'
+import { ResponseTimeline } from '@/components/services/ResponseTimeline'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -53,6 +55,23 @@ export default async function ServiceRequestPage({ params }: PageProps) {
     notFound()
   }
 
+  // Fetch all responses for this service request
+  const { data: responses } = await (supabase as any)
+    .from('service_request_responses')
+    .select(`
+      *,
+      responder:profiles!responder_id(id, name, email, avatar_url)
+    `)
+    .eq('service_request_id', id)
+    .order('created_at', { ascending: true })
+
+  const responseList = responses || []
+
+  // Get the latest admin response (if any) for ClientResponseView
+  const latestAdminResponse = responseList
+    .filter((r: any) => r.response_type === 'admin_response')
+    .pop()
+
   // Permission check
   if (p.organization_id && request.organization_id !== p.organization_id) {
     // If not in same org, check if super admin (handled by RLS usually but good to be safe)
@@ -72,6 +91,7 @@ export default async function ServiceRequestPage({ params }: PageProps) {
     if (!status) return 'bg-yellow-100 text-yellow-700 border-yellow-200'
     const colors: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      responded: 'bg-purple-100 text-purple-700 border-purple-200',
       approved: 'bg-green-100 text-green-700 border-green-200',
       rejected: 'bg-red-100 text-red-700 border-red-200',
       converted: 'bg-blue-100 text-blue-700 border-blue-200',
@@ -159,6 +179,26 @@ export default async function ServiceRequestPage({ params }: PageProps) {
               {/* Additional fields from details object can be rendered here */}
             </CardContent>
           </Card>
+
+          {/* Client Response View - Shows if status is 'responded' and there's an admin response */}
+          {request.status === 'responded' && latestAdminResponse && p.role === 'client' && (
+            <ClientResponseView
+              serviceRequestId={request.id}
+              adminResponse={{
+                response_text: latestAdminResponse.response_text,
+                created_at: latestAdminResponse.created_at,
+                responder: {
+                  name: latestAdminResponse.responder?.name || null,
+                  email: latestAdminResponse.responder?.email || 'Team',
+                },
+              }}
+            />
+          )}
+
+          {/* Response Timeline - Shows conversation history if there are responses */}
+          {responseList.length > 0 && (
+            <ResponseTimeline responses={responseList} />
+          )}
         </div>
 
         {/* Sidebar */}

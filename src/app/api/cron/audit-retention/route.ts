@@ -36,8 +36,9 @@ export async function GET(request: NextRequest) {
   cutoff.setDate(cutoff.getDate() - RETENTION_DAYS);
   const cutoffIso = cutoff.toISOString();
 
-  const { supabaseAdmin } = await import("@/lib/supabase/admin");
-  const { data, error } = await (supabaseAdmin as any)
+  const { getSupabaseAdmin } = await import("@/lib/supabase/admin");
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
     .from("audit_logs")
     .delete()
     .lt("created_at", cutoffIso)

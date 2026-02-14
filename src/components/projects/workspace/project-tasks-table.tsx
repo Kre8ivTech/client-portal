@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -56,18 +56,25 @@ import {
   ArrowUp,
   ArrowDown,
   Trash2,
-  Pencil,
   CheckCircle2,
   Circle,
   Clock,
   Eye,
   XCircle,
+  ClipboardPaste,
+  WandSparkles,
 } from 'lucide-react'
 import {
   TASK_STATUS_OPTIONS,
   TASK_PRIORITY_OPTIONS,
 } from '@/lib/validators/project'
 import { formatDistanceToNow } from 'date-fns'
+import { useToast } from '@/components/ui/use-toast'
+import {
+  parseTaskListFromText,
+  parsedTaskCandidateSchema,
+  type ParsedTaskCandidate,
+} from '@/lib/task-list-parser'
 
 type Task = {
   id: string
@@ -109,6 +116,54 @@ interface ProjectTasksTableProps {
 
 type SortField = 'title' | 'status' | 'priority' | 'due_date' | 'updated_at'
 type SortDirection = 'asc' | 'desc'
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message
+  }
+
+  return fallback
+}
+
+function normalizeParsedTaskCandidates(input: unknown): ParsedTaskCandidate[] {
+  if (!Array.isArray(input)) {
+    return []
+  }
+
+  const normalized: ParsedTaskCandidate[] = []
+
+  for (const item of input) {
+    const candidate = parsedTaskCandidateSchema.safeParse(item)
+    if (candidate.success) {
+      normalized.push(candidate.data)
+    }
+  }
+
+  return normalized
+}
+
+const TASK_INSERT_SELECT_QUERY = `
+  id,
+  title,
+  description,
+  status,
+  priority,
+  start_date,
+  due_date,
+  completed_at,
+  sort_order,
+  created_by,
+  created_at,
+  updated_at,
+  assignee:users!assigned_to (
+    id,
+    email,
+    profiles:profiles!user_id (
+      name,
+      avatar_url
+    )
+  )
+`
 
 function getStatusIcon(status: string) {
   switch (status) {
@@ -180,10 +235,14 @@ export function ProjectTasksTable({
   members,
   canEdit,
 }: ProjectTasksTableProps) {
+  const { toast } = useToast()
   const [tasks, setTasks] = useState<Task[]>(initialTasks)
   const [selectedTasks, setSelectedTasks] = useState<string[]>([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [isPasteDialogOpen, setIsPasteDialogOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isAnalyzingList, setIsAnalyzingList] = useState(false)
+  const [isCreatingFromList, setIsCreatingFromList] = useState(false)
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null)
   const [sortField, setSortField] = useState<SortField>('updated_at')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
@@ -195,6 +254,14 @@ export function ProjectTasksTable({
     assigned_to: '',
     due_date: '',
   })
+  const [rawTaskList, setRawTaskList] = useState('')
+  const [parsedTaskList, setParsedTaskList] = useState<ParsedTaskCandidate[]>([])
+  const [taskListSource, setTaskListSource] = useState<'ai' | 'heuristic' | null>(
+    null
+  )
+  const [useAIAnalysis, setUseAIAnalysis] = useState(true)
+  const [bulkStatus, setBulkStatus] = useState('todo')
+  const [bulkAssignee, setBulkAssignee] = useState('unassigned')
   const router = useRouter()
   const supabase = createClient()
 
@@ -273,6 +340,156 @@ export function ProjectTasksTable({
     }
   }
 
+  function resetTaskListImportState() {
+    setRawTaskList('')
+    setParsedTaskList([])
+    setTaskListSource(null)
+    setUseAIAnalysis(true)
+    setBulkStatus('todo')
+    setBulkAssignee('unassigned')
+    setIsAnalyzingList(false)
+    setIsCreatingFromList(false)
+  }
+
+  async function handleAnalyzeTaskList() {
+    const input = rawTaskList.trim()
+    if (!input) return
+
+    setIsAnalyzingList(true)
+    try {
+      const response = await fetch('/api/projects/tasks/parse-list', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: input,
+          use_ai: useAIAnalysis,
+          max_items: 100,
+        }),
+      })
+
+      const payload = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          typeof payload?.error === 'string'
+            ? payload.error
+            : 'Failed to analyze task list'
+        )
+      }
+
+      const normalized = normalizeParsedTaskCandidates(payload?.tasks)
+      if (normalized.length === 0) {
+        throw new Error('No tasks were detected in the pasted content')
+      }
+
+      setParsedTaskList(normalized)
+      setTaskListSource(payload?.source === 'ai' ? 'ai' : 'heuristic')
+
+      if (typeof payload?.warning === 'string' && payload.warning.trim()) {
+        toast({
+          title: 'List parsed with fallback',
+          description: payload.warning,
+        })
+      } else {
+        toast({
+          title: 'Task list analyzed',
+          description: `Prepared ${normalized.length} task${normalized.length === 1 ? '' : 's'}.`,
+        })
+      }
+    } catch (error) {
+      const fallbackTasks = parseTaskListFromText(input, 100)
+
+      if (fallbackTasks.length === 0) {
+        toast({
+          title: 'Could not parse list',
+          description: getErrorMessage(
+            error,
+            'No actionable tasks were found in the pasted text.'
+          ),
+          variant: 'destructive',
+        })
+        return
+      }
+
+      setParsedTaskList(fallbackTasks)
+      setTaskListSource('heuristic')
+      toast({
+        title: 'Parsed without AI',
+        description:
+          'AI analysis was unavailable, so deterministic parsing was used.',
+      })
+    } finally {
+      setIsAnalyzingList(false)
+    }
+  }
+
+  async function handleCreateTasksFromList() {
+    if (parsedTaskList.length === 0) return
+
+    setIsCreatingFromList(true)
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user?.id) {
+        throw new Error('You must be logged in to create tasks')
+      }
+
+      const currentMaxOrder = tasks.reduce(
+        (max, task) =>
+          Number.isFinite(task.sort_order)
+            ? Math.max(max, task.sort_order)
+            : max,
+        0
+      )
+
+      const insertPayload = parsedTaskList.map((task, index) => ({
+        project_id: projectId,
+        title: task.title.trim(),
+        description: task.description?.trim() || null,
+        status: bulkStatus,
+        priority: task.priority,
+        assigned_to: bulkAssignee === 'unassigned' ? null : bulkAssignee,
+        created_by: user.id,
+        sort_order: currentMaxOrder + index + 1,
+      }))
+
+      const { data, error } = await supabase
+        .from('project_tasks')
+        .insert(insertPayload)
+        .select(TASK_INSERT_SELECT_QUERY)
+
+      if (error) throw error
+
+      if (data && data.length > 0) {
+        setTasks((prev) => [...(data as Task[]), ...prev])
+      }
+
+      toast({
+        title: 'Tasks created',
+        description: `Created ${insertPayload.length} task${insertPayload.length === 1 ? '' : 's'} from your pasted list.`,
+      })
+
+      setIsPasteDialogOpen(false)
+      resetTaskListImportState()
+      router.refresh()
+    } catch (error) {
+      toast({
+        title: 'Failed to create tasks',
+        description: getErrorMessage(
+          error,
+          'An unexpected error occurred while creating tasks.'
+        ),
+        variant: 'destructive',
+      })
+    } finally {
+      setIsCreatingFromList(false)
+    }
+  }
+
   async function handleCreateTask() {
     if (!newTask.title.trim()) return
 
@@ -294,35 +511,12 @@ export function ProjectTasksTable({
           due_date: newTask.due_date || null,
           created_by: user?.id,
         })
-        .select(
-          `
-          id,
-          title,
-          description,
-          status,
-          priority,
-          start_date,
-          due_date,
-          completed_at,
-          sort_order,
-          created_by,
-          created_at,
-          updated_at,
-          assignee:users!assigned_to (
-            id,
-            email,
-            profiles:profiles!user_id (
-              name,
-              avatar_url
-            )
-          )
-        `
-        )
+        .select(TASK_INSERT_SELECT_QUERY)
         .single()
 
       if (error) throw error
 
-      setTasks([data, ...tasks])
+      setTasks((prev) => [data, ...prev])
       setIsCreateDialogOpen(false)
       setNewTask({
         title: '',
@@ -415,154 +609,335 @@ export function ProjectTasksTable({
             </CardDescription>
           </div>
           {canEdit && (
-            <Dialog
-              open={isCreateDialogOpen}
-              onOpenChange={setIsCreateDialogOpen}
-            >
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Add Task
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Create Task</DialogTitle>
-                  <DialogDescription>
-                    Add a new task to this project.
-                  </DialogDescription>
-                </DialogHeader>
+            <div className="flex items-center gap-2">
+              <Dialog
+                open={isPasteDialogOpen}
+                onOpenChange={(open) => {
+                  setIsPasteDialogOpen(open)
+                  if (!open) {
+                    resetTaskListImportState()
+                  }
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="gap-2">
+                    <ClipboardPaste className="h-4 w-4" />
+                    Paste List
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Convert Pasted List to Tasks</DialogTitle>
+                    <DialogDescription>
+                      Paste a numbered or bulleted list. We&apos;ll split it into
+                      individual tasks and optionally refine it with AI.
+                    </DialogDescription>
+                  </DialogHeader>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">Title</label>
-                    <Input
-                      value={newTask.title}
-                      onChange={(e) =>
-                        setNewTask((prev) => ({
-                          ...prev,
-                          title: e.target.value,
-                        }))
-                      }
-                      placeholder="Task title"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Description</label>
-                    <Textarea
-                      value={newTask.description}
-                      onChange={(e) =>
-                        setNewTask((prev) => ({
-                          ...prev,
-                          description: e.target.value,
-                        }))
-                      }
-                      placeholder="Optional description"
-                      className="min-h-[80px]"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium">Status</label>
-                      <Select
-                        value={newTask.status}
-                        onValueChange={(v) =>
-                          setNewTask((prev) => ({ ...prev, status: v }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TASK_STATUS_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Pasted list</label>
+                      <Textarea
+                        value={rawTaskList}
+                        onChange={(e) => setRawTaskList(e.target.value)}
+                        placeholder="Paste a client list with numbered points or bullets..."
+                        className="min-h-[180px]"
+                      />
                     </div>
-                    <div>
-                      <label className="text-sm font-medium">Priority</label>
-                      <Select
-                        value={newTask.priority}
-                        onValueChange={(v) =>
-                          setNewTask((prev) => ({ ...prev, priority: v }))
-                        }
+
+                    <div className="rounded-lg border p-3 space-y-3">
+                      <label className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={useAIAnalysis}
+                          onCheckedChange={(checked) =>
+                            setUseAIAnalysis(checked === true)
+                          }
+                        />
+                        <span className="flex items-center gap-1.5">
+                          <WandSparkles className="h-4 w-4 text-blue-600" />
+                          Use AI analysis to improve task formatting
+                        </span>
+                      </label>
+
+                      <Button
+                        variant="secondary"
+                        onClick={handleAnalyzeTaskList}
+                        disabled={!rawTaskList.trim() || isAnalyzingList}
                       >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TASK_PRIORITY_OPTIONS.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        {isAnalyzingList && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Analyze List
+                      </Button>
                     </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Assign To</label>
-                    {members.length > 0 ? (
-                      <Select
-                        value={newTask.assigned_to}
-                        onValueChange={(v) =>
-                          setNewTask((prev) => ({ ...prev, assigned_to: v }))
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Unassigned" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {members.map((m) => (
-                            <SelectItem key={m.user_id} value={m.user_id}>
-                              {m.user?.profiles?.name ?? m.user?.email ?? 'Unknown'}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <p className="text-sm text-slate-500 mt-1">
-                        Add members to the project Team tab first.
-                      </p>
+
+                    {parsedTaskList.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">
+                            {parsedTaskList.length} task
+                            {parsedTaskList.length === 1 ? '' : 's'} detected
+                          </Badge>
+                          {taskListSource && (
+                            <Badge
+                              variant="outline"
+                              className={
+                                taskListSource === 'ai'
+                                  ? 'border-blue-200 text-blue-700 bg-blue-50'
+                                  : 'border-slate-200 text-slate-700 bg-slate-50'
+                              }
+                            >
+                              {taskListSource === 'ai'
+                                ? 'AI analyzed'
+                                : 'Parsed without AI'}
+                            </Badge>
+                          )}
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div>
+                            <label className="text-sm font-medium">
+                              Status for imported tasks
+                            </label>
+                            <Select value={bulkStatus} onValueChange={setBulkStatus}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TASK_STATUS_OPTIONS.map((opt) => (
+                                  <SelectItem key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium">
+                              Assignee for imported tasks
+                            </label>
+                            <Select
+                              value={bulkAssignee}
+                              onValueChange={setBulkAssignee}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="unassigned">
+                                  Unassigned
+                                </SelectItem>
+                                {members.map((m) => (
+                                  <SelectItem key={m.user_id} value={m.user_id}>
+                                    {m.user?.profiles?.name ??
+                                      m.user?.email ??
+                                      'Unknown'}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        <div className="max-h-[260px] overflow-y-auto rounded-lg border">
+                          <div className="divide-y">
+                            {parsedTaskList.map((task, index) => (
+                              <div key={`${task.title}-${index}`} className="p-3">
+                                <div className="flex items-start justify-between gap-3">
+                                  <p className="text-sm font-medium">
+                                    {index + 1}. {task.title}
+                                  </p>
+                                  <Badge
+                                    variant="outline"
+                                    className={getPriorityBadgeClass(task.priority)}
+                                  >
+                                    {task.priority}
+                                  </Badge>
+                                </div>
+                                {task.description && (
+                                  <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                    {task.description}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
-                  <div>
-                    <label className="text-sm font-medium">Due Date</label>
-                    <Input
-                      type="date"
-                      value={newTask.due_date}
-                      onChange={(e) =>
-                        setNewTask((prev) => ({
-                          ...prev,
-                          due_date: e.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
 
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsCreateDialogOpen(false)}
-                  >
-                    Cancel
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsPasteDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleCreateTasksFromList}
+                      disabled={parsedTaskList.length === 0 || isCreatingFromList}
+                    >
+                      {isCreatingFromList && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      {parsedTaskList.length > 0
+                        ? `Create ${parsedTaskList.length} ${parsedTaskList.length === 1 ? 'Task' : 'Tasks'}`
+                        : 'Create Tasks'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog
+                open={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
+              >
+                <DialogTrigger asChild>
+                  <Button size="sm" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Add Task
                   </Button>
-                  <Button
-                    onClick={handleCreateTask}
-                    disabled={!newTask.title.trim() || isSubmitting}
-                  >
-                    {isSubmitting && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Create Task
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                </DialogTrigger>
+                <DialogContent className="max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Create Task</DialogTitle>
+                    <DialogDescription>
+                      Add a new task to this project.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium">Title</label>
+                      <Input
+                        value={newTask.title}
+                        onChange={(e) =>
+                          setNewTask((prev) => ({
+                            ...prev,
+                            title: e.target.value,
+                          }))
+                        }
+                        placeholder="Task title"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Description</label>
+                      <Textarea
+                        value={newTask.description}
+                        onChange={(e) =>
+                          setNewTask((prev) => ({
+                            ...prev,
+                            description: e.target.value,
+                          }))
+                        }
+                        placeholder="Optional description"
+                        className="min-h-[80px]"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium">Status</label>
+                        <Select
+                          value={newTask.status}
+                          onValueChange={(v) =>
+                            setNewTask((prev) => ({ ...prev, status: v }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TASK_STATUS_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Priority</label>
+                        <Select
+                          value={newTask.priority}
+                          onValueChange={(v) =>
+                            setNewTask((prev) => ({ ...prev, priority: v }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TASK_PRIORITY_OPTIONS.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Assign To</label>
+                      {members.length > 0 ? (
+                        <Select
+                          value={newTask.assigned_to}
+                          onValueChange={(v) =>
+                            setNewTask((prev) => ({ ...prev, assigned_to: v }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Unassigned" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {members.map((m) => (
+                              <SelectItem key={m.user_id} value={m.user_id}>
+                                {m.user?.profiles?.name ?? m.user?.email ?? 'Unknown'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <p className="text-sm text-slate-500 mt-1">
+                          Add members to the project Team tab first.
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium">Due Date</label>
+                      <Input
+                        type="date"
+                        value={newTask.due_date}
+                        onChange={(e) =>
+                          setNewTask((prev) => ({
+                            ...prev,
+                            due_date: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsCreateDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleCreateTask}
+                      disabled={!newTask.title.trim() || isSubmitting}
+                    >
+                      {isSubmitting && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Create Task
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
           )}
         </div>
       </CardHeader>

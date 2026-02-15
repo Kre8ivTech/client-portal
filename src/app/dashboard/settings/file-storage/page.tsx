@@ -2,11 +2,9 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { HardDrive, CloudIcon } from "lucide-react";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getS3ConnectionStatus } from "@/lib/storage/s3";
 import { FileStorageSettings } from "@/components/settings/file-storage-settings";
 import { ClientCloudDrives } from "@/components/settings/client-cloud-drives";
-
-const APP_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 
 type IntegrationRow = {
   id: string;
@@ -87,20 +85,8 @@ export default async function FileStorageSettingsPage() {
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const awsEnvConfigured = !!process.env.AWS_S3_BUCKET_NAME && !!process.env.AWS_ACCESS_KEY_ID && !!process.env.AWS_SECRET_ACCESS_KEY;
-  const admin = getSupabaseAdmin();
-  const { data: appRow } = await (admin as any)
-    .from("app_settings")
-    .select("aws_s3_config_encrypted")
-    .eq("id", APP_SETTINGS_ID)
-    .single();
-  const hasEncryptedS3 = !!appRow?.aws_s3_config_encrypted;
-  const { data: s3DbRow } = await db
-    .from("aws_s3_config")
-    .select("id")
-    .is("organization_id", null)
-    .maybeSingle();
-  const awsConfigured = awsEnvConfigured || hasEncryptedS3 || !!s3DbRow;
+  const s3ConnectionStatus = await getS3ConnectionStatus();
+  const awsConfigured = s3ConnectionStatus.configured;
 
   const isAdminOrStaff = role === "super_admin" || role === "staff";
 
@@ -126,6 +112,7 @@ export default async function FileStorageSettingsPage() {
             role={role}
             organizationId={organizationId}
             awsConfigured={awsConfigured}
+            s3ConnectionStatus={s3ConnectionStatus}
             integrations={(integrations as IntegrationRow[]) ?? []}
             storageSettings={(storageSettingsRes?.data as StorageSettingsRow) ?? null}
             recentRuns={(syncRunsRes?.data as SyncRunRow[]) ?? []}

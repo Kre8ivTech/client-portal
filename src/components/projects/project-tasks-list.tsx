@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import {
   Card,
@@ -53,6 +54,7 @@ import {
   XCircle,
   Calendar,
   User,
+  ExternalLink,
 } from 'lucide-react'
 import {
   TASK_STATUS_OPTIONS,
@@ -510,7 +512,13 @@ export function ProjectTasksList({
                             : 'text-slate-900'
                         }`}
                       >
-                        {task.title}
+                        <Link
+                          href={`/dashboard/projects/${projectId}/tasks/${task.id}`}
+                          className="inline-flex items-center gap-1 hover:text-primary hover:underline"
+                        >
+                          {task.title}
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
                       </span>
                       <Badge
                         variant="outline"

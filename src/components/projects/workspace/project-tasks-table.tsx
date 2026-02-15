@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import {
   Table,
@@ -63,6 +64,7 @@ import {
   XCircle,
   ClipboardPaste,
   WandSparkles,
+  ExternalLink,
 } from 'lucide-react'
 import {
   TASK_STATUS_OPTIONS,
@@ -1057,7 +1059,13 @@ export function ProjectTasksTable({
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium">{task.title}</div>
+                        <Link
+                          href={`/dashboard/projects/${projectId}/tasks/${task.id}`}
+                          className="inline-flex items-center gap-1 font-medium hover:text-primary hover:underline"
+                        >
+                          {task.title}
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Link>
                         {task.description && (
                           <div className="text-sm text-muted-foreground line-clamp-1 mt-1">
                             {task.description}

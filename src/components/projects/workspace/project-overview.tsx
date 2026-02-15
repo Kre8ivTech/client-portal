@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
   Card,
   CardContent,
@@ -283,7 +284,12 @@ export function ProjectOverview({ project, tasks, members, fileCount, commentCou
                 {overdueTasks.slice(0, 5).map(task => (
                   <div key={task.id} className="flex items-center gap-2 p-2 rounded border border-red-100 bg-red-50/50">
                     <Circle className="h-3.5 w-3.5 text-red-500 shrink-0" />
-                    <span className="text-sm flex-1 truncate">{task.title}</span>
+                    <Link
+                      href={`/dashboard/projects/${project.id}/tasks/${task.id}`}
+                      className="text-sm flex-1 truncate hover:underline"
+                    >
+                      {task.title}
+                    </Link>
                     <span className="text-xs text-red-600">
                       {task.due_date && new Date(task.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
@@ -310,7 +316,12 @@ export function ProjectOverview({ project, tasks, members, fileCount, commentCou
                   return (
                     <div key={task.id} className="flex items-center gap-2 p-2 rounded border">
                       <StatusIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="text-sm flex-1 truncate">{task.title}</span>
+                      <Link
+                        href={`/dashboard/projects/${project.id}/tasks/${task.id}`}
+                        className="text-sm flex-1 truncate hover:underline"
+                      >
+                        {task.title}
+                      </Link>
                       {assigneeName && (
                         <Avatar className="h-5 w-5">
                           <AvatarFallback className="text-[8px]">{assigneeName.slice(0, 2).toUpperCase()}</AvatarFallback>

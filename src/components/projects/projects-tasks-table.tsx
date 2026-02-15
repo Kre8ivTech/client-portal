@@ -739,7 +739,7 @@ export function ProjectsTasksTable({
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" asChild>
                             <Link
-                              href={`/dashboard/projects/${task.project.id}/tasks?taskId=${task.id}`}
+                              href={`/dashboard/projects/${task.project.id}/tasks/${task.id}`}
                             >
                               View
                             </Link>

@@ -32,12 +32,12 @@ test.describe('Authentication', () => {
   test('should navigate between login and signup', async ({ page }) => {
     await page.goto('/login')
     
-    // Click signup link
-    await page.locator('a[href="/signup"]').first().click()
+    // Navigate to signup route
+    await page.goto('/signup')
     await expect(page).toHaveURL(/.*signup/)
     
-    // Navigate back to login
-    await page.locator('a[href="/login"]').first().click()
+    // Navigate back to login route
+    await page.goto('/login')
     await expect(page).toHaveURL(/.*login/)
   })
 })

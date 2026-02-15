@@ -7,8 +7,8 @@ test.describe('Authentication', () => {
     // Check for login page elements
     await expect(page).toHaveTitle(/KT-Portal|Login/)
     await expect(page.getByText(/welcome back/i)).toBeVisible()
-    await expect(page.getByPlaceholder(/email/i)).toBeVisible()
-    await expect(page.getByPlaceholder(/password/i)).toBeVisible()
+    await expect(page.getByLabel(/email/i)).toBeVisible()
+    await expect(page.getByLabel(/password/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /sign in|login|send magic link/i })).toBeVisible()
   })
 

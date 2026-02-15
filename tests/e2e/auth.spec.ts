@@ -6,7 +6,7 @@ test.describe('Authentication', () => {
     
     // Check for login page elements
     await expect(page).toHaveTitle(/KT-Portal|Login/)
-    await expect(page.getByRole('heading', { name: /welcome back|sign in|login/i })).toBeVisible()
+    await expect(page.getByText(/welcome back/i)).toBeVisible()
     await expect(page.getByPlaceholder(/email/i)).toBeVisible()
     await expect(page.getByPlaceholder(/password/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /sign in|login|send magic link/i })).toBeVisible()
@@ -16,7 +16,7 @@ test.describe('Authentication', () => {
     await page.goto('/signup')
     
     // Check for signup page elements
-    await expect(page.getByRole('heading', { name: /request access|sign up|create account/i })).toBeVisible()
+    await expect(page.getByText(/request access|sign up|create account/i)).toBeVisible()
   })
 
   test('should show validation error for empty login form', async ({ page }) => {

@@ -9,14 +9,13 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { Database } from '@/types/database'
 import { sendTemplatedEmail } from '@/lib/notifications/providers/email'
 
 // Use admin client to bypass RLS
-const supabaseAdmin = createClient<Database>(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+) as any
 
 export async function GET(request: NextRequest) {
   try {
@@ -99,7 +98,7 @@ export async function GET(request: NextRequest) {
 
       if (taskError || !task) {
         console.error(`[Cron] Failed to get task ${taskKey}:`, taskError)
-        records.forEach((r) => remindersFailed.push(r.id))
+        records.forEach((r: any) => remindersFailed.push(r.id))
         continue
       }
 
@@ -118,7 +117,7 @@ export async function GET(request: NextRequest) {
         .eq('task_id', taskId)
         .not('acknowledged_at', 'is', null)
 
-      const acknowledgedByNames = acknowledgedRecords?.map((r) => r.acknowledger?.profiles?.name || 'Unknown') || []
+      const acknowledgedByNames = acknowledgedRecords?.map((r: any) => r.acknowledger?.profiles?.name || 'Unknown') || []
 
       // Send reminder to each unacknowledged recipient
       for (const record of records) {

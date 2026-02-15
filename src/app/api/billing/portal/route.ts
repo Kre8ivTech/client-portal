@@ -9,7 +9,7 @@ async function getStripeInstance() {
   }
   const { default: Stripe } = await import("stripe");
   return new Stripe(secretKey, {
-    apiVersion: "2024-12-18.acacia",
+    apiVersion: "2026-01-28.clover",
   });
 }
 

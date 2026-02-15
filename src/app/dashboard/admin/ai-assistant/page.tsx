@@ -118,9 +118,9 @@ export default async function AIAdminPage() {
               <div className="space-y-4">
                 {organizations && organizations.length > 0 ? (
                   <div className="grid gap-4">
-                    {organizations.map((org) => {
-                      const orgDocs = documents?.filter(d => d.organization_id === org.id) || []
-                      const orgRules = rules?.filter(r => r.organization_id === org.id) || []
+                    {organizations.map((org: any) => {
+                      const orgDocs = documents?.filter((d: any) => d.organization_id === org.id) || []
+                      const orgRules = rules?.filter((r: any) => r.organization_id === org.id) || []
 
                       return (
                         <div key={org.id} className="border rounded-lg p-4 space-y-2">

@@ -35,17 +35,17 @@ export function useRealtimePresence(channelName: string, userId?: string) {
 
     channel
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState<PresenceState>()
+        const state = channel.presenceState() as PresenceState
         setPresenceState(state)
         setOnlineUsers(Object.keys(state))
       })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+      .on('presence', { event: 'join' }, ({ key, newPresences }: any) => {
         console.log('User joined:', key, newPresences)
       })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }: any) => {
         console.log('User left:', key, leftPresences)
       })
-      .subscribe(async (status) => {
+      .subscribe(async (status: any) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({
             user_id: userId,
@@ -81,7 +81,7 @@ export function useRealtimeBroadcast<T = any>(
 
     const channel = supabase
       .channel(channelName)
-      .on('broadcast', { event: eventType }, (payload) => {
+      .on('broadcast', { event: eventType }, (payload: any) => {
         onEvent(payload.payload as T)
       })
       .subscribe()

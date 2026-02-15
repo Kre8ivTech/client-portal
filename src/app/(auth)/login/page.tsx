@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,8 +38,6 @@ export default function LoginPage() {
   const [branding, setBranding] = useState<LoginBranding | null>(null);
   const [authSettings, setAuthSettings] = useState<AuthSettings | null>(null);
   const [showMFA, setShowMFA] = useState(false);
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
-  const [recaptchaLoaded, setRecaptchaLoaded] = useState(false);
 
   const supabase = createClient();
 
@@ -67,6 +65,20 @@ export default function LoginPage() {
       setMessage({
         type: "error",
         text: "Authentication failed. Please ensure the callback URL is configured correctly.",
+      });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    if (params.get("mfa_required") === "1") {
+      setMessage({
+        type: "error",
+        text: "This account requires MFA verification before access is granted.",
+      });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+    if (params.get("session_expired") === "1") {
+      setMessage({
+        type: "error",
+        text: "Your session expired due to inactivity. Please sign in again.",
       });
       window.history.replaceState({}, "", window.location.pathname);
     }
@@ -105,20 +117,24 @@ export default function LoginPage() {
       // Verify reCAPTCHA if enabled
       if (authSettings?.recaptcha_enabled && authSettings?.recaptcha_site_key) {
         const token = await executeRecaptcha();
-        if (token) {
-          const recaptchaResult = await verifyRecaptcha(token, "login");
-          if (!recaptchaResult.success) {
-            setMessage({ type: "error", text: recaptchaResult.error || "reCAPTCHA verification failed" });
-            setLoading(false);
-            return;
-          }
+        if (!token) {
+          setMessage({ type: "error", text: "Could not complete reCAPTCHA verification" });
+          setLoading(false);
+          return;
+        }
+        const recaptchaResult = await verifyRecaptcha(token, password.trim() ? "login_password" : "login_magic_link");
+        if (!recaptchaResult.success) {
+          setMessage({ type: "error", text: recaptchaResult.error || "reCAPTCHA verification failed" });
+          setLoading(false);
+          return;
         }
       }
 
       if (password.trim()) {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        const signedInUser = data?.user;
 
-        if (error) {
+        if (error || !signedInUser) {
           setMessage({ type: "error", text: getAuthErrorMessage(error) });
           setLoading(false);
           return;
@@ -127,8 +143,28 @@ export default function LoginPage() {
         // Check if MFA is required
         const { data: factorsData } = await supabase.auth.mfa.listFactors();
         const totpFactor = factorsData?.totp?.[0];
+        const hasVerifiedFactor = Boolean(totpFactor && totpFactor.status === "verified");
 
-        if (totpFactor && totpFactor.status === "verified") {
+        const { data: userRow } = await (supabase as any)
+          .from("users")
+          .select("role")
+          .eq("id", signedInUser.id)
+          .single();
+
+        const role = (userRow as { role?: string } | null)?.role ?? "client";
+        const isStaffLike = ["super_admin", "staff", "partner", "partner_staff"].includes(role);
+        const mfaRequiredByPolicy = Boolean(
+          authSettings?.mfa_enabled &&
+            ((authSettings?.mfa_required_for_staff && isStaffLike) ||
+              (authSettings?.mfa_required_for_clients && role === "client"))
+        );
+
+        if (mfaRequiredByPolicy && !hasVerifiedFactor) {
+          window.location.href = "/dashboard/settings/security?required_mfa=1";
+          return;
+        }
+
+        if (hasVerifiedFactor) {
           // User has MFA enabled, show verification screen
           setShowMFA(true);
           setLoading(false);
@@ -246,7 +282,6 @@ export default function LoginPage() {
         <Script
           src={`https://www.google.com/recaptcha/api.js?render=${authSettings.recaptcha_site_key}`}
           strategy="afterInteractive"
-          onLoad={() => setRecaptchaLoaded(true)}
         />
       )}
 

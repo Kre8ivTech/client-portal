@@ -29,7 +29,7 @@ export async function notifyTicketEvent(
 ) {
   try {
     // Format the notification message
-    const { subject, message } = formatNotificationMessage(notificationType, context)
+    const { subject, message } = formatNotificationMessage(notificationType, context ?? {})
 
     // Call the notification API
     const response = await fetch(

@@ -6,7 +6,6 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
-import { Database } from '@/types/database'
 import { 
   NotificationPayload, 
   NotificationResult, 
@@ -18,10 +17,10 @@ import { sendSlack } from './providers/slack'
 import { sendWhatsApp } from './providers/whatsapp'
 
 // Use admin client for logging notifications (bypasses RLS)
-const supabaseAdmin = createClient<Database>(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+) as any
 
 /**
  * Send a notification through the specified channel

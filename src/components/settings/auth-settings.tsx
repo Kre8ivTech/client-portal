@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,6 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield, Key, Loader2, Save, ExternalLink, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { createClient } from "@/lib/supabase/client";
 
 interface AuthSettingsData {
   sso_google_enabled: boolean;
@@ -19,7 +18,7 @@ interface AuthSettingsData {
   sso_apple_enabled: boolean;
   recaptcha_enabled: boolean;
   recaptcha_site_key: string;
-  recaptcha_secret_key: string;
+  recaptcha_secret_configured: boolean;
   mfa_enabled: boolean;
   mfa_required_for_staff: boolean;
   mfa_required_for_clients: boolean;
@@ -36,95 +35,94 @@ export function AuthSettings() {
     sso_apple_enabled: false,
     recaptcha_enabled: false,
     recaptcha_site_key: "",
-    recaptcha_secret_key: "",
+    recaptcha_secret_configured: false,
     mfa_enabled: true,
     mfa_required_for_staff: false,
     mfa_required_for_clients: false,
   });
+  const [newRecaptchaSecret, setNewRecaptchaSecret] = useState("");
 
-  const supabase = createClient();
-
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select(
-          `
-          sso_google_enabled,
-          sso_microsoft_enabled,
-          sso_github_enabled,
-          sso_apple_enabled,
-          recaptcha_enabled,
-          recaptcha_site_key,
-          recaptcha_secret_key,
-          mfa_enabled,
-          mfa_required_for_staff,
-          mfa_required_for_clients
-        `,
-        )
-        .eq("id", "00000000-0000-0000-0000-000000000001")
-        .single();
-
-      if (error) {
-        // Columns may not exist yet if migrations haven't run
-        if (error.message?.includes("does not exist")) {
-          console.info("Auth settings columns not found, using defaults");
-        } else {
-          console.error("Failed to load auth settings:", error);
-        }
-        return;
+      const response = await fetch("/api/admin/auth/settings", { method: "GET" });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to load auth settings");
       }
 
-      if (data) {
-        setSettings({
-          sso_google_enabled: data.sso_google_enabled ?? false,
-          sso_microsoft_enabled: data.sso_microsoft_enabled ?? false,
-          sso_github_enabled: data.sso_github_enabled ?? false,
-          sso_apple_enabled: data.sso_apple_enabled ?? false,
-          recaptcha_enabled: data.recaptcha_enabled ?? false,
-          recaptcha_site_key: data.recaptcha_site_key ?? "",
-          recaptcha_secret_key: data.recaptcha_secret_key ?? "",
-          mfa_enabled: data.mfa_enabled ?? true,
-          mfa_required_for_staff: data.mfa_required_for_staff ?? false,
-          mfa_required_for_clients: data.mfa_required_for_clients ?? false,
-        });
-      }
+      setSettings(payload.settings as AuthSettingsData);
     } catch (err) {
       console.error("Failed to load auth settings:", err);
+      toast({
+        title: "Error",
+        description: "Failed to load authentication settings",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
 
   const handleSave = async () => {
+    if (settings.recaptcha_enabled && !settings.recaptcha_site_key.trim()) {
+      toast({
+        title: "Validation error",
+        description: "reCAPTCHA site key is required when reCAPTCHA is enabled",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (
+      settings.recaptcha_enabled &&
+      !settings.recaptcha_secret_configured &&
+      newRecaptchaSecret.trim().length === 0
+    ) {
+      toast({
+        title: "Validation error",
+        description: "Set a reCAPTCHA secret key before enabling reCAPTCHA",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from("app_settings")
-        .update({
+      const response = await fetch("/api/admin/auth/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           sso_google_enabled: settings.sso_google_enabled,
           sso_microsoft_enabled: settings.sso_microsoft_enabled,
           sso_github_enabled: settings.sso_github_enabled,
           sso_apple_enabled: settings.sso_apple_enabled,
           recaptcha_enabled: settings.recaptcha_enabled,
           recaptcha_site_key: settings.recaptcha_site_key || null,
-          recaptcha_secret_key: settings.recaptcha_secret_key || null,
+          recaptcha_secret_key: newRecaptchaSecret.trim() || undefined,
           mfa_enabled: settings.mfa_enabled,
           mfa_required_for_staff: settings.mfa_required_for_staff,
           mfa_required_for_clients: settings.mfa_required_for_clients,
-        })
-        .eq("id", "00000000-0000-0000-0000-000000000001");
+        }),
+      });
 
-      if (error) throw error;
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to save settings");
+      }
 
       toast({
         title: "Success",
         description: "Authentication settings updated successfully",
       });
+
+      if (newRecaptchaSecret.trim().length > 0) {
+        setSettings((prev) => ({ ...prev, recaptcha_secret_configured: true }));
+        setNewRecaptchaSecret("");
+      }
     } catch (err: any) {
       toast({
         title: "Error",
@@ -384,15 +382,24 @@ export function AuthSettings() {
                 <Input
                   type="password"
                   placeholder="6LcXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                  value={settings.recaptcha_secret_key}
-                  onChange={(e) => updateSetting("recaptcha_secret_key", e.target.value)}
+                value={newRecaptchaSecret}
+                onChange={(e) => setNewRecaptchaSecret(e.target.value)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  This key is used server-side to verify tokens. Keep it secret.
+                  This key is used server-side to verify tokens. Leave blank to keep the current secret.
                 </p>
               </div>
 
-              {settings.recaptcha_site_key && settings.recaptcha_secret_key && (
+              {(settings.recaptcha_secret_configured || newRecaptchaSecret.trim().length > 0) && (
+                <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900">
+                  <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                  <AlertDescription className="text-blue-700 dark:text-blue-300">
+                    Secret key {settings.recaptcha_secret_configured ? "is configured" : "will be configured on save"}.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {settings.recaptcha_site_key && (settings.recaptcha_secret_configured || newRecaptchaSecret.trim().length > 0) && (
                 <Alert className="bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-900">
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
                   <AlertDescription className="text-green-700 dark:text-green-300">

@@ -12,8 +12,9 @@ import {
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const supabase = await createServerSupabaseClient();
 
@@ -62,7 +63,7 @@ export async function POST(
         line_items:invoice_line_items(*)
       `
       )
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (invoiceError || !invoice) {
@@ -196,7 +197,7 @@ export async function POST(
         quickbooks_synced_at: new Date().toISOString(),
         quickbooks_sync_status: "synced",
       })
-      .eq("id", params.id);
+      .eq("id", id);
 
     return NextResponse.json({
       success: true,
@@ -214,7 +215,7 @@ export async function POST(
       .update({
         quickbooks_sync_status: "error",
       })
-      .eq("id", params.id);
+      .eq("id", id);
 
     return NextResponse.json(
       {

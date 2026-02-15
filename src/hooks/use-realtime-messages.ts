@@ -24,7 +24,7 @@ export function useRealtimeMessages(conversationId?: string) {
           table: 'messages',
           ...(conversationId && { filter: `conversation_id=eq.${conversationId}` }),
         },
-        (payload) => {
+        (payload: any) => {
           console.log('Message change detected:', payload)
           
           // Invalidate specific conversation messages if conversationId provided
@@ -74,7 +74,7 @@ export function useRealtimeConversations() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'conversations' },
-        (payload) => {
+        (payload: any) => {
           console.log('Conversation change detected:', payload)
           
           // Invalidate conversations list

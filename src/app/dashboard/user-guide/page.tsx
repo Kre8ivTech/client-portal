@@ -29,7 +29,6 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { Database } from "@/types/database";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
@@ -37,9 +36,6 @@ export const metadata = {
   title: "Admin & Staff User Guide | KT-Portal",
   description: "Complete guide for administrators and staff members",
 };
-
-// Type for the user_profiles view
-type UserProfile = Database["public"]["Views"]["user_profiles"]["Row"];
 
 export default async function UserGuidePage() {
   const supabase = await createServerSupabaseClient();
@@ -58,7 +54,7 @@ export default async function UserGuidePage() {
     .from("user_profiles")
     .select("role, is_account_manager")
     .eq("id", user.id)
-    .single<Pick<UserProfile, "role" | "is_account_manager">>();
+    .single();
 
   const role = profile?.role || "client";
   const isAccountManager = profile?.is_account_manager || false;

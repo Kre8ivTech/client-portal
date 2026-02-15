@@ -17,6 +17,7 @@ export type EmailTemplateType =
   | 'ticket_closed'
   | 'sla_warning'
   | 'sla_breach'
+  | 'task_acknowledgement_reminder'
   | 'password_reset'
   | 'magic_link'
   | 'welcome'
@@ -66,6 +67,7 @@ export const VALID_TEMPLATE_TYPES: EmailTemplateType[] = [
   'ticket_closed',
   'sla_warning',
   'sla_breach',
+  'task_acknowledgement_reminder',
   'password_reset',
   'magic_link',
   'welcome'
@@ -93,6 +95,7 @@ export function getTemplateTypeDisplayName(type: EmailTemplateType): string {
     ticket_closed: 'Ticket Closed',
     sla_warning: 'SLA Warning',
     sla_breach: 'SLA Breach',
+    task_acknowledgement_reminder: 'Task Acknowledgement Reminder',
     password_reset: 'Password Reset',
     magic_link: 'Magic Link Login',
     welcome: 'Welcome Email'

@@ -1,9 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
-import type { Database } from '@/types/database'
-
-type StaffAssignment = Database['public']['Tables']['staff_assignments']['Row']
-type StaffAssignmentInsert = Database['public']['Tables']['staff_assignments']['Insert']
+type StaffAssignment = any
 
 interface StaffWithProfile {
   id: string

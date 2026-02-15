@@ -5,13 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Download, Plus, FileText, Eye, Send } from "lucide-react";
 import Link from "next/link";
-import type { Database } from "@/types/database";
-
-type Invoice = Database["public"]["Tables"]["invoices"]["Row"];
-type InvoiceWithOrg = Invoice & {
-  organization: { name: string } | null;
-  line_items: { count: number }[] | null;
-};
+type InvoiceWithOrg = any;
 
 // Status badge styling
 function getStatusBadge(status: string) {

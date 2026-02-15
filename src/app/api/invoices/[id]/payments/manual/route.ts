@@ -13,9 +13,10 @@ const manualPaymentSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = await createServerSupabaseClient();
 
     // Check authentication
@@ -74,7 +75,7 @@ export async function POST(
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
       .select("id, organization_id, total, amount_paid, balance_due, status")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (invoiceError || !invoice) {
@@ -128,7 +129,7 @@ export async function POST(
     const { data: paymentId, error: paymentError } = await supabase.rpc(
       "record_manual_payment",
       {
-        p_invoice_id: params.id,
+        p_invoice_id: id,
         p_amount: amountInCents,
         p_payment_method: payment_method,
         p_payment_date: payment_date,
@@ -166,7 +167,7 @@ export async function POST(
         )
       `
       )
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (fetchError) {
@@ -203,9 +204,10 @@ export async function POST(
 // GET endpoint to fetch manual payment history for an invoice
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = await createServerSupabaseClient();
 
     // Check authentication
@@ -243,7 +245,7 @@ export async function GET(
         )
       `
       )
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (invoiceError || !invoice) {

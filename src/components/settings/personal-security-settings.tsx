@@ -9,15 +9,18 @@ import { KeyRound, Loader2, Mail, Shield, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { MFASetup } from "@/components/auth/mfa-setup";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface PersonalSecuritySettingsProps {
   userEmail: string;
   mfaEnabled?: boolean;
+  mfaRequired?: boolean;
 }
 
 export function PersonalSecuritySettings({
   userEmail,
   mfaEnabled: initialMfaEnabled = false,
+  mfaRequired = false,
 }: PersonalSecuritySettingsProps) {
   const { toast } = useToast();
   const [changingPassword, setChangingPassword] = useState(false);
@@ -110,6 +113,18 @@ export function PersonalSecuritySettings({
           <CardDescription>Manage your password and account security settings.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {mfaRequired && !mfaStatus && (
+            <Alert className="border-amber-300 bg-amber-50 text-amber-900">
+              <Shield className="h-4 w-4" />
+              <div>
+                <AlertTitle>MFA required</AlertTitle>
+                <AlertDescription>
+                  You must enable two-factor authentication to continue using the portal.
+                </AlertDescription>
+              </div>
+            </Alert>
+          )}
+
           {/* Current Email Display */}
           <div className="space-y-2">
             <Label>Email Address</Label>

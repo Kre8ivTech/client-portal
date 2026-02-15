@@ -1,7 +1,7 @@
 "use server";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { encrypt, decrypt } from "@/lib/crypto";
+import { encrypt, decrypt, decryptLegacy } from "@/lib/crypto";
 import { revalidatePath } from "next/cache";
 import { writeAuditLog } from "@/lib/audit";
 
@@ -30,7 +30,7 @@ export async function createVaultItem(formData: FormData) {
   const password = formData.get("password") as string;
 
   // Encrypt password before storage
-  const { encryptedData, iv, authTag } = encrypt(password);
+  const { encryptedData, iv, authTag, salt } = encrypt(password);
 
   const { error } = await supabase.from("vault_items").insert({
     organization_id: profile.organization_id,
@@ -42,6 +42,7 @@ export async function createVaultItem(formData: FormData) {
     encrypted_password: encryptedData,
     iv,
     auth_tag: authTag,
+    salt,
   });
 
   if (error) throw new Error(error.message);
@@ -75,7 +76,7 @@ export async function getDecryptedPassword(itemId: string) {
 
   const { data: item, error } = await supabase
     .from("vault_items")
-    .select("encrypted_password, iv, auth_tag")
+    .select("encrypted_password, iv, auth_tag, salt")
     .eq("id", itemId)
     .eq("organization_id", profile.organization_id)
     .single();
@@ -84,7 +85,9 @@ export async function getDecryptedPassword(itemId: string) {
 
   // Decrypt on demand
   try {
-    const password = decrypt(item.encrypted_password, item.iv, item.auth_tag);
+    const password = item.salt
+      ? decrypt(item.encrypted_password, item.iv, item.auth_tag, item.salt)
+      : decryptLegacy(item.encrypted_password, item.iv, item.auth_tag);
     return { password };
   } catch (err) {
     throw new Error("Decryption failed. Ensure ENCRYPTION_SECRET is correct.");

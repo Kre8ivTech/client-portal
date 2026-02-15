@@ -49,7 +49,7 @@ export async function triggerWebhooks(
     };
 
     // Send webhooks in parallel (fire and forget with error handling)
-    const promises = webhooks.map(async (webhook) => {
+    const promises = webhooks.map(async (webhook: any) => {
       // Check if webhook passes filters (if any)
       if (webhook.filters && Object.keys(webhook.filters).length > 0) {
         const passesFilter = checkFilters(data, webhook.filters);

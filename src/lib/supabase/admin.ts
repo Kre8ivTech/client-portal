@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import { Database } from '@/types/database'
 
 /**
  * SECURITY: Get Supabase admin client with service role key
@@ -44,13 +43,13 @@ export const getSupabaseAdmin = () => {
     )
   }
 
-  return createClient<Database>(url, key, {
+  return createClient(url, key, {
     auth: {
       // Disable auto-refresh for service role (not needed for server-side)
       autoRefreshToken: false,
       persistSession: false,
     },
-  })
+  }) as any
 }
 
 /**
@@ -67,3 +66,14 @@ export const getSupabaseAdmin = () => {
  * @deprecated Use getSupabaseAdmin() instead
  */
 // Removed: export const supabaseAdmin = createClient(...)
+
+/**
+ * Backward-compatible lazy admin client.
+ * Accessing any property resolves getSupabaseAdmin() at call time.
+ */
+export const supabaseAdmin = new Proxy({} as ReturnType<typeof getSupabaseAdmin>, {
+  get(_target, prop) {
+    const client = getSupabaseAdmin() as any
+    return client[prop]
+  },
+})

@@ -68,7 +68,7 @@ export function useMessageableUsers(searchQuery: string = "") {
           .select("id, parent_org_id")
           .or(`id.eq.${currentUserData.organization_id},parent_org_id.eq.${currentUserData.organization_id}`);
 
-        const orgIds = relatedOrgs?.map((o) => o.id) || [currentUserData.organization_id];
+        const orgIds = relatedOrgs?.map((o: any) => o.id) || [currentUserData.organization_id];
 
         // Also include parent org if current org has one
         const { data: currentOrg } = await supabase

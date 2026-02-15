@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +21,10 @@ import {
   HelpCircle,
 } from "lucide-react";
 import Link from "next/link";
+import Script from "next/script";
 import { cn } from "@/lib/utils";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
+import { getAuthSettings, verifyRecaptcha, type AuthSettings } from "@/lib/actions/auth-settings";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -31,12 +33,51 @@ export default function ForgotPasswordPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [authSettings, setAuthSettings] = useState<AuthSettings | null>(null);
   const supabase = createClient();
+
+  useEffect(() => {
+    void getAuthSettings().then(setAuthSettings);
+  }, []);
+
+  const executeRecaptcha = async (action: string): Promise<string | null> => {
+    if (!authSettings?.recaptcha_enabled || !authSettings.recaptcha_site_key) {
+      return null;
+    }
+    try {
+      if (typeof window !== "undefined" && window.grecaptcha) {
+        return await window.grecaptcha.execute(authSettings.recaptcha_site_key, { action });
+      }
+    } catch {
+      // ignored
+    }
+    return null;
+  };
 
   const handleRecovery = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
+
+    if (authSettings?.recaptcha_enabled && authSettings?.recaptcha_site_key) {
+      const action = "password_reset";
+      const token = await executeRecaptcha(action);
+      if (!token) {
+        setMessage({ type: "error", text: "Could not complete reCAPTCHA verification" });
+        setLoading(false);
+        return;
+      }
+
+      const recaptchaResult = await verifyRecaptcha(token, action);
+      if (!recaptchaResult.success) {
+        setMessage({
+          type: "error",
+          text: recaptchaResult.error || "reCAPTCHA verification failed",
+        });
+        setLoading(false);
+        return;
+      }
+    }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
@@ -55,6 +96,12 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4 bg-slate-950 font-sans">
+      {authSettings?.recaptcha_enabled && authSettings?.recaptcha_site_key && (
+        <Script
+          src={`https://www.google.com/recaptcha/api.js?render=${authSettings.recaptcha_site_key}`}
+          strategy="afterInteractive"
+        />
+      )}
       <Card className="w-full max-w-md shadow-2xl border-slate-800 bg-slate-900/40 backdrop-blur-md">
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
@@ -125,6 +172,28 @@ export default function ForgotPasswordPage() {
             <ChevronLeft size={16} />
             Back to login
           </Link>
+          {authSettings?.recaptcha_enabled && (
+            <p className="mt-4 text-[10px] text-slate-600 leading-relaxed">
+              Protected by reCAPTCHA.{" "}
+              <a
+                href="https://policies.google.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                Privacy
+              </a>{" "}
+              &{" "}
+              <a
+                href="https://policies.google.com/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                Terms
+              </a>
+            </p>
+          )}
         </CardFooter>
       </Card>
     </div>

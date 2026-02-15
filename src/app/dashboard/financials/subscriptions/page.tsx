@@ -36,7 +36,7 @@ export default async function SubscriptionsPage() {
     .eq("status", "active");
 
   // Calculate MRR
-  const mrr = subscriptions?.reduce((sum, sub: any) => sum + (sub.monthly_cost || 0), 0) || 0;
+  const mrr = subscriptions?.reduce((sum: number, sub: any) => sum + (sub.monthly_cost || 0), 0) || 0;
 
   return (
     <div className="space-y-6">

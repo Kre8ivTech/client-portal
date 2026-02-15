@@ -149,7 +149,7 @@ export function ProjectTasksBoard({ projectId, initialTasks, members, canEdit }:
       .from('project_tasks')
       .select(`
         *,
-        assignee:users!project_tasks_assigned_to_fkey(id, email, profiles:profiles(name, avatar_url))
+        assignee:users!project_tasks_assigned_to_fkey(id, email, profiles:profiles!user_id(name, avatar_url))
       `)
       .eq('project_id', projectId)
       .order('sort_order', { ascending: true })

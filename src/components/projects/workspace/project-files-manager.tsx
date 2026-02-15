@@ -125,7 +125,7 @@ export function ProjectFilesManager({ projectId, initialFiles, canEdit }: Projec
       .from('project_files')
       .select(`
         *,
-        uploader:users!project_files_uploaded_by_fkey(id, email, profiles:profiles(name, avatar_url))
+        uploader:users!project_files_uploaded_by_fkey(id, email, profiles:profiles!user_id(name, avatar_url))
       `)
       .eq('project_id', projectId)
       .eq('is_deleted', false)

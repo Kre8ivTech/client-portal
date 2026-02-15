@@ -4,6 +4,7 @@ import {
   GetObjectCommand,
   DeleteObjectCommand,
   ListObjectsV2Command,
+  HeadBucketCommand,
   HeadObjectCommand,
   type ServerSideEncryption,
 } from "@aws-sdk/client-s3";
@@ -29,6 +30,12 @@ type S3Config = {
   secretAccessKey: string;
   bucketName: string;
   kmsKeyId: string | undefined;
+};
+
+export type S3ConnectionStatus = {
+  configured: boolean;
+  connected: boolean;
+  message: string | null;
 };
 
 let _cachedConfig: S3Config | null = null;
@@ -136,6 +143,40 @@ export function resetS3Config(): void {
 export async function getBucketName(): Promise<string> {
   const config = await resolveConfig();
   return config.bucketName;
+}
+
+/**
+ * Verify S3 is configured and the bucket is reachable with current credentials.
+ */
+export async function getS3ConnectionStatus(): Promise<S3ConnectionStatus> {
+  try {
+    const config = await resolveConfig();
+    const client = buildClient(config);
+
+    await client.send(
+      new HeadBucketCommand({
+        Bucket: config.bucketName,
+      })
+    );
+
+    return {
+      configured: true,
+      connected: true,
+      message: null,
+    };
+  } catch (error) {
+    const rawMessage =
+      error instanceof Error ? error.message : "Unknown S3 connection error";
+    const isNotConfigured = rawMessage.includes("AWS S3 is not configured");
+
+    return {
+      configured: !isNotConfigured,
+      connected: false,
+      message: isNotConfigured
+        ? "AWS S3 is not configured yet."
+        : "Unable to connect to AWS S3. Check bucket access and credentials.",
+    };
+  }
 }
 
 export function sanitizeS3KeyPart(input: string): string {

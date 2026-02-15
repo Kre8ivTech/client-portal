@@ -33,6 +33,12 @@ type SyncRun = {
   stats: unknown;
 };
 
+type S3ConnectionStatus = {
+  configured: boolean;
+  connected: boolean;
+  message: string | null;
+};
+
 const providerUi = {
   google_drive: { label: "Google Drive", api: "google-drive" },
   microsoft_onedrive: { label: "Microsoft OneDrive", api: "microsoft-onedrive" },
@@ -45,6 +51,7 @@ export function FileStorageSettings(props: {
   role: string;
   organizationId: string;
   awsConfigured: boolean;
+  s3ConnectionStatus: S3ConnectionStatus;
   integrations: Integration[];
   storageSettings: StorageSettings;
   recentRuns: SyncRun[];
@@ -175,23 +182,55 @@ export function FileStorageSettings(props: {
             <p className="text-xs text-muted-foreground">
               Files are stored under an organization-scoped prefix to keep tenants separated.
             </p>
-          </div>
-          <Badge
-            variant="outline"
-            className={props.awsConfigured ? "bg-green-500/10 text-green-600 border-green-500/30" : "bg-muted text-muted-foreground"}
-          >
-            {props.awsConfigured ? (
-              <>
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-                Configured
-              </>
-            ) : (
-              <>
-                <XCircle className="w-3 h-3 mr-1" />
-                Not Configured
-              </>
+            {props.s3ConnectionStatus.message && (
+              <p className="text-xs text-muted-foreground mt-1">{props.s3ConnectionStatus.message}</p>
             )}
-          </Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge
+              variant="outline"
+              className={props.awsConfigured ? "bg-green-500/10 text-green-600 border-green-500/30" : "bg-muted text-muted-foreground"}
+            >
+              {props.awsConfigured ? (
+                <>
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  Configured
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-3 h-3 mr-1" />
+                  Not Configured
+                </>
+              )}
+            </Badge>
+            <Badge
+              variant="outline"
+              className={
+                props.s3ConnectionStatus.connected
+                  ? "bg-green-500/10 text-green-600 border-green-500/30"
+                  : props.s3ConnectionStatus.configured
+                    ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
+                    : "bg-muted text-muted-foreground"
+              }
+            >
+              {props.s3ConnectionStatus.connected ? (
+                <>
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  Connected
+                </>
+              ) : props.s3ConnectionStatus.configured ? (
+                <>
+                  <XCircle className="w-3 h-3 mr-1" />
+                  Connection Issue
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-3 h-3 mr-1" />
+                  Disconnected
+                </>
+              )}
+            </Badge>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">

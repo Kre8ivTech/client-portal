@@ -33,11 +33,11 @@ test.describe('Authentication', () => {
     await page.goto('/login')
     
     // Click signup link
-    await page.locator('a[href="/signup"]').first().click()
+    await page.getByRole('link', { name: 'Request Access' }).click()
     await expect(page).toHaveURL(/.*signup/)
     
     // Navigate back to login
-    await page.locator('a[href="/login"]').first().click()
+    await page.getByRole('link', { name: /back to login/i }).click()
     await expect(page).toHaveURL(/.*login/)
   })
 })

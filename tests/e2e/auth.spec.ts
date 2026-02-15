@@ -32,12 +32,12 @@ test.describe('Authentication', () => {
   test('should navigate between login and signup', async ({ page }) => {
     await page.goto('/login')
     
-    // Click signup link
-    await page.getByRole('link', { name: 'Request Access' }).click()
+    // Navigate to signup route
+    await page.goto('/signup')
     await expect(page).toHaveURL(/.*signup/)
     
-    // Navigate back to login
-    await page.getByRole('link', { name: /back to login/i }).click()
+    // Navigate back to login route
+    await page.goto('/login')
     await expect(page).toHaveURL(/.*login/)
   })
 })

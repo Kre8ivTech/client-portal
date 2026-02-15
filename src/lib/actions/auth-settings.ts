@@ -83,22 +83,31 @@ export async function getAuthSettings(): Promise<AuthSettings> {
 export async function verifyRecaptcha(
   token: string,
   action: string = "login",
+  remoteIp?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    if (!token || token.trim().length === 0) {
+      return { success: false, error: "Missing reCAPTCHA token" }
+    }
+
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return { success: true }; // Skip if no service role key
+      return { success: false, error: "Server configuration error (missing Supabase credentials)" }
     }
 
     const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
     const { data: settings } = await supabaseAdmin
       .from("app_settings")
-      .select("recaptcha_secret_key")
+      .select("recaptcha_enabled, recaptcha_secret_key")
       .eq("id", "00000000-0000-0000-0000-000000000001")
       .single();
 
+    if (!settings?.recaptcha_enabled) {
+      return { success: true }
+    }
+
     if (!settings?.recaptcha_secret_key) {
-      return { success: true }; // Skip if no secret key configured
+      return { success: false, error: "reCAPTCHA is enabled but not configured" }
     }
 
     const response = await fetch("https://www.google.com/recaptcha/api/siteverify", {
@@ -109,6 +118,7 @@ export async function verifyRecaptcha(
       body: new URLSearchParams({
         secret: settings.recaptcha_secret_key,
         response: token,
+        ...(remoteIp ? { remoteip: remoteIp } : {}),
       }),
     });
 

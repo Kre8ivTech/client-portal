@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -42,11 +42,7 @@ export function AuthSettings() {
   });
   const [newRecaptchaSecret, setNewRecaptchaSecret] = useState("");
 
-  useEffect(() => {
-    void loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/auth/settings", { method: "GET" });
       const payload = await response.json();
@@ -65,7 +61,11 @@ export function AuthSettings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
 
   const handleSave = async () => {
     if (settings.recaptcha_enabled && !settings.recaptcha_site_key.trim()) {

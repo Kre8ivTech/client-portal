@@ -30,13 +30,13 @@ export default async function TimeTrackingPage() {
     .limit(50);
 
   // Calculate metrics
-  const totalHours = timeEntries?.reduce((sum, entry: any) => sum + (entry.hours || 0), 0) || 0;
+  const totalHours = timeEntries?.reduce((sum: number, entry: any) => sum + (entry.hours || 0), 0) || 0;
   const billableHours = timeEntries
     ?.filter((e: any) => e.is_billable)
-    .reduce((sum, entry: any) => sum + (entry.hours || 0), 0) || 0;
+    .reduce((sum: number, entry: any) => sum + (entry.hours || 0), 0) || 0;
   const billableRevenue = timeEntries
     ?.filter((e: any) => e.is_billable)
-    .reduce((sum, entry: any) => sum + (entry.hours || 0) * (entry.billable_rate || 0), 0) || 0;
+    .reduce((sum: number, entry: any) => sum + (entry.hours || 0) * (entry.billable_rate || 0), 0) || 0;
 
   const utilization = totalHours > 0 ? (billableHours / totalHours) * 100 : 0;
 

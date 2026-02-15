@@ -965,7 +965,7 @@ export function ProjectTasksTable({
                         checked={allSelected}
                         ref={(el) => {
                           if (el) {
-                            el.indeterminate = someSelected
+                            ;(el as any).indeterminate = someSelected
                           }
                         }}
                         onCheckedChange={handleToggleAll}

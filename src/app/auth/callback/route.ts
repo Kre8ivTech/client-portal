@@ -1,7 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import { cookies, headers } from 'next/headers'
-import type { Database } from '@/types/database'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -12,7 +11,7 @@ export async function GET(request: Request) {
     const cookieStore = await cookies()
     const redirectResponse = NextResponse.redirect(`${origin}${next}`)
 
-    const supabase = createServerClient<Database>(
+    const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -27,7 +26,7 @@ export async function GET(request: Request) {
           },
         },
       }
-    )
+    ) as any
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 

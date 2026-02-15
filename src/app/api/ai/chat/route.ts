@@ -47,7 +47,8 @@ async function getOpenRouterResponse(messages: any[], systemPrompt: string, apiK
   const response = await client.chat.completions.create({
     model: "anthropic/claude-3.5-sonnet",
     messages: [{ role: "system", content: systemPrompt }, ...messages],
-    extra_headers: {
+  }, {
+    headers: {
       "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://client-portal.com",
       "X-Title": "Client Portal AI",
     },

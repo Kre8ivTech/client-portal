@@ -64,7 +64,7 @@ export function useSLAMonitor(enabled: boolean = true) {
       const now = new Date()
       const atRisk: string[] = []
 
-      tickets?.forEach((ticket) => {
+      tickets?.forEach((ticket: any) => {
         // Check first response SLA
         if (!ticket.first_response_at && ticket.first_response_due_at) {
           const dueDate = new Date(ticket.first_response_due_at)

@@ -215,6 +215,3 @@ function isOnline(conv: any, userId: string) {
   return false
 }
 
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ')
-}

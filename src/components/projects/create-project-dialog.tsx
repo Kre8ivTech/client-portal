@@ -25,7 +25,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Loader2 } from "lucide-react";
 import {
   createProjectSchema,
-  CreateProjectInput,
   PROJECT_STATUS_OPTIONS,
   PROJECT_PRIORITY_OPTIONS,
   PROJECT_MEMBER_ROLE_OPTIONS,
@@ -70,7 +69,7 @@ export function CreateProjectDialog({ staffUsers, organizations, userOrganizatio
   const router = useRouter();
   const supabase = createClient();
 
-  const form = useForm<CreateProjectInput>({
+  const form = useForm<any>({
     resolver: zodResolver(createProjectSchema),
     defaultValues: {
       name: "",
@@ -111,7 +110,7 @@ export function CreateProjectDialog({ staffUsers, organizations, userOrganizatio
     setSelectedOrgs((prev) => prev.map((o) => (o.organizationId === organizationId ? { ...o, role } : o)));
   };
 
-  async function onSubmit(values: CreateProjectInput) {
+  async function onSubmit(values: any) {
     setIsSubmitting(true);
 
     try {

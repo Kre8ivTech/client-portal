@@ -50,7 +50,7 @@ export default async function InvoicingRevenuePage() {
     .select("amount")
     .eq("status", "paid");
 
-  const totalRevenue = revenueData?.reduce((sum, inv: any) => sum + (inv.amount || 0), 0) || 0;
+  const totalRevenue = revenueData?.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0) || 0;
 
   return (
     <div className="space-y-6">

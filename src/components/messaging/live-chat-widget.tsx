@@ -37,7 +37,7 @@ export function LiveChatWidget({
   const toggleChat = () => {
     if (!isOpen && !session) {
       // Create session when opening chat for first time
-      createSession()
+      createSession(undefined)
     }
     setIsOpen(!isOpen)
     setIsMinimized(false)

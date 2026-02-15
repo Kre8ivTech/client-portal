@@ -24,7 +24,7 @@ export function useRealtimeTicketComments(ticketId?: string) {
           table: 'ticket_comments',
           ...(ticketId && { filter: `ticket_id=eq.${ticketId}` }),
         },
-        (payload) => {
+        (payload: any) => {
           console.log('Ticket comment change detected:', payload)
           
           // Invalidate specific ticket comments if ticketId provided

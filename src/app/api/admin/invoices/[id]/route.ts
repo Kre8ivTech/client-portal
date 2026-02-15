@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { invoiceSchema, invoiceStatusUpdateSchema, calculateInvoiceTotals } from '@/lib/validators/invoice'
-import type { Database } from '@/types/database'
 
-type UserAuthRow = Pick<
-  Database['public']['Tables']['users']['Row'],
-  'organization_id' | 'role' | 'is_account_manager'
->
+type UserAuthRow = {
+  organization_id: string | null
+  role: string
+  is_account_manager?: boolean | null
+}
 
 export async function PATCH(
   request: NextRequest,

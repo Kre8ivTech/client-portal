@@ -1,5 +1,5 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { decrypt } from "@/lib/crypto";
+import { decrypt, decryptLegacy } from "@/lib/crypto";
 
 const APP_SETTINGS_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -27,7 +27,9 @@ export async function getS3ConfigFromAppSettings(): Promise<S3ConfigFromAppSetti
   const supabase = getSupabaseAdmin();
   const { data, error } = await (supabase as any)
     .from("app_settings")
-    .select("aws_s3_config_encrypted, aws_s3_config_iv, aws_s3_config_auth_tag")
+    .select(
+      "aws_s3_config_encrypted, aws_s3_config_iv, aws_s3_config_auth_tag, aws_s3_config_salt"
+    )
     .eq("id", APP_SETTINGS_ID)
     .single();
 
@@ -41,11 +43,19 @@ export async function getS3ConfigFromAppSettings(): Promise<S3ConfigFromAppSetti
   }
 
   try {
-    const decrypted = decrypt(
-      data.aws_s3_config_encrypted,
-      data.aws_s3_config_iv,
-      data.aws_s3_config_auth_tag
-    );
+    const decrypted =
+      typeof data.aws_s3_config_salt === "string" && data.aws_s3_config_salt.length > 0
+        ? decrypt(
+            data.aws_s3_config_encrypted,
+            data.aws_s3_config_iv,
+            data.aws_s3_config_auth_tag,
+            data.aws_s3_config_salt
+          )
+        : decryptLegacy(
+            data.aws_s3_config_encrypted,
+            data.aws_s3_config_iv,
+            data.aws_s3_config_auth_tag
+          );
     const parsed = JSON.parse(decrypted) as StoredPayload;
     if (
       typeof parsed.access_key_id === "string" &&

@@ -41,7 +41,7 @@ export function SendTestEmailDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
-          template: template.content,
+          template: template.body_html,
           subject: template.subject,
         }),
       })

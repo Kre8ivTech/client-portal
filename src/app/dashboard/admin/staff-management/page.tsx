@@ -27,7 +27,7 @@ export default async function StaffManagementPage() {
   const isStaff = profile.role === 'staff'
 
   // Staff users can access this page only if they are an active project manager for at least one org.
-  let managedOrganizationIds: string[] | null = null
+  let managedOrganizationIds: string[] = []
   if (!isSuperAdmin) {
     if (!isStaff) redirect('/dashboard')
 
@@ -56,7 +56,7 @@ export default async function StaffManagementPage() {
     .from('organizations')
     .select('id, name, type')
     .order('name')
-  const { data: organizations } = managedOrganizationIds
+  const { data: organizations } = managedOrganizationIds.length > 0
     ? await orgQuery.in('id', managedOrganizationIds)
     : await orgQuery
 
@@ -72,7 +72,7 @@ export default async function StaffManagementPage() {
     )
     .eq('is_active', true)
     .order('assigned_at', { ascending: false })
-  const { data: staffAssignments } = managedOrganizationIds
+  const { data: staffAssignments } = managedOrganizationIds.length > 0
     ? await assignmentsQuery.in('organization_id', managedOrganizationIds)
     : await assignmentsQuery
 

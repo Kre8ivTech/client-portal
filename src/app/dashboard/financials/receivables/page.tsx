@@ -31,7 +31,7 @@ export default async function ReceivablesPage() {
     .order("due_date", { ascending: true });
 
   // Calculate AR metrics
-  const totalAR = unpaidInvoices?.reduce((sum, inv: any) => sum + (inv.amount || 0), 0) || 0;
+  const totalAR = unpaidInvoices?.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0) || 0;
 
   const now = new Date();
   const aged30 = unpaidInvoices?.filter((inv: any) => {
@@ -52,9 +52,9 @@ export default async function ReceivablesPage() {
     return daysOverdue > 60;
   }) || [];
 
-  const aged30Total = aged30.reduce((sum, inv: any) => sum + (inv.amount || 0), 0);
-  const aged60Total = aged60.reduce((sum, inv: any) => sum + (inv.amount || 0), 0);
-  const aged90PlusTotal = aged90Plus.reduce((sum, inv: any) => sum + (inv.amount || 0), 0);
+  const aged30Total = aged30.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
+  const aged60Total = aged60.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
+  const aged90PlusTotal = aged90Plus.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
 
   return (
     <div className="space-y-6">

@@ -203,7 +203,8 @@ async function tryProvider(
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      extra_headers: {
+    }, {
+      headers: {
         'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'https://client-portal.com',
         'X-Title': 'KT Portal Task List Parser',
       },

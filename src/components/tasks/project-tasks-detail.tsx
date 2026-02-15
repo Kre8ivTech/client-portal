@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import {
   Card,
@@ -60,6 +61,7 @@ import {
   User,
   Search,
   AlertCircle,
+  ExternalLink,
 } from 'lucide-react'
 import {
   TASK_STATUS_OPTIONS,
@@ -734,6 +736,12 @@ export function ProjectTasksDetail({
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                      <Button variant="ghost" size="sm" asChild className="h-8 gap-1 px-2 text-xs">
+                        <Link href={`/dashboard/projects/${projectId}/tasks/${task.id}`}>
+                          Open
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      </Button>
                       {!canEdit && (
                         <Badge variant="outline" className="text-xs">
                           {TASK_STATUS_OPTIONS.find(

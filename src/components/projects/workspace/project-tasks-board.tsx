@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import {
   Card,
@@ -56,6 +57,7 @@ import {
   Timer,
   Eye,
   XCircle,
+  ExternalLink,
 } from 'lucide-react'
 
 type Task = {
@@ -419,31 +421,47 @@ export function ProjectTasksBoard({ projectId, initialTasks, members, canEdit }:
     return (
       <div key={task.id} className="group rounded-lg border bg-card p-3 space-y-2.5 hover:shadow-sm transition-shadow">
         <div className="flex items-start justify-between gap-2">
-          <h4 className="text-sm font-medium leading-tight flex-1">{task.title}</h4>
-          {canEdit && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <MoreHorizontal className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => openEditDialog(task)}>
-                  <Pencil className="h-3.5 w-3.5 mr-2" /> Edit
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                {STATUSES.filter(s => s.value !== task.status).map(s => (
-                  <DropdownMenuItem key={s.value} onClick={() => handleStatusChange(task.id, s.value)}>
-                    <s.icon className="h-3.5 w-3.5 mr-2" /> Move to {s.label}
+          <h4 className="text-sm font-medium leading-tight flex-1">
+            <Link href={`/dashboard/projects/${projectId}/tasks/${task.id}`} className="hover:underline">
+              {task.title}
+            </Link>
+          </h4>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              asChild
+              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+            >
+              <Link href={`/dashboard/projects/${projectId}/tasks/${task.id}`}>
+                <ExternalLink className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
+            {canEdit && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <MoreHorizontal className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => openEditDialog(task)}>
+                    <Pencil className="h-3.5 w-3.5 mr-2" /> Edit
                   </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleDeleteTask(task.id)} className="text-red-600">
-                  <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+                  <DropdownMenuSeparator />
+                  {STATUSES.filter(s => s.value !== task.status).map(s => (
+                    <DropdownMenuItem key={s.value} onClick={() => handleStatusChange(task.id, s.value)}>
+                      <s.icon className="h-3.5 w-3.5 mr-2" /> Move to {s.label}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleDeleteTask(task.id)} className="text-red-600">
+                    <Trash2 className="h-3.5 w-3.5 mr-2" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
 
         {task.description && (
@@ -612,7 +630,9 @@ export function ProjectTasksBoard({ projectId, initialTasks, members, canEdit }:
                       )}
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm font-medium truncate ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
-                          {task.title}
+                          <Link href={`/dashboard/projects/${projectId}/tasks/${task.id}`} className="hover:underline">
+                            {task.title}
+                          </Link>
                         </p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">

@@ -280,6 +280,32 @@ export async function POST(request: NextRequest) {
       .eq("id", conversation.id)
       .single();
 
+    // Fire-and-forget: notify other participants of the new conversation/message
+    if (initialMessage) {
+      try {
+        const otherParticipantIds = allParticipantIds.filter((id: string) => id !== user.id);
+        for (const otherUserId of otherParticipantIds) {
+          const { data: otherUser } = await supabase
+            .from("users")
+            .select("email, full_name")
+            .eq("id", otherUserId)
+            .single();
+
+          if ((otherUser as any)?.email) {
+            const { sendEmail } = await import("@/lib/notifications/providers/email");
+            sendEmail({
+              to: (otherUser as any).email,
+              subject: "New Message",
+              message: `Hello ${(otherUser as any).full_name || "there"},\n\nYou have a new message. Log in to view and respond.\n\n${process.env.NEXT_PUBLIC_APP_URL || "https://app.ktportal.app"}/dashboard/messages`,
+              appUrl: process.env.NEXT_PUBLIC_APP_URL,
+            }).catch(() => {});
+          }
+        }
+      } catch {
+        /* best-effort notification */
+      }
+    }
+
     return NextResponse.json({ data: fullConversation }, { status: 201 });
   } catch (err) {
     console.error("Error creating conversation:", err);

@@ -1,18 +1,20 @@
 /**
  * Ticket Notification Helpers
  * 
- * Helper functions to trigger notifications for ticket events
- * Can be called from server actions and API routes
+ * Helper functions to trigger notifications for ticket events.
+ * Called from server actions, API routes, and components.
+ * Uses the notification infrastructure directly (no self-fetch).
  */
 
 'use server'
 
 import { formatNotificationMessage } from '@/lib/notifications'
 import type { NotificationType } from '@/lib/notifications'
+import { buildTicketNotificationPayloads, sendNotifications } from '@/lib/notifications/send'
 
 /**
- * Trigger notifications for a ticket event
- * Calls the notification API endpoint to send notifications
+ * Trigger notifications for a ticket event.
+ * Builds payloads (respecting preferences) and sends via all enabled channels.
  */
 export async function notifyTicketEvent(
   ticketId: string,
@@ -31,36 +33,26 @@ export async function notifyTicketEvent(
     // Format the notification message
     const { subject, message } = formatNotificationMessage(notificationType, context ?? {})
 
-    // Call the notification API
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notifications/ticket`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ticketId,
-          notificationType,
-          context: {
-            ...context,
-            subject,
-            message,
-          },
-        }),
-      }
-    )
+    // Build payloads for all recipients and channels
+    const payloads = await buildTicketNotificationPayloads(ticketId, notificationType, {
+      ...context,
+      subject,
+      message,
+    })
 
-    if (!response.ok) {
-      console.error('[Notifications] Failed to send notification:', await response.text())
-      return { success: false }
+    if (payloads.length === 0) {
+      return { success: true, sent: 0 }
     }
 
-    const data = await response.json()
-    return { success: true, ...data }
+    // Send all notifications
+    const results = await sendNotifications(payloads)
+    const sent = results.filter(r => r.success).length
+    const failed = results.filter(r => !r.success).length
+
+    return { success: true, sent, failed }
   } catch (error) {
-    console.error('[Notifications] Error triggering notification:', error)
-    return { success: false }
+    console.error('[Notifications] Error triggering ticket notification:', error)
+    return { success: false, error: 'Failed to send notifications' }
   }
 }
 

@@ -123,6 +123,7 @@ export function PasswordChangeForm() {
           />
           <button
             type="button"
+            aria-label={showCurrent ? "Hide current password" : "Show current password"}
             onClick={() => setShowCurrent(!showCurrent)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
           >
@@ -144,6 +145,7 @@ export function PasswordChangeForm() {
           />
           <button
             type="button"
+            aria-label={showNew ? "Hide new password" : "Show new password"}
             onClick={() => setShowNew(!showNew)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
           >
@@ -168,6 +170,7 @@ export function PasswordChangeForm() {
           />
           <button
             type="button"
+            aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
             onClick={() => setShowConfirm(!showConfirm)}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
           >

@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
+import { logAIUsage, extractTokenUsage, checkAIRateLimit } from "@/lib/ai/usage-tracker";
 
 const chatMessageSchema = z.object({
   message: z.string().min(1, "Message is required").max(10000, "Message must be at most 10,000 characters"),
@@ -48,10 +49,19 @@ function getOpenAIClient(apiKey: string) {
   });
 }
 
-async function getOpenRouterResponse(messages: any[], systemPrompt: string, apiKey: string) {
+// Provider response type with raw data for token extraction
+interface ProviderResult {
+  content: string | null;
+  rawResponse: any;
+  provider: string;
+  model: string;
+}
+
+async function getOpenRouterResponse(messages: any[], systemPrompt: string, apiKey: string): Promise<ProviderResult> {
   const client = getOpenRouterClient(apiKey);
+  const model = "anthropic/claude-3.5-sonnet";
   const response = await client.chat.completions.create({
-    model: "anthropic/claude-3.5-sonnet",
+    model,
     messages: [{ role: "system", content: systemPrompt }, ...messages],
   }, {
     headers: {
@@ -59,11 +69,17 @@ async function getOpenRouterResponse(messages: any[], systemPrompt: string, apiK
       "X-Title": "Client Portal AI",
     },
   });
-  return response.choices[0]?.message?.content;
+  return {
+    content: response.choices[0]?.message?.content ?? null,
+    rawResponse: response,
+    provider: "openrouter",
+    model,
+  };
 }
 
-async function getAnthropicResponse(messages: any[], systemPrompt: string, apiKey: string) {
+async function getAnthropicResponse(messages: any[], systemPrompt: string, apiKey: string): Promise<ProviderResult> {
   const client = getAnthropicClient(apiKey);
+  const model = "claude-3-5-sonnet-20241022";
   // Convert messages to Anthropic format (no system role in messages array)
   const anthropicMessages = messages.map((m) => ({
     role: m.role === "user" ? "user" : "assistant",
@@ -71,22 +87,33 @@ async function getAnthropicResponse(messages: any[], systemPrompt: string, apiKe
   })) as Anthropic.MessageParam[];
 
   const response = await client.messages.create({
-    model: "claude-3-5-sonnet-20241022",
+    model,
     max_tokens: 1024,
     system: systemPrompt,
     messages: anthropicMessages,
   });
 
-  return response.content[0].type === "text" ? response.content[0].text : null;
+  return {
+    content: response.content[0].type === "text" ? response.content[0].text : null,
+    rawResponse: response,
+    provider: "anthropic",
+    model,
+  };
 }
 
-async function getOpenAIResponse(messages: any[], systemPrompt: string, apiKey: string) {
+async function getOpenAIResponse(messages: any[], systemPrompt: string, apiKey: string): Promise<ProviderResult> {
   const client = getOpenAIClient(apiKey);
+  const model = "gpt-4o";
   const response = await client.chat.completions.create({
-    model: "gpt-4o",
+    model,
     messages: [{ role: "system", content: systemPrompt }, ...messages],
   });
-  return response.choices[0]?.message?.content;
+  return {
+    content: response.choices[0]?.message?.content ?? null,
+    rawResponse: response,
+    provider: "openai",
+    model,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -116,6 +143,16 @@ export async function POST(request: NextRequest) {
 
     if (!conversation_id) {
       return NextResponse.json({ error: "conversation_id is required" }, { status: 400 });
+    }
+
+    // Rate limit check
+    const rateCheck = await checkAIRateLimit(user.id, 100);
+    if (!rateCheck.allowed) {
+      return NextResponse.json({
+        error: "Daily AI request limit reached. Please try again tomorrow.",
+        remaining: 0,
+        limit: rateCheck.limit,
+      }, { status: 429 });
     }
 
     // Fetch the user's record to get their actual organization_id and role
@@ -221,7 +258,7 @@ export async function POST(request: NextRequest) {
     // Current message
     const messages = [...conversationHistory, { role: "user", content: message }];
 
-    let assistantMessage: string | null | undefined = null;
+    let providerResult: ProviderResult | null = null;
     let errorDetails: any = {};
 
     // Execution Order based on Primary Provider
@@ -237,32 +274,77 @@ export async function POST(request: NextRequest) {
     if (!providers.includes("anthropic")) providers.push("anthropic");
     if (!providers.includes("openai")) providers.push("openai");
 
-    // Execute
+    // Execute with timing
+    const startTime = Date.now();
+
     for (const provider of providers) {
-      if (assistantMessage) break; // Stop if success
+      if (providerResult?.content) break; // Stop if success
 
       try {
         if (provider === "openrouter" && openRouterKey) {
-          assistantMessage = await getOpenRouterResponse(messages, systemPrompt, openRouterKey);
+          providerResult = await getOpenRouterResponse(messages, systemPrompt, openRouterKey);
         } else if (provider === "anthropic" && anthropicKey) {
-          assistantMessage = await getAnthropicResponse(messages, systemPrompt, anthropicKey);
+          providerResult = await getAnthropicResponse(messages, systemPrompt, anthropicKey);
         } else if (provider === "openai" && openaiKey) {
-          assistantMessage = await getOpenAIResponse(messages, systemPrompt, openaiKey);
+          providerResult = await getOpenAIResponse(messages, systemPrompt, openaiKey);
         }
       } catch (e: any) {
         console.error(`${provider} failed:`, e.message);
         errorDetails[provider] = e.message;
+
+        // Log the failed provider attempt
+        logAIUsage({
+          userId: user.id,
+          organizationId: organization_id || undefined,
+          conversationId: conversation_id,
+          provider,
+          model: provider === "openrouter" ? "anthropic/claude-3.5-sonnet"
+            : provider === "anthropic" ? "claude-3-5-sonnet-20241022"
+            : "gpt-4o",
+          inputTokens: 0,
+          outputTokens: 0,
+          requestType: "chat",
+          status: "error",
+          errorMessage: e.message,
+          latencyMs: Date.now() - startTime,
+        }).catch(() => {}); // fire-and-forget
       }
     }
 
-    if (!assistantMessage) {
+    const latencyMs = Date.now() - startTime;
+
+    if (!providerResult?.content) {
       console.error("All AI providers failed", errorDetails);
       return NextResponse.json({ error: "AI service unavailable. All providers failed." }, { status: 503 });
     }
 
+    // Extract token usage and log successful request
+    const { inputTokens, outputTokens } = extractTokenUsage(
+      providerResult.provider,
+      providerResult.rawResponse
+    );
+
+    logAIUsage({
+      userId: user.id,
+      organizationId: organization_id || undefined,
+      conversationId: conversation_id,
+      provider: providerResult.provider,
+      model: providerResult.model,
+      inputTokens,
+      outputTokens,
+      requestType: "chat",
+      status: "success",
+      latencyMs,
+    }).catch(() => {}); // fire-and-forget
+
     return NextResponse.json({
-      message: assistantMessage,
+      message: providerResult.content,
       conversation_id,
+      usage: {
+        inputTokens,
+        outputTokens,
+        remaining: rateCheck.remaining - 1,
+      },
     });
   } catch (error: any) {
     console.error("AI chat error:", error);

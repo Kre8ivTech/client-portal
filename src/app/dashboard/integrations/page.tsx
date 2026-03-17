@@ -1,9 +1,6 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Bot,
@@ -184,39 +181,37 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
             </div>
           </CardHeader>
           <CardContent className="pt-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="resend-key">API Key</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="resend-key"
-                  type="password"
-                  placeholder="re_..."
-                  defaultValue={resendConfigured ? "••••••••••••••••" : ""}
-                  className="font-mono text-sm"
-                />
-                <Button variant="outline" size="sm" className="shrink-0">
-                  {resendConfigured ? "Update" : "Save"}
-                </Button>
+            {resendConfigured ? (
+              <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-green-800">Resend is configured and active</p>
+                  <p className="text-xs text-green-700">
+                    The <code className="bg-green-100 px-1 py-0.5 rounded text-xs">RESEND_API_KEY</code> environment variable is set.
+                    Email notifications and invoices will be sent via Resend.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
-                  Get API key from Resend <ExternalLink className="w-3 h-3" />
-                </a>
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email-from">From Address</Label>
-              <Input
-                id="email-from"
-                type="email"
-                placeholder="noreply@yourdomain.com"
-                defaultValue={process.env.EMAIL_FROM || ""}
-                className="text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                Must be a verified domain in your Resend account
-              </p>
-            </div>
+            ) : (
+              <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-amber-800">Resend is not configured</p>
+                  <p className="text-xs text-amber-700">
+                    To enable email notifications, set the following environment variables in your deployment:
+                  </p>
+                  <div className="bg-amber-100/50 rounded p-2 text-xs font-mono text-amber-900 space-y-1">
+                    <div>RESEND_API_KEY=re_...</div>
+                    <div>EMAIL_FROM=noreply@yourdomain.com</div>
+                  </div>
+                  <p className="text-xs text-amber-700">
+                    <a href="https://resend.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-amber-800 font-medium hover:underline inline-flex items-center gap-1">
+                      Get your API key from Resend <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </p>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

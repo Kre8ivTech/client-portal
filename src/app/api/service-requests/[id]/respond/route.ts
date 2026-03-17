@@ -155,6 +155,30 @@ export async function POST(
       // Notification is best-effort, don't fail the request
     }
 
+    // Also send email to the requester
+    const { data: requester } = await (supabase as any)
+      .from('users')
+      .select('email, full_name')
+      .eq('id', serviceRequest.requested_by)
+      .single()
+
+    if (requester?.email) {
+      const { sendTemplatedEmail } = await import('@/lib/notifications/providers/email')
+      sendTemplatedEmail({
+        to: requester.email,
+        templateType: 'service_request_responded' as any,
+        variables: {
+          recipient_name: requester.full_name || requester.email,
+          request_number: updatedRequest?.request_number || '',
+          response_preview: result.data.response_text?.substring(0, 200) || 'A new response has been added.',
+          service_request_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app'}/dashboard/service/${id}`,
+          app_url: process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
+          current_year: new Date().getFullYear().toString(),
+        },
+        organizationId: serviceRequest.organization_id,
+      }).catch(() => {})
+    }
+
     return NextResponse.json(
       {
         message: 'Response created successfully',

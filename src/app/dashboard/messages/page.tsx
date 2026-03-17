@@ -8,6 +8,7 @@ import { NewConversationDialog } from "@/components/messaging/new-conversation-d
 import { Button } from "@/components/ui/button";
 import { Loader2, MessageSquare, PenSquare } from "lucide-react";
 import type { Database } from "@/types/database";
+import { notifyNewMessage } from "@/lib/actions/message-notifications";
 
 type Conversation = Database["public"]["Tables"]["conversations"]["Row"];
 type Message = Database["public"]["Tables"]["messages"]["Row"];
@@ -51,6 +52,7 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>("Someone");
   const [sendError, setSendError] = useState<string | null>(null);
   const [newConversationOpen, setNewConversationOpen] = useState(false);
   const supabase = createClient();
@@ -94,6 +96,16 @@ export default function MessagesPage() {
       } = await supabase.auth.getUser();
       if (!user) return;
       setUserId(user.id);
+
+      // Fetch display name for notification context
+      const { data: profile } = await (supabase as any)
+        .from("users")
+        .select("full_name, email")
+        .eq("id", user.id)
+        .single();
+      if (profile) {
+        setUserName(profile.full_name || profile.email || "Someone");
+      }
 
       await refreshConversations();
       setLoading(false);
@@ -168,7 +180,12 @@ export default function MessagesPage() {
       content,
       message_type: "text",
     });
-    if (error) setSendError(error.message);
+    if (error) {
+      setSendError(error.message);
+    } else {
+      // Fire-and-forget: notify other participants
+      notifyNewMessage(activeId, userId, userName, content).catch(() => {});
+    }
   }
 
   if (loading) {
@@ -205,14 +222,26 @@ export default function MessagesPage() {
           />
         </div>
 
-        <div className="flex-1 h-full bg-slate-50">
+        <div className="flex-1 h-full bg-slate-50 flex flex-col">
           {activeId ? (
-            <MessageThread
-              conversation={activeConversation}
-              messages={messages}
-              userId={userId || ""}
-              onSendMessage={handleSendMessage}
-            />
+            <div className="flex flex-col h-full">
+              <div className="flex-1 min-h-0">
+                <MessageThread
+                  conversation={activeConversation}
+                  messages={messages}
+                  userId={userId || ""}
+                  onSendMessage={handleSendMessage}
+                />
+              </div>
+              {sendError && (
+                <div role="alert" className="px-4 py-2 bg-destructive/10 text-destructive text-sm border-t border-destructive/20">
+                  Failed to send message: {sendError}
+                  <button onClick={() => setSendError(null)} className="ml-2 underline cursor-pointer">
+                    Dismiss
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full space-y-4 text-center p-8 animate-in fade-in zoom-in duration-500">
               <div className="h-20 w-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center shadow-inner">

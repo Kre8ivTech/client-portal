@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin';
 import { downloadDocument } from '@/lib/docusign/envelopes';
 import { uploadContract } from '@/lib/storage/s3';
 import { triggerWebhooks } from '@/lib/zapier/webhooks';
+import { notifyContractSigned, notifyContractDeclined } from '@/lib/actions/contract-notifications';
 
 export const runtime = 'nodejs';
 
@@ -279,6 +280,9 @@ async function handleEnvelopeCompleted(
       document_url: documentUrl,
     });
 
+    // Fire-and-forget email notification
+    notifyContractSigned(contract.id).catch(() => {});
+
   } catch (error) {
     console.error('[DocuSign Webhook] Error handling envelope completion:', error);
     throw error;
@@ -334,6 +338,9 @@ async function handleEnvelopeDeclined(
       declinedBy: declinedRecipient?.email,
       message: `Contract declined by ${declinedRecipient?.email || 'unknown signer'}`,
     });
+
+    // Fire-and-forget email notification
+    notifyContractDeclined(contract.id, declinedRecipient?.email).catch(() => {});
 
   } catch (error) {
     console.error('[DocuSign Webhook] Error handling envelope decline:', error);

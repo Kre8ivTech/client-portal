@@ -4,6 +4,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { createUserSchema, canCreateUsers, getAllowedRolesToCreate } from "@/lib/validators/user";
 import { writeAuditLog } from "@/lib/audit";
+import { sendTemplatedEmail } from "@/lib/notifications/providers/email";
 
 export async function GET(request: Request) {
   try {
@@ -339,6 +340,29 @@ export async function POST(request: Request) {
         created_by_email: profile.email,
       },
     });
+
+    // Send branded welcome email (best-effort)
+    let orgName = '';
+    if (data.organization_id) {
+      const { data: orgData } = await (supabase as any)
+        .from('organizations')
+        .select('name')
+        .eq('id', data.organization_id)
+        .single();
+      orgName = orgData?.name || '';
+    }
+    await sendTemplatedEmail({
+      to: data.email,
+      templateType: 'welcome',
+      variables: {
+        recipient_name: data.name || data.email,
+        recipient_email: data.email,
+        role: data.role || 'client',
+        organization_name: orgName,
+        app_url: process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
+        current_year: new Date().getFullYear().toString(),
+      },
+    }).catch(() => {}); // best-effort
 
     return NextResponse.json({
       message: "User created successfully",

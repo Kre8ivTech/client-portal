@@ -1,8 +1,9 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Book, FileText, ChevronRight, HelpCircle, LifeBuoy, Zap } from 'lucide-react'
+import { Book, FileText, ChevronRight, HelpCircle, LifeBuoy, Zap, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { KBSearchForm } from '@/components/kb/kb-search-form'
 
@@ -17,7 +18,7 @@ export default async function KnowledgeBasePage({
   if (!user) redirect('/login')
 
   // Fetch categories
-  const { data: categories } = await supabase
+  const { data: categories, error: categoriesError } = await supabase
     .from('kb_categories')
     .select('*')
     .eq('is_active', true)
@@ -33,7 +34,22 @@ export default async function KnowledgeBasePage({
     articlesQuery = articlesQuery.or(`title.ilike.%${q}%,excerpt.ilike.%${q}%`)
   }
 
-  const { data: featuredArticles } = await articlesQuery.limit(5)
+  const { data: featuredArticles, error: articlesError } = await articlesQuery.limit(5)
+
+  if (categoriesError && articlesError) {
+    return (
+      <div className="max-w-6xl mx-auto space-y-6 py-8">
+        <h1 className="text-2xl font-bold">Knowledge Base</h1>
+        <Alert variant="destructive" role="alert">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Failed to load knowledge base</AlertTitle>
+          <AlertDescription>
+            There was a problem loading the knowledge base. Please try refreshing the page.
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -53,27 +69,27 @@ export default async function KnowledgeBasePage({
 
       {/* Quick Links */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+        <Link href="/dashboard/kb?q=getting+started" className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
           <div className="h-12 w-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
             <Zap size={24} />
           </div>
           <h3 className="text-lg font-bold text-slate-900">Quick Start</h3>
           <p className="text-sm text-slate-500 mt-1">Get up and running with KT-Portal in minutes.</p>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+        </Link>
+        <Link href="/dashboard/kb?q=API" className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
           <div className="h-12 w-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
             <Book size={24} />
           </div>
           <h3 className="text-lg font-bold text-slate-900">API Documentation</h3>
           <p className="text-sm text-slate-500 mt-1">Detailed technical guides for our developer tools.</p>
-        </div>
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+        </Link>
+        <Link href="/dashboard/kb?q=support+policies" className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group">
           <div className="h-12 w-12 bg-slate-50 text-slate-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
             <LifeBuoy size={24} />
           </div>
           <h3 className="text-lg font-bold text-slate-900">Support Policies</h3>
           <p className="text-sm text-slate-500 mt-1">Learn about our SLAs, standards, and process.</p>
-        </div>
+        </Link>
       </div>
 
       {/* Categories Grid */}

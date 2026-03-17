@@ -4,6 +4,7 @@ import Stripe from 'stripe'
 import { getStripeClient, getStripeConfig } from '@/lib/stripe'
 import { triggerWebhooks } from '@/lib/zapier/webhooks'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { notifyInvoicePaid, notifyInvoiceOverdue } from '@/lib/actions/invoice-notifications'
 
 export const runtime = 'nodejs' // Required for webhook signature verification
 
@@ -140,6 +141,9 @@ async function handleCheckoutSessionCompleted(
     triggerWebhooks('invoice.paid', invoiceData.organization_id, invoiceData)
   }
 
+  // Fire-and-forget email notification
+  notifyInvoicePaid(invoiceId).catch(() => {})
+
 }
 
 async function handlePaymentIntentSucceeded(
@@ -169,6 +173,9 @@ async function handlePaymentIntentSucceeded(
     throw error
   }
 
+  // Fire-and-forget email notification
+  notifyInvoicePaid(invoiceId).catch(() => {})
+
 }
 
 async function handlePaymentIntentFailed(
@@ -183,16 +190,34 @@ async function handlePaymentIntentFailed(
 
   console.error(`Payment failed for invoice ${invoiceId}:`, paymentIntent.last_payment_error?.message)
 
-  // Optionally update invoice with payment failure info
+  // Check if invoice exists before updating
+  const { data: existingInvoice } = await (supabase as any)
+    .from('invoices')
+    .select('metadata')
+    .eq('id', invoiceId)
+    .single()
+
+  if (!existingInvoice) {
+    console.warn(`[Stripe Webhook] Invoice ${invoiceId} not found for payment_intent.payment_failed`)
+    return
+  }
+
+  // Merge with existing metadata to avoid overwriting
+  const mergedMetadata = {
+    ...(existingInvoice.metadata || {}),
+    last_payment_error: paymentIntent.last_payment_error?.message,
+    last_payment_attempt: new Date().toISOString(),
+  }
+
   await (supabase as any)
     .from('invoices')
     .update({
-      metadata: {
-        last_payment_error: paymentIntent.last_payment_error?.message,
-        last_payment_attempt: new Date().toISOString(),
-      },
+      metadata: mergedMetadata,
     })
     .eq('id', invoiceId)
+
+  // Fire-and-forget email notification for payment failure
+  notifyInvoiceOverdue(invoiceId).catch(() => {})
 }
 
 async function handleInvoicePaid(
@@ -231,6 +256,9 @@ async function handleInvoicePaid(
     triggerWebhooks('invoice.paid', invoiceData.organization_id, invoiceData)
   }
 
+  // Fire-and-forget email notification
+  notifyInvoicePaid(invoiceId).catch(() => {})
+
 }
 
 async function handleInvoicePaymentFailed(
@@ -245,14 +273,30 @@ async function handleInvoicePaymentFailed(
 
   console.error(`Stripe invoice payment failed for ${invoiceId}`)
 
+  // Check if invoice exists before updating
+  const { data: existingInvoice } = await (supabase as any)
+    .from('invoices')
+    .select('metadata')
+    .eq('id', invoiceId)
+    .single()
+
+  if (!existingInvoice) {
+    console.warn(`[Stripe Webhook] Invoice ${invoiceId} not found for invoice.payment_failed`)
+    return
+  }
+
+  // Merge with existing metadata to avoid overwriting
+  const mergedMetadata = {
+    ...(existingInvoice.metadata || {}),
+    last_payment_error: 'Payment failed',
+    last_payment_attempt: new Date().toISOString(),
+  }
+
   await (supabase as any)
     .from('invoices')
     .update({
       status: 'overdue',
-      metadata: {
-        last_payment_error: 'Payment failed',
-        last_payment_attempt: new Date().toISOString(),
-      },
+      metadata: mergedMetadata,
     })
     .eq('id', invoiceId)
 
@@ -266,4 +310,7 @@ async function handleInvoicePaymentFailed(
   if (invoiceData) {
     triggerWebhooks('invoice.overdue', invoiceData.organization_id, invoiceData)
   }
+
+  // Fire-and-forget email notification
+  notifyInvoiceOverdue(invoiceId).catch(() => {})
 }

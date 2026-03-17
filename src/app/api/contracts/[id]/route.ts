@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { contractUpdateSchema } from '@/lib/validators/contract'
 import { writeAuditLog } from '@/lib/audit'
 import { escapeHtml, sanitizeHtml } from '@/lib/security'
+import { notifyContractDeclined } from '@/lib/actions/contract-notifications'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -270,6 +271,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       old_values: { status: existingContract.status },
       new_values: { status: 'cancelled' },
     })
+
+    // Fire-and-forget email notification for contract cancellation
+    notifyContractDeclined(id).catch(() => {})
 
     return NextResponse.json({
       data: contract,

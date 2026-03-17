@@ -49,6 +49,7 @@ import {
   PROJECT_STATUS_OPTIONS,
   PROJECT_PRIORITY_OPTIONS,
 } from '@/lib/validators/project'
+import { notifyProjectStatusChanged } from '@/lib/actions/project-notifications'
 
 type Project = {
   id: string
@@ -113,6 +114,16 @@ export function ProjectSettingsForm({ project }: ProjectSettingsFormProps) {
         .eq('id', project.id)
 
       if (error) throw error
+
+      // Fire-and-forget: notify members if status changed
+      if (values.status && values.status !== project.status && user?.id) {
+        notifyProjectStatusChanged(
+          project.id,
+          values.status,
+          project.status,
+          user.id
+        ).catch(() => {})
+      }
 
       router.refresh()
     } catch (error) {

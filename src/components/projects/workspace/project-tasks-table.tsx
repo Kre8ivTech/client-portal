@@ -77,6 +77,7 @@ import {
   parsedTaskCandidateSchema,
   type ParsedTaskCandidate,
 } from '@/lib/task-list-parser'
+import { notifyTaskAssigned } from '@/lib/actions/project-notifications'
 
 type Task = {
   id: string
@@ -520,6 +521,18 @@ export function ProjectTasksTable({
 
       setTasks((prev) => [data, ...prev])
       setIsCreateDialogOpen(false)
+
+      // Fire-and-forget: notify assignee
+      if (newTask.assigned_to && (data as any)?.id) {
+        notifyTaskAssigned(
+          (data as any).id,
+          projectId,
+          newTask.assigned_to,
+          newTask.title.trim(),
+          user?.id
+        ).catch(() => {})
+      }
+
       setNewTask({
         title: '',
         description: '',

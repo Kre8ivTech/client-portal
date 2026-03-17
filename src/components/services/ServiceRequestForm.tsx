@@ -187,7 +187,7 @@ export function ServiceRequestForm({
           <CardDescription>Choose the service you need from our catalog</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4" role="radiogroup" aria-label="Select a service">
             {services.map((service) => (
               <Card
                 key={service.id}
@@ -200,6 +200,17 @@ export function ServiceRequestForm({
                   setSelectedServiceId(service.id)
                   setValue('service_id', service.id)
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setSelectedServiceId(service.id)
+                    setValue('service_id', service.id)
+                  }
+                }}
+                tabIndex={0}
+                role="radio"
+                aria-checked={selectedServiceId === service.id}
+                aria-label={`Select ${service.name}`}
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2">

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { serviceRequestApprovalSchema } from '@/lib/validators/service'
+import { sendTemplatedEmail } from '@/lib/notifications/providers/email'
 
 export async function PATCH(
   request: NextRequest,
@@ -112,6 +113,32 @@ export async function PATCH(
     if (updateError) {
       console.error('Failed to update service request:', updateError)
       return NextResponse.json({ error: updateError.message }, { status: 500 })
+    }
+
+    // Send email notification to the requester
+    const isApproved = result.data.status === 'approved'
+    const templateType = isApproved ? 'service_request_approved' : 'service_request_rejected'
+
+    const { data: requester } = await (supabase as any)
+      .from('users')
+      .select('email, full_name')
+      .eq('id', updatedRequest.requester?.id || '')
+      .single()
+
+    if (requester?.email) {
+      sendTemplatedEmail({
+        to: requester.email,
+        templateType: templateType as any,
+        variables: {
+          recipient_name: requester.full_name || requester.email,
+          request_number: updatedRequest.request_number || '',
+          status: isApproved ? 'Approved' : 'Rejected',
+          service_request_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app'}/dashboard/service/${id}`,
+          app_url: process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
+          current_year: new Date().getFullYear().toString(),
+        },
+        organizationId: updatedRequest.organization_id,
+      }).catch(() => {})
     }
 
     return NextResponse.json({ data: updatedRequest })

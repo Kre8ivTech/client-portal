@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { sendTemplatedEmail } from "@/lib/notifications/providers/email";
 
 export async function POST(
   request: Request,
@@ -53,6 +54,17 @@ export async function POST(
 
     const targetUser = targetUserData as { id: string; email: string; organization_id: string | null } | null;
 
+    // Get target user's profile name for email personalization
+    let targetUserName: string | null = null;
+    if (targetUser) {
+      const { data: targetProfile } = await (supabase as any)
+        .from("profiles")
+        .select("name")
+        .eq("user_id", id)
+        .single();
+      targetUserName = targetProfile?.name || null;
+    }
+
     if (!targetUser) {
       return NextResponse.json(
         { error: "User not found" },
@@ -92,7 +104,7 @@ export async function POST(
 
     // Send password reset email
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const { error: resetError } = await adminClient.auth.admin.generateLink({
+    const { data: linkData, error: resetError } = await adminClient.auth.admin.generateLink({
       type: 'recovery',
       email: targetUser.email,
       options: {
@@ -107,6 +119,19 @@ export async function POST(
         { status: 500 }
       );
     }
+
+    // Send branded password reset email (best-effort)
+    const generatedLink = linkData?.properties?.action_link || `${appUrl}/auth/callback?next=/reset-password`;
+    await sendTemplatedEmail({
+      to: targetUser.email,
+      templateType: 'password_reset',
+      variables: {
+        recipient_name: targetUserName || targetUser.email,
+        reset_link: generatedLink,
+        app_url: appUrl,
+        current_year: new Date().getFullYear().toString(),
+      },
+    }).catch(() => {}) // best-effort
 
     return NextResponse.json({
       success: true,

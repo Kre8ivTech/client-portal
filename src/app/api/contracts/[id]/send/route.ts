@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { contractSendSchema } from '@/lib/validators/contract'
 import { createEnvelope } from '@/lib/docusign/envelopes'
 import { writeAuditLog } from '@/lib/audit'
+import { notifyContractSent } from '@/lib/actions/contract-notifications'
 import type { DocuSignDocument, DocuSignSigner } from '@/types/docusign'
 
 interface RouteParams {
@@ -179,6 +180,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         envelope_status: envelopeStatus,
       },
     })
+
+    // Fire-and-forget email notification to signers
+    notifyContractSent(id).catch(() => {})
 
     return NextResponse.json({
       data: updatedContract,

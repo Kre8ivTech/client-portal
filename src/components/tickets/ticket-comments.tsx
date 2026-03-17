@@ -14,6 +14,7 @@ import { MessageSquare, Send, Loader2, User, AlertCircle } from 'lucide-react'
 import { Database } from '@/types/database'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import { notifyTicketComment } from '@/lib/actions/ticket-notifications'
 
 type Comment = Database['public']['Tables']['ticket_comments']['Row'] & {
   author?: {
@@ -38,6 +39,34 @@ export function TicketComments({ ticketId, userId, userRole }: TicketCommentsPro
   const router = useRouter()
 
   const isStaff = userRole === 'super_admin' || userRole === 'staff'
+
+  // Fetch ticket details for notification context
+  const { data: ticketData } = useQuery({
+    queryKey: ['ticket-detail-for-comments', ticketId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('tickets')
+        .select('ticket_number, subject')
+        .eq('id', ticketId)
+        .single()
+      return data as { ticket_number: number; subject: string } | null
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+
+  // Fetch current user's display name for notifications
+  const { data: currentUserProfile } = useQuery({
+    queryKey: ['current-user-profile', userId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('user_profiles')
+        .select('name')
+        .eq('id', userId)
+        .single()
+      return data as { name: string | null } | null
+    },
+    staleTime: 10 * 60 * 1000,
+  })
 
   // Subscribe to real-time comment updates using our hook
   useRealtimeTicketComments(ticketId)
@@ -78,12 +107,24 @@ export function TicketComments({ ticketId, userId, userRole }: TicketCommentsPro
     if (error) {
       setPostError(error.message || 'Failed to post comment. Please try again.')
     } else {
+      const commentContent = newComment.trim()
       setNewComment('')
       setIsInternal(false)
       setPostError(null)
       // Refresh comments and ticket data
       queryClient.invalidateQueries({ queryKey: ['ticket-comments', ticketId] })
       router.refresh()
+
+      // Fire-and-forget email notification for non-internal comments
+      if (!isInternal && ticketData) {
+        notifyTicketComment(
+          ticketId,
+          ticketData.ticket_number,
+          ticketData.subject,
+          currentUserProfile?.name || 'Someone',
+          commentContent
+        ).catch(() => {})
+      }
     }
     setIsSubmitting(false)
   }

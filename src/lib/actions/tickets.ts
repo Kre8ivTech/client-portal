@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { triggerWebhooks } from "@/lib/zapier/webhooks";
 import { createTicketSchema } from "@/lib/validators/ticket";
+import { notifyTicketCreated, notifyTicketUpdated, notifyTicketResolved, notifyTicketClosed } from "./ticket-notifications";
 import { z } from "zod";
 
 /**
@@ -55,6 +56,9 @@ export async function createTicket(data: z.infer<typeof createTicketSchema>) {
 
     // Trigger webhook asynchronously
     triggerWebhooks("ticket.created", userData.organization_id, ticket);
+
+    // Fire-and-forget email notification
+    notifyTicketCreated(ticket.id, ticket.ticket_number, ticket.subject, ticket.priority).catch(() => {});
 
     return { success: true, data: ticket };
   } catch (err: any) {
@@ -116,6 +120,17 @@ export async function updateTicket(
       triggerWebhooks("ticket.closed", userData.organization_id, ticket);
     } else {
       triggerWebhooks("ticket.updated", userData.organization_id, ticket);
+    }
+
+    // Fire-and-forget email notifications for status changes
+    if (updates.status && updates.status !== currentTicket.status) {
+      if (updates.status === "resolved") {
+        notifyTicketResolved(ticketId, currentTicket.ticket_number, currentTicket.subject).catch(() => {});
+      } else if (updates.status === "closed") {
+        notifyTicketClosed(ticketId, currentTicket.ticket_number, currentTicket.subject).catch(() => {});
+      } else {
+        notifyTicketUpdated(ticketId, currentTicket.ticket_number, currentTicket.subject, updates.status).catch(() => {});
+      }
     }
 
     return { success: true, data: ticket };
@@ -209,6 +224,9 @@ export async function closeTicketWithNote(ticketId: string, options: { note?: st
 
     // Trigger webhook for ticket closed
     triggerWebhooks("ticket.closed", userData.organization_id, ticket);
+
+    // Fire-and-forget email notification for ticket closed
+    notifyTicketClosed(ticketId, currentTicket.ticket_number, currentTicket.subject).catch(() => {});
 
     return { success: true, data: ticket };
   } catch (err: any) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { invoiceSchema, calculateInvoiceTotals } from '@/lib/validators/invoice'
+import { notifyInvoiceCreated } from '@/lib/actions/invoice-notifications'
 
 export async function GET(request: NextRequest) {
   try {
@@ -185,6 +186,9 @@ export async function POST(request: NextRequest) {
       await supabase.from('invoices').delete().eq('id', invoice.id)
       return NextResponse.json({ error: 'Failed to create line items' }, { status: 500 })
     }
+
+    // Fire-and-forget email notification for new invoice
+    notifyInvoiceCreated(invoice.id).catch(() => {})
 
     return NextResponse.json({ data: invoice }, { status: 201 })
   } catch (err) {

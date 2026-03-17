@@ -397,10 +397,16 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
 
       {/* Actions */}
       <div className="flex gap-4 flex-wrap">
-        <Button variant="outline" disabled>
-          <Download className="h-4 w-4 mr-2" />
-          Download PDF
-        </Button>
+        <a
+          href={`/api/invoices/${invoice.id}/pdf`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Button variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            Download PDF
+          </Button>
+        </a>
         {canPay && <PayInvoiceButton invoice={invoice} />}
         {isAccountManager && invoice.balance_due > 0 && invoice.status !== 'cancelled' && (
           <RecordManualPaymentDialog

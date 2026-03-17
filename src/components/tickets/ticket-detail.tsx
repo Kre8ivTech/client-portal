@@ -16,6 +16,7 @@ import { DeliverableList } from "./deliverable-list";
 import { DeliverableForm } from "./deliverable-form";
 import { CloseTicketDialog } from "./close-ticket-dialog";
 import { TicketTimeTracking } from "./ticket-time-tracking";
+import { notifyTicketAssigned } from "@/lib/actions/ticket-notifications";
 
 type Ticket = Database["public"]["Tables"]["tickets"]["Row"] & {
   creator?: {
@@ -94,6 +95,18 @@ export function TicketDetail({
 
     if (!error) {
       setTicket({ ...ticket, assigned_to: staffId === "unassigned" ? null : staffId });
+
+      // Fire-and-forget email notification for assignment
+      if (staffId !== "unassigned") {
+        const assignedStaffMember = staff.find((s) => s.id === staffId);
+        notifyTicketAssigned(
+          ticket.id,
+          ticket.ticket_number,
+          ticket.subject,
+          assignedStaffMember?.name || "Staff Member",
+          ticket.priority
+        ).catch(() => {});
+      }
     }
     setIsAssigning(false);
   };

@@ -2,10 +2,8 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { getAIResponse } from '@/lib/actions/ai'
 import { Bot, Send, User, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -18,17 +16,23 @@ type Message = {
 export default function AIAssistantPage() {
   const supabase = useMemo(() => createClient(), [])
   const [isAuthed, setIsAuthed] = useState(false)
+  const [conversationId, setConversationId] = useState<string | null>(null)
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: 'Hello! I am your AI Assistant. How can I help you today?' }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) window.location.href = '/login'
-      else setIsAuthed(true)
+      else {
+        setIsAuthed(true)
+        // Generate a conversation ID for this session
+        setConversationId(crypto.randomUUID())
+      }
     })
   }, [supabase])
 
@@ -44,20 +48,37 @@ export default function AIAssistantPage() {
     e.preventDefault()
     if (!input.trim() || loading) return
 
-    const userMsg: Message = { role: 'user', content: input }
+    const userMessage = input.trim()
+    const userMsg: Message = { role: 'user', content: userMessage }
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setLoading(true)
+    setError(null)
 
     try {
-      const response = await getAIResponse([...messages, userMsg])
-      if (response.error || !response.content) {
-        setMessages(prev => [...prev, { role: 'assistant', content: "I'm sorry, I encountered an error. Please try again." }])
-      } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: response.content }])
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          conversation_id: conversationId || undefined,
+        }),
+      })
+      const data = await response.json()
+
+      if (response.status === 429) {
+        setError('Daily AI request limit reached. Please try again tomorrow.')
+        setMessages(prev => [...prev, { role: 'assistant', content: 'You have reached your daily AI request limit. Please try again tomorrow.' }])
+        return
       }
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "Connection error." }])
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get AI response')
+      }
+
+      setMessages(prev => [...prev, { role: 'assistant', content: data.message || 'No response generated.' }])
+    } catch (err: any) {
+      const errorMessage = err?.message || 'Connection error. Please try again.'
+      setMessages(prev => [...prev, { role: 'assistant', content: errorMessage }])
     } finally {
       setLoading(false)
     }
@@ -77,6 +98,12 @@ export default function AIAssistantPage() {
         </div>
       </div>
 
+      {error && (
+        <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       <Card className="flex-1 flex flex-col overflow-hidden border-slate-200 shadow-sm">
         <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={scrollRef}>
           {messages.map((m, i) => (
@@ -90,8 +117,8 @@ export default function AIAssistantPage() {
               <div
                 className={cn(
                   "flex gap-3 max-w-[80%] rounded-2xl p-4 text-sm shadow-sm",
-                  m.role === 'user' 
-                    ? "bg-primary text-primary-foreground rounded-br-none" 
+                  m.role === 'user'
+                    ? "bg-primary text-primary-foreground rounded-br-none"
                     : "bg-slate-100 text-slate-800 rounded-bl-none"
                 )}
               >

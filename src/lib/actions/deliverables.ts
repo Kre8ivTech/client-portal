@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { writeAuditLog } from '@/lib/audit'
 import { requireRole } from '@/lib/require-role'
+import { sendTemplatedEmail } from '@/lib/notifications/providers/email'
 
 export type CreateDeliverableData = {
   ticket_id: string
@@ -56,6 +57,38 @@ export async function createDeliverable(data: CreateDeliverableData) {
       entity_id: deliverable.id,
       details: { ticket_id: data.ticket_id, title: data.title }
     })
+
+    // Notify the ticket creator (client) about the new deliverable
+    const { data: ticketOwner } = await (supabase as any)
+      .from('tickets')
+      .select('created_by, subject, ticket_number, organization_id')
+      .eq('id', data.ticket_id)
+      .single()
+
+    if (ticketOwner?.created_by) {
+      const { data: ownerUser } = await (supabase as any)
+        .from('users')
+        .select('email, full_name')
+        .eq('id', ticketOwner.created_by)
+        .single()
+
+      if (ownerUser?.email) {
+        sendTemplatedEmail({
+          to: ownerUser.email,
+          templateType: 'deliverable_created' as any,
+          variables: {
+            recipient_name: ownerUser.full_name || ownerUser.email,
+            ticket_number: String(ticketOwner.ticket_number || ''),
+            ticket_subject: ticketOwner.subject || '',
+            deliverable_name: data.title,
+            ticket_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app'}/dashboard/tickets/${data.ticket_id}`,
+            app_url: process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
+            current_year: new Date().getFullYear().toString(),
+          },
+          organizationId: ticketOwner.organization_id,
+        }).catch(() => {})
+      }
+    }
 
     revalidatePath(`/dashboard/tickets/${data.ticket_id}`)
     revalidatePath(`/dashboard/contracts/${data.ticket_id}`) // In case it's linked
@@ -117,6 +150,31 @@ export async function reviewDeliverable(data: ReviewDeliverableData) {
       entity_id: data.deliverable_id,
       details: { ticket_id: deliverable.ticket_id, feedback: data.feedback }
     })
+
+    // Notify the staff member who created the deliverable about the review
+    if (deliverable.created_by) {
+      const { data: creator } = await (supabase as any)
+        .from('users')
+        .select('email, full_name')
+        .eq('id', deliverable.created_by)
+        .single()
+
+      if (creator?.email) {
+        sendTemplatedEmail({
+          to: creator.email,
+          templateType: 'deliverable_reviewed' as any,
+          variables: {
+            recipient_name: creator.full_name || creator.email,
+            deliverable_name: deliverable.title || '',
+            review_status: data.status,
+            review_notes: data.feedback || '',
+            ticket_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app'}/dashboard/tickets/${deliverable.ticket_id}`,
+            app_url: process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
+            current_year: new Date().getFullYear().toString(),
+          },
+        }).catch(() => {})
+      }
+    }
 
     revalidatePath(`/dashboard/tickets/${deliverable.ticket_id}`)
     return { success: true }

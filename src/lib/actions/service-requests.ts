@@ -2,6 +2,8 @@
 
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { sendTemplatedEmail } from '@/lib/notifications/providers/email'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 export async function cancelServiceRequest(requestId: string) {
   const supabase = await createServerSupabaseClient()
@@ -51,6 +53,34 @@ export async function cancelServiceRequest(requestId: string) {
 
   if (updateError) {
     return { error: updateError.message }
+  }
+
+  // Notify assigned staff about cancellation
+  try {
+    const admin = getSupabaseAdmin()
+    const { data: staffAssignments } = await (admin as any)
+      .from('staff_assignments')
+      .select('staff_user:users!staff_assignments_staff_user_id_fkey(email, full_name)')
+      .eq('assignable_type', 'service_request')
+      .eq('assignable_id', requestId)
+      .is('unassigned_at', null)
+
+    for (const assignment of staffAssignments || []) {
+      if (!assignment.staff_user?.email) continue
+      sendTemplatedEmail({
+        to: assignment.staff_user.email,
+        templateType: 'service_request_cancelled' as any,
+        variables: {
+          recipient_name: assignment.staff_user.full_name || assignment.staff_user.email,
+          request_number: '',
+          service_request_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app'}/dashboard/admin/service-requests`,
+          app_url: process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
+          current_year: new Date().getFullYear().toString(),
+        },
+      }).catch(() => {})
+    }
+  } catch {
+    // Notification is best-effort
   }
 
   revalidatePath(`/dashboard/service/${requestId}`)

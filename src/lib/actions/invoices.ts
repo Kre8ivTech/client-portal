@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { triggerWebhooks } from '@/lib/zapier/webhooks'
+import { notifyInvoiceCreated } from './invoice-notifications'
 
 export type CreateInvoiceData = {
   organization_id: string
@@ -80,6 +81,9 @@ export async function createInvoice(data: CreateInvoiceData) {
 
   // Trigger webhook for invoice creation
   triggerWebhooks('invoice.created', data.organization_id, invoice)
+
+  // Fire-and-forget email notification
+  notifyInvoiceCreated(invoice.id).catch(() => {})
 
   revalidatePath('/dashboard/admin/invoices')
   return { success: true, id: invoice.id }

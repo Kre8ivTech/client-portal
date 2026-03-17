@@ -9,12 +9,15 @@ import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { 
   NotificationPayload, 
   NotificationResult, 
-  NotificationChannel 
+  NotificationChannel,
+  NotificationType,
+  shouldSendNotification,
 } from './index'
-import { sendEmail } from './providers/email'
+import { sendEmail, sendTemplatedEmail } from './providers/email'
 import { sendSMS } from './providers/sms'
 import { sendSlack } from './providers/slack'
 import { sendWhatsApp } from './providers/whatsapp'
+import type { EmailTemplateType } from '@/lib/email-templates-shared'
 
 /**
  * Send a notification through the specified channel
@@ -28,14 +31,45 @@ export async function sendNotification(
 
   // Send via appropriate channel
   switch (channel) {
-    case 'email':
-      result = await sendEmail({
-        to: recipient,
-        subject: subject || 'Notification',
-        message,
-        ticketId,
-      })
+    case 'email': {
+      // Try to use DB template first, fall back to formatted HTML
+      const templateType = notificationTypeToTemplateType(type)
+      if (templateType) {
+        result = await sendTemplatedEmail({
+          to: recipient,
+          templateType,
+          variables: {
+            subject: subject || 'Notification',
+            message: message || '',
+            ticket_number: payload.metadata?.ticketNumber?.toString() || '',
+            ticket_subject: payload.metadata?.ticketSubject || '',
+            priority: payload.metadata?.priority || 'medium',
+            status: payload.metadata?.status || '',
+            assignee_name: payload.metadata?.assigneeName || '',
+            commenter_name: payload.metadata?.commenterName || '',
+            comment_preview: payload.metadata?.commentPreview || '',
+            recipient_name: payload.metadata?.recipientName || '',
+            client_name: payload.metadata?.clientName || '',
+            organization_name: payload.metadata?.organizationName || '',
+            request_number: payload.metadata?.requestNumber || '',
+            app_url: process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
+            current_year: new Date().getFullYear().toString(),
+            ...(payload.metadata?.acknowledgementUrl && { acknowledgement_url: payload.metadata.acknowledgementUrl }),
+            ...(payload.metadata?.requestUrl && { request_url: payload.metadata.requestUrl }),
+            ...(ticketId && { ticket_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app'}/dashboard/tickets/${ticketId}` }),
+          },
+          organizationId: payload.organizationId,
+        })
+      } else {
+        result = await sendEmail({
+          to: recipient,
+          subject: subject || 'Notification',
+          message,
+          ticketId,
+        })
+      }
       break
+    }
 
     case 'sms':
       result = await sendSMS({
@@ -220,14 +254,14 @@ export async function buildTicketNotificationPayloads(
     const userPrefs = user.notification_preferences || {}
     const channels: NotificationChannel[] = []
 
-    // Check which channels are enabled
-    if (userPrefs.email !== false && user.email) {
+    // Check both channel AND event-type preferences via shouldSendNotification
+    if (shouldSendNotification(notificationType, 'email', userPrefs) && user.email) {
       channels.push('email')
     }
-    if (userPrefs.sms && userPrefs.sms_number) {
+    if (shouldSendNotification(notificationType, 'sms', userPrefs)) {
       channels.push('sms')
     }
-    if (userPrefs.whatsapp && userPrefs.whatsapp_number) {
+    if (shouldSendNotification(notificationType, 'whatsapp', userPrefs)) {
       channels.push('whatsapp')
     }
 
@@ -424,4 +458,25 @@ export async function buildTaskNotificationPayloads(
   }
 
   return payloads
+}
+
+/**
+ * Map NotificationType to EmailTemplateType for DB template lookup.
+ * Returns null if no template mapping exists (falls back to plain email).
+ */
+function notificationTypeToTemplateType(type: NotificationType): EmailTemplateType | null {
+  const map: Partial<Record<NotificationType, EmailTemplateType>> = {
+    'ticket_created': 'ticket_created',
+    'ticket_updated': 'ticket_updated',
+    'ticket_comment': 'ticket_comment',
+    'ticket_assigned': 'ticket_assigned',
+    'ticket_resolved': 'ticket_resolved',
+    'ticket_closed': 'ticket_closed',
+    'sla_warning': 'sla_warning',
+    'sla_breach': 'sla_breach',
+    'service_request_created': 'new_service_request',
+    'project_request_created': 'new_project',
+    'task_acknowledgement_reminder': 'task_acknowledgement_reminder',
+  }
+  return map[type] || null
 }

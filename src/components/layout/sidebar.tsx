@@ -164,6 +164,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/admin/notifications", icon: Bell, label: "Notifications" },
       { href: "/dashboard/admin/settings/sla", icon: Clock, label: "SLA Settings" },
       { href: "/dashboard/admin/settings/auth", icon: Shield, label: "Auth Settings" },
+      { href: "/dashboard/admin/ai-usage", icon: BarChart3, label: "AI Usage" },
       { href: "/dashboard/audit", icon: History, label: "Audit Log" },
       { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
     ],
@@ -276,6 +277,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/admin/notifications",
         "/dashboard/admin/settings/sla",
         "/dashboard/admin/settings/auth",
+        "/dashboard/admin/ai-usage",
         "/dashboard/tenants",
         "/dashboard/audit",
       ];
@@ -301,6 +303,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/admin/services",
         "/dashboard/admin/contracts",
         "/dashboard/admin/notifications",
+        "/dashboard/admin/ai-usage",
       ];
     case "partner":
       return [
@@ -432,7 +435,7 @@ export function DashboardSidebar({
   };
 
   return (
-    <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground flex-shrink-0 border-r border-sidebar-muted/30">
+    <aside aria-label="Sidebar navigation" className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground flex-shrink-0 border-r border-sidebar-muted/30">
       <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-muted/30">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- dynamic user-provided logo URL
@@ -450,7 +453,7 @@ export function DashboardSidebar({
         )}
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
+      <nav aria-label="Main navigation" className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
         {visibleNavGroups.map((group) => {
           const items = group.items;
           const isAdminGroup = group.label === "Admin";
@@ -460,7 +463,7 @@ export function DashboardSidebar({
           return (
             <Collapsible key={group.label} open={isOpen} onOpenChange={() => toggleSection(group.label)}>
               <CollapsibleTrigger asChild>
-                <button className="w-full px-3 mb-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider flex items-center gap-2 cursor-pointer hover:text-sidebar-foreground transition-colors bg-transparent border-0 text-left">
+                <button className="w-full px-3 mb-2 text-xs font-semibold text-sidebar-muted uppercase tracking-wider flex items-center gap-2 cursor-pointer hover:text-sidebar-foreground transition-colors bg-transparent border-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md">
                   <ChevronDown
                     size={14}
                     className={cn(
@@ -484,8 +487,9 @@ export function DashboardSidebar({
                       <li key={item.href}>
                         <Link
                           href={item.href}
+                          aria-current={isActive ? "page" : undefined}
                           className={cn(
-                            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                             isActive
                               ? "bg-sidebar-accent text-white"
                               : "text-sidebar-foreground/80 hover:bg-sidebar-muted/20 hover:text-sidebar-foreground",

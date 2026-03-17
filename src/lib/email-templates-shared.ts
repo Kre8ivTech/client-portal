@@ -9,6 +9,7 @@ export type EmailTemplateType =
   | 'new_invoice'
   | 'invoice_paid'
   | 'invoice_overdue'
+  | 'invoice_due_reminder'
   | 'ticket_created'
   | 'ticket_updated'
   | 'ticket_comment'
@@ -18,9 +19,24 @@ export type EmailTemplateType =
   | 'sla_warning'
   | 'sla_breach'
   | 'task_acknowledgement_reminder'
+  | 'task_due_reminder'
   | 'password_reset'
   | 'magic_link'
   | 'welcome'
+  | 'new_message'
+  | 'contract_expiring'
+  | 'contract_cancelled'
+  | 'plan_renewal_reminder'
+  | 'service_request_approved'
+  | 'service_request_rejected'
+  | 'service_request_responded'
+  | 'service_request_cancelled'
+  | 'role_changed'
+  | 'account_deactivated'
+  | 'project_status_changed'
+  | 'payment_failed'
+  | 'deliverable_created'
+  | 'deliverable_reviewed'
 
 export type TemplateVariable = {
   name: string
@@ -59,6 +75,7 @@ export const VALID_TEMPLATE_TYPES: EmailTemplateType[] = [
   'new_invoice',
   'invoice_paid',
   'invoice_overdue',
+  'invoice_due_reminder',
   'ticket_created',
   'ticket_updated',
   'ticket_comment',
@@ -68,9 +85,24 @@ export const VALID_TEMPLATE_TYPES: EmailTemplateType[] = [
   'sla_warning',
   'sla_breach',
   'task_acknowledgement_reminder',
+  'task_due_reminder',
   'password_reset',
   'magic_link',
-  'welcome'
+  'welcome',
+  'new_message',
+  'contract_expiring',
+  'contract_cancelled',
+  'plan_renewal_reminder',
+  'service_request_approved',
+  'service_request_rejected',
+  'service_request_responded',
+  'service_request_cancelled',
+  'role_changed',
+  'account_deactivated',
+  'project_status_changed',
+  'payment_failed',
+  'deliverable_created',
+  'deliverable_reviewed',
 ]
 
 /**
@@ -81,12 +113,13 @@ export function getTemplateTypeDisplayName(type: EmailTemplateType): string {
     new_user: 'New User Welcome',
     new_tenant: 'New Tenant',
     new_organization: 'New Organization',
-    new_task: 'New Task',
+    new_task: 'New Task Assigned',
     new_service_request: 'New Service Request',
     new_project: 'New Project',
     new_invoice: 'New Invoice',
     invoice_paid: 'Invoice Paid',
     invoice_overdue: 'Invoice Overdue',
+    invoice_due_reminder: 'Invoice Due Reminder',
     ticket_created: 'Ticket Created',
     ticket_updated: 'Ticket Updated',
     ticket_comment: 'Ticket Comment',
@@ -96,9 +129,24 @@ export function getTemplateTypeDisplayName(type: EmailTemplateType): string {
     sla_warning: 'SLA Warning',
     sla_breach: 'SLA Breach',
     task_acknowledgement_reminder: 'Task Acknowledgement Reminder',
+    task_due_reminder: 'Task Due Reminder',
     password_reset: 'Password Reset',
     magic_link: 'Magic Link Login',
-    welcome: 'Welcome Email'
+    welcome: 'Welcome Email',
+    new_message: 'New Message Received',
+    contract_expiring: 'Contract Expiring Soon',
+    contract_cancelled: 'Contract Cancelled',
+    plan_renewal_reminder: 'Plan Renewal Reminder',
+    service_request_approved: 'Service Request Approved',
+    service_request_rejected: 'Service Request Rejected',
+    service_request_responded: 'Service Request Response',
+    service_request_cancelled: 'Service Request Cancelled',
+    role_changed: 'User Role Changed',
+    account_deactivated: 'Account Deactivated',
+    project_status_changed: 'Project Status Changed',
+    payment_failed: 'Payment Failed',
+    deliverable_created: 'New Deliverable Uploaded',
+    deliverable_reviewed: 'Deliverable Reviewed',
   }
   return displayNames[type] || type
 }

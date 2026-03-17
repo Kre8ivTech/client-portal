@@ -42,6 +42,18 @@ export async function DELETE(
       userId = user.id;
     }
 
+    // Check if webhook exists before deleting
+    const { data: existing } = await supabase
+      .from("zapier_webhooks")
+      .select("id")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .single();
+
+    if (!existing) {
+      return NextResponse.json({ error: "Webhook not found" }, { status: 404 });
+    }
+
     const { error } = await supabase
       .from("zapier_webhooks")
       .delete()
@@ -122,6 +134,10 @@ export async function PATCH(
       .single();
 
     if (error) {
+      // PGRST116 = "JSON object requested, multiple (or no) rows returned"
+      if (error.code === "PGRST116") {
+        return NextResponse.json({ error: "Webhook not found" }, { status: 404 });
+      }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 

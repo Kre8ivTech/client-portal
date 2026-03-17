@@ -1,18 +1,20 @@
 /**
  * Task Notification Helpers
  *
- * Helper functions to trigger notifications for service request and project request events
- * Can be called from server actions and API routes
+ * Helper functions to trigger notifications for service request and project request events.
+ * Called from server actions, API routes, and components.
+ * Uses the notification infrastructure directly (no self-fetch).
  */
 
 'use server'
 
 import { formatNotificationMessage } from '@/lib/notifications'
 import type { NotificationType } from '@/lib/notifications'
+import { buildTaskNotificationPayloads, sendNotifications } from '@/lib/notifications/send'
 
 /**
- * Trigger notifications for a task event (service request or project request)
- * Calls the notification API endpoint to send notifications
+ * Trigger notifications for a task event (service request or project request).
+ * Builds payloads (respecting preferences) and sends via all enabled channels.
  */
 export async function notifyTaskEvent(
   taskId: string,
@@ -36,37 +38,26 @@ export async function notifyTaskEvent(
       taskTitle: taskType === 'service_request' ? context?.serviceName : context?.projectTitle,
     })
 
-    // Call the notification API
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notifications/task`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          taskId,
-          taskType,
-          notificationType,
-          context: {
-            ...context,
-            subject,
-            message,
-          },
-        }),
-      }
-    )
+    // Build payloads for all recipients and channels
+    const payloads = await buildTaskNotificationPayloads(taskId, taskType, notificationType, {
+      ...context,
+      subject,
+      message,
+    })
 
-    if (!response.ok) {
-      console.error('[Task Notifications] Failed to send notification:', await response.text())
-      return { success: false }
+    if (payloads.length === 0) {
+      return { success: true, sent: 0 }
     }
 
-    const data = await response.json()
-    return { success: true, ...data }
+    // Send all notifications
+    const results = await sendNotifications(payloads)
+    const sent = results.filter(r => r.success).length
+    const failed = results.filter(r => !r.success).length
+
+    return { success: true, sent, failed }
   } catch (error) {
     console.error('[Task Notifications] Error triggering notification:', error)
-    return { success: false }
+    return { success: false, error: 'Failed to send notifications' }
   }
 }
 

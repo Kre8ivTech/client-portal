@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
 import { streamText, convertToModelMessages, UIMessage } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
+import { logAIUsage } from "@/lib/ai/usage-tracker";
 
 const systemPrompt = `You are an expert legal document assistant helping to create professional contract templates.
 
@@ -28,6 +29,8 @@ Contract types you can help with:
 - Amendment: Modifications to existing contracts
 
 Respond with properly formatted contract text. When asked to generate a full contract, provide complete sections. When asked for specific clauses, provide just those sections.`;
+
+const CONTRACT_MODEL = "anthropic/claude-sonnet-4-20250514";
 
 export async function POST(request: NextRequest) {
   try {
@@ -98,10 +101,25 @@ export async function POST(request: NextRequest) {
     // Convert UI messages to model messages
     const modelMessages = await convertToModelMessages(messages as UIMessage[]);
 
+    const startTime = Date.now();
+
     const result = streamText({
-      model: openrouter("anthropic/claude-sonnet-4-20250514"),
+      model: openrouter(CONTRACT_MODEL),
       system: contextualPrompt,
       messages: modelMessages,
+      onFinish: async ({ usage }) => {
+        const latencyMs = Date.now() - startTime;
+        logAIUsage({
+          userId: user.id,
+          provider: "openrouter",
+          model: CONTRACT_MODEL,
+          inputTokens: usage?.inputTokens || 0,
+          outputTokens: usage?.outputTokens || 0,
+          requestType: "contract_generate",
+          status: "success",
+          latencyMs,
+        }).catch(() => {}); // fire-and-forget
+      },
     });
 
     return result.toUIMessageStreamResponse();

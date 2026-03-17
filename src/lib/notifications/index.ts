@@ -82,8 +82,11 @@ export function shouldSendNotification(
   channel: NotificationChannel,
   preferences: NotificationPreferences
 ): boolean {
-  // Check if channel is enabled
-  if (!preferences[channel]) {
+  // Check if channel is enabled (email defaults to true)
+  const channelEnabled = channel === 'email' 
+    ? preferences[channel] !== false 
+    : !!preferences[channel]
+  if (!channelEnabled) {
     return false
   }
 

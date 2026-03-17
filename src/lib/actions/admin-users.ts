@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache'
 import { writeAuditLog } from '@/lib/audit'
 import { requireRole } from '@/lib/require-role'
 import { createUserSchema, canCreateUsers, getAllowedRolesToCreate, type CreateUserInput } from '@/lib/validators/user'
+import { sendTemplatedEmail } from '@/lib/notifications/providers/email'
 
 export async function createUser(input: CreateUserInput) {
   await requireRole(['super_admin', 'staff'])
@@ -177,6 +178,29 @@ export async function createUser(input: CreateUserInput) {
       }
     })
 
+    // Send branded welcome email (best-effort)
+    let orgName = ''
+    if (data.organization_id) {
+      const { data: orgData } = await (supabase as any)
+        .from('organizations')
+        .select('name')
+        .eq('id', data.organization_id)
+        .single()
+      orgName = orgData?.name || ''
+    }
+    await sendTemplatedEmail({
+      to: data.email,
+      templateType: 'welcome',
+      variables: {
+        recipient_name: data.name || data.email,
+        recipient_email: data.email,
+        role: data.role || 'client',
+        organization_name: orgName,
+        app_url: process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
+        current_year: new Date().getFullYear().toString(),
+      },
+    }).catch(() => {})
+
     revalidatePath('/dashboard/users')
     return { 
       success: true, 
@@ -208,12 +232,33 @@ export async function deleteUser(userId: string) {
     return { success: false, error: 'You cannot delete your own account' }
   }
 
-  // Get user details before deletion for audit log
+  // Get user details before deletion for audit log and notification
   const { data: userToDelete } = await (supabase as any)
     .from('users')
     .select('email, role')
     .eq('id', userId)
     .single()
+
+  // Get profile name for notification
+  const { data: deleteProfileData } = await (supabase as any)
+    .from('profiles')
+    .select('name')
+    .eq('user_id', userId)
+    .single()
+  const deleteUserName = deleteProfileData?.name || userToDelete?.email
+
+  // Send account deactivated notification before deletion (best-effort)
+  if (userToDelete?.email) {
+    await sendTemplatedEmail({
+      to: userToDelete.email,
+      templateType: 'account_deactivated',
+      variables: {
+        recipient_name: deleteUserName || userToDelete.email,
+        app_url: process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
+        current_year: new Date().getFullYear().toString(),
+      },
+    }).catch(() => {})
+  }
 
   try {
     // Delete from Supabase Auth (this will cascade to public.users and public.profiles via triggers/FKs)
@@ -279,6 +324,7 @@ export async function updateUser(
       .select(`
         id, 
         email, 
+        role,
         organization_id,
         organizations:organization_id (
           parent_org_id
@@ -294,9 +340,18 @@ export async function updateUser(
     const targetUser = targetUserData as { 
       id: string; 
       email: string; 
+      role: string;
       organization_id: string | null;
       organizations: { parent_org_id: string | null } | null 
     }
+
+    // Get target user's profile name for email notifications
+    const { data: targetProfileData } = await (supabaseAdmin as any)
+      .from('profiles')
+      .select('name')
+      .eq('user_id', userId)
+      .single()
+    const targetUserName = (targetProfileData?.name as string) || targetUser.email
 
     // Enforce organization scoping for non-super admins
     if (adminProfile.role !== 'super_admin') {
@@ -391,6 +446,21 @@ export async function updateUser(
         updated_by_email: adminProfile.email,
       },
     })
+
+    // Send role-changed notification if role was updated (best-effort)
+    if (data.role && data.role !== targetUser.role) {
+      await sendTemplatedEmail({
+        to: targetUser.email,
+        templateType: 'role_changed',
+        variables: {
+          recipient_name: targetUserName,
+          old_role: targetUser.role,
+          new_role: data.role,
+          app_url: process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
+          current_year: new Date().getFullYear().toString(),
+        },
+      }).catch(() => {})
+    }
 
     revalidatePath('/dashboard/users')
     return { success: true }

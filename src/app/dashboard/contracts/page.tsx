@@ -1,7 +1,8 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { FileText, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
+import { FileText, Clock, CheckCircle, XCircle, AlertCircle, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
@@ -20,6 +21,21 @@ export default async function ContractsPage() {
     `)
     .eq('client_id', user.id)
     .order('created_at', { ascending: false })
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Contracts</h1>
+        <Alert variant="destructive" role="alert">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Failed to load contracts</AlertTitle>
+          <AlertDescription>
+            There was a problem loading your contracts. Please try refreshing the page.
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full space-y-8 py-8 px-4">

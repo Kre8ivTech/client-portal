@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { writeAuditLog } from '@/lib/audit'
 import { escapeHtml, sanitizeHtml } from '@/lib/security'
 import { triggerWebhooks } from '@/lib/zapier/webhooks'
+import { notifyContractDeclined } from '@/lib/actions/contract-notifications'
 
 type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'expired' | 'cancelled'
 
@@ -427,6 +428,9 @@ export async function cancelContract(
         console.error('DocuSign void error:', dsError)
       }
     }
+
+    // Fire-and-forget email notification for contract cancellation
+    notifyContractDeclined(contractId).catch(() => {})
 
     revalidatePath('/dashboard/contracts')
     revalidatePath(`/dashboard/contracts/${contractId}`)

@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { DashboardSidebar } from "@/components/layout/sidebar";
 import { DashboardTopbar } from "@/components/layout/dashboard-topbar";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { LiveChatWidget } from "@/components/messaging/live-chat-widget";
 import { SLAMonitorWrapper } from "@/components/tickets/sla-monitor-wrapper";
 import { AIChatbotWidget } from "@/components/ai/ai-chatbot-widget";
@@ -126,6 +127,13 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-background">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:top-4 focus:left-4 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
+
       <DashboardSidebar profile={profile} branding={branding} />
 
       <div className="flex-1 flex flex-col min-h-0 min-w-0">
@@ -135,9 +143,14 @@ export default async function DashboardLayout({
           tickets={recentTickets ?? []}
           planAssignments={planAssignments ?? []}
         />
-        <main className="p-6 flex-1 overflow-auto">{children}</main>
+        <main id="main-content" className="p-4 md:p-6 flex-1 overflow-auto pb-20 md:pb-6">
+          <div className="max-w-7xl mx-auto w-full">
+            {children}
+          </div>
+        </main>
       </div>
 
+      <BottomNav />
       <LiveChatWidget />
       <SLAMonitorWrapper />
       <AIChatbotWidget

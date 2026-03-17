@@ -3,7 +3,8 @@ import { requireInvoiceAccess } from "@/lib/require-role";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Plus, FileText, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { ExportCsvButton } from "@/components/invoices/export-csv-button";
 type InvoiceWithOrg = any;
@@ -61,7 +62,18 @@ export default async function InvoicesPage() {
     .limit(50);
 
   if (error) {
-    console.error("Error fetching invoices:", error);
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Invoices</h1>
+        <Alert variant="destructive" role="alert">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Failed to load invoices</AlertTitle>
+          <AlertDescription>
+            There was a problem loading your invoices. Please try refreshing the page.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
   }
 
   // Calculate stats
@@ -151,7 +163,16 @@ export default async function InvoicesPage() {
                 </thead>
                 <tbody className="divide-y">
                   {(invoices as InvoiceWithOrg[]).map((invoice) => (
-                    <tr key={invoice.id} className="hover:bg-slate-50">
+                    <tr
+                      key={invoice.id}
+                      className="hover:bg-slate-50 cursor-pointer"
+                      onClick={() => window.location.href = `/dashboard/invoices/${invoice.id}`}
+                      role="link"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') window.location.href = `/dashboard/invoices/${invoice.id}`
+                      }}
+                    >
                       <td className="py-4 font-medium">{invoice.invoice_number}</td>
                       {(role === "super_admin" || role === "staff") && (
                         <td className="py-4 text-slate-600">{invoice.organization?.name ?? "-"}</td>
@@ -170,7 +191,13 @@ export default async function InvoicesPage() {
                         )}
                       </td>
                       <td className="py-4 text-right">
-                        <span className="text-slate-400 text-sm">No actions available</span>
+                        <Link
+                          href={`/dashboard/invoices/${invoice.id}`}
+                          className="text-sm text-blue-600 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          View
+                        </Link>
                       </td>
                     </tr>
                   ))}

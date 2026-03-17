@@ -1,15 +1,18 @@
-import { Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function DashboardLoading() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-[400px] w-full gap-4">
-      <div className="relative">
-        <Loader2 className="h-12 w-12 animate-spin text-primary opacity-20" />
-        <Loader2 className="h-12 w-12 animate-spin text-primary absolute inset-0 [animation-duration:1.5s]" />
+    <div className="space-y-6">
+      <Skeleton className="h-8 w-48" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-28 rounded-xl" />
+        ))}
       </div>
-      <p className="text-sm font-medium text-slate-500 animate-pulse uppercase tracking-widest">
-        Loading KT-Portal...
-      </p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Skeleton className="h-72 rounded-xl" />
+        <Skeleton className="h-72 rounded-xl" />
+      </div>
     </div>
-  );
+  )
 }

@@ -129,6 +129,7 @@ export function DashboardTopbar({
         <Button
           variant="outline"
           onClick={() => setSearchOpen(true)}
+          aria-label="Search pages"
           className="relative h-9 w-9 p-0 md:w-auto md:px-3 md:gap-2"
         >
           <Search className="h-4 w-4" />

@@ -45,13 +45,23 @@ export default async function WhiteLabelSettingsPage() {
     name: string;
     slug: string;
     type: string;
-    branding_config: { logo_url?: string | null; primary_color?: string | null } | null;
+    custom_domain?: string | null;
+    custom_domain_verified?: boolean | null;
+    branding_config: {
+      app_name?: string | null;
+      tagline?: string | null;
+      logo_url?: string | null;
+      primary_color?: string | null;
+      login_bg_color?: string | null;
+      login_bg_image_url?: string | null;
+      login_bg_overlay_opacity?: number | null;
+    } | null;
   };
   let organization: OrganizationRow | null = null;
   if (userRow?.organization_id) {
     const { data: orgData } = await supabase
       .from("organizations")
-      .select("id, name, slug, type, branding_config")
+      .select("id, name, slug, type, custom_domain, custom_domain_verified, branding_config")
       .eq("id", userRow.organization_id)
       .single();
     organization = orgData as OrganizationRow | null;
@@ -67,7 +77,7 @@ export default async function WhiteLabelSettingsPage() {
   if (isStaffOrAdmin) {
     const { data: orgsData } = await supabase
       .from("organizations")
-      .select("id, name, slug, type, branding_config")
+      .select("id, name, slug, type, custom_domain, custom_domain_verified, branding_config")
       .order("name", { ascending: true });
     allOrganizations = (orgsData ?? []) as OrganizationRow[];
   }

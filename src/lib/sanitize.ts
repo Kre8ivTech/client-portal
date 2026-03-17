@@ -51,6 +51,10 @@ export function sanitizeCssColor(color: string): string {
   if (/^hsla?\(\s*\d{1,3}\s*,\s*\d{1,3}%?\s*,\s*\d{1,3}%?\s*(,\s*(0|1|0?\.\d+))?\s*\)$/.test(trimmed)) {
     return trimmed
   }
+  // Allow HSL tuple format used by theme tokens (e.g. "221 83% 53%")
+  if (/^\d{1,3}\s+\d{1,3}%\s+\d{1,3}%$/.test(trimmed)) {
+    return trimmed
+  }
   // Allow CSS custom property references
   if (/^var\(--[a-zA-Z0-9-]+\)$/.test(trimmed)) {
     return trimmed

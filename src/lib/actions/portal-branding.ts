@@ -3,6 +3,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { validateImageUrl, validateHexColor, validateOpacity } from "@/lib/security";
+import { headers } from "next/headers";
 
 const PORTAL_BRANDING_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -159,6 +160,61 @@ export type PortalBrandingResult = {
   login_bg_overlay_opacity: number;
 };
 
+function normalizeHost(host: string | null | undefined): string | null {
+  if (!host) return null;
+  const raw = host.trim().toLowerCase();
+  if (!raw) return null;
+  return raw.split(":")[0] ?? null;
+}
+
+function normalizeCustomDomain(input: unknown): string | null {
+  if (typeof input !== "string") return null;
+  const raw = input.trim().toLowerCase();
+  if (!raw) return null;
+  const withoutProtocol = raw.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  return withoutProtocol.split("/")[0] ?? null;
+}
+
+function normalizePrimaryColor(color: string | null | undefined): string | null {
+  if (!color) return null;
+  const trimmed = color.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("#")) return hexToHsl(trimmed);
+  return trimmed;
+}
+
+function mergeBranding(
+  base: PortalBrandingResult,
+  tenant: Record<string, unknown> | null,
+  orgName: string | null
+): PortalBrandingResult {
+  if (!tenant) return base;
+
+  const appName = (tenant.app_name as string | undefined)?.trim() || orgName || base.app_name;
+  const tagline =
+    (tenant.tagline as string | undefined)?.trim() ||
+    (orgName ? `${orgName} Client Portal` : null) ||
+    base.tagline;
+
+  const primary = normalizePrimaryColor(tenant.primary_color as string | null) ?? base.primary_color;
+  const logo = validateImageUrl((tenant.logo_url as string | null) ?? null) ?? base.logo_url;
+  const favicon = validateImageUrl((tenant.favicon_url as string | null) ?? null) ?? base.favicon_url;
+  const bgImage = validateImageUrl((tenant.login_bg_image_url as string | null) ?? null) ?? base.login_bg_image_url;
+  const bgColor = validateHexColor((tenant.login_bg_color as string | null) ?? null) ?? base.login_bg_color;
+  const bgOverlay = validateOpacity((tenant.login_bg_overlay_opacity as number | string | null) ?? base.login_bg_overlay_opacity);
+
+  return {
+    app_name: appName,
+    tagline,
+    logo_url: logo,
+    primary_color: primary,
+    favicon_url: favicon,
+    login_bg_color: bgColor,
+    login_bg_image_url: bgImage,
+    login_bg_overlay_opacity: bgOverlay,
+  };
+}
+
 export async function getPortalBranding(): Promise<PortalBrandingResult> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
@@ -168,21 +224,23 @@ export async function getPortalBranding(): Promise<PortalBrandingResult> {
     .eq("id", PORTAL_BRANDING_ID)
     .single();
 
+  const fallback: PortalBrandingResult = {
+    app_name: "KT-Portal",
+    tagline: "Client Portal",
+    logo_url: null,
+    primary_color: "231 48% 58%",
+    favicon_url: null,
+    login_bg_color: null,
+    login_bg_image_url: null,
+    login_bg_overlay_opacity: 0.5,
+  };
+
   if (error || !data) {
-    return {
-      app_name: "KT-Portal",
-      tagline: "Client Portal",
-      logo_url: null,
-      primary_color: "231 48% 58%",
-      favicon_url: null,
-      login_bg_color: null,
-      login_bg_image_url: null,
-      login_bg_overlay_opacity: 0.5,
-    };
+    return fallback;
   }
 
   const row = data as Record<string, unknown>;
-  return {
+  const baseBranding: PortalBrandingResult = {
     app_name: (row.app_name as string) ?? "KT-Portal",
     tagline: (row.tagline as string | null) ?? "Client Portal",
     logo_url: (row.logo_url as string | null) ?? null,
@@ -192,4 +250,39 @@ export async function getPortalBranding(): Promise<PortalBrandingResult> {
     login_bg_image_url: (row.login_bg_image_url as string | null) ?? null,
     login_bg_overlay_opacity: (row.login_bg_overlay_opacity as number | null) ?? 0.5,
   };
+
+  const hdrs = await headers();
+  const requestHost = normalizeHost(hdrs.get("x-forwarded-host") ?? hdrs.get("host"));
+  if (!requestHost || requestHost === "localhost" || requestHost.endsWith(".localhost")) {
+    return baseBranding;
+  }
+
+  const domain = normalizeCustomDomain(requestHost);
+  if (!domain) {
+    return baseBranding;
+  }
+
+  const { data: organization, error: orgError } = await (supabase as any)
+    .from("organizations")
+    .select("name, branding_config, custom_domain, custom_domain_verified, type, status")
+    .eq("custom_domain", domain)
+    .eq("custom_domain_verified", true)
+    .eq("type", "partner")
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (orgError && !isMissingColumnError(orgError)) {
+    return baseBranding;
+  }
+
+  if (!organization) {
+    return baseBranding;
+  }
+
+  const orgRow = organization as {
+    name?: string | null;
+    branding_config?: Record<string, unknown> | null;
+  };
+
+  return mergeBranding(baseBranding, orgRow.branding_config ?? null, orgRow.name ?? null);
 }

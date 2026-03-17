@@ -12,9 +12,16 @@ type Organization = {
   name: string;
   slug: string;
   type: string;
+  custom_domain?: string | null;
+  custom_domain_verified?: boolean | null;
   branding_config?: {
+    app_name?: string | null;
+    tagline?: string | null;
     logo_url?: string | null;
     primary_color?: string | null;
+    login_bg_color?: string | null;
+    login_bg_image_url?: string | null;
+    login_bg_overlay_opacity?: number | null;
   } | null;
 };
 
@@ -74,6 +81,7 @@ export function WhiteLabelAdminSection({ organizations }: WhiteLabelAdminSection
             <OrganizationBrandingForm
               organization={selectedOrg}
               canEdit={true}
+              canManageDomainVerification={true}
             />
           </div>
         )}

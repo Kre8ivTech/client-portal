@@ -19,7 +19,7 @@ export default function AISettingsPage() {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    supabase.auth.getUser().then(async ({ data: { user } }: { data: { user: any } }) => {
       if (!user) {
         window.location.href = '/login'
         return

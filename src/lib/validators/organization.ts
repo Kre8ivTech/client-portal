@@ -12,10 +12,15 @@ export const organizationStatusSchema = z.enum(['active', 'inactive', 'suspended
 // =============================================================================
 
 export const brandingConfigSchema = z.object({
+  app_name: z.string().max(255).optional().nullable(),
+  tagline: z.string().max(255).optional().nullable(),
   logo_url: z.string().url().optional().nullable(),
   primary_color: z.string().max(50).optional().nullable(),
   secondary_color: z.string().max(50).optional().nullable(),
   favicon_url: z.string().url().optional().nullable(),
+  login_bg_color: z.string().max(50).optional().nullable(),
+  login_bg_image_url: z.string().url().optional().nullable(),
+  login_bg_overlay_opacity: z.number().min(0).max(1).optional().nullable(),
 }).optional().nullable()
 
 // =============================================================================
@@ -50,6 +55,8 @@ export const createOrganizationSchema = z.object({
   type: organizationTypeSchema,
   status: organizationStatusSchema.default('active'),
   parent_org_id: z.string().uuid().optional().nullable(),
+  custom_domain: z.string().max(255).optional().nullable(),
+  custom_domain_verified: z.boolean().optional(),
   branding_config: brandingConfigSchema,
   settings: organizationSettingsSchema,
 })
@@ -69,6 +76,8 @@ export const updateOrganizationSchema = z.object({
   type: organizationTypeSchema.optional(),
   status: organizationStatusSchema.optional(),
   parent_org_id: z.string().uuid().optional().nullable(),
+  custom_domain: z.string().max(255).optional().nullable(),
+  custom_domain_verified: z.boolean().optional(),
   branding_config: brandingConfigSchema,
   settings: organizationSettingsSchema,
 })

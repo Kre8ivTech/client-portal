@@ -1,7 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
 import type { Database } from '@/types/database'
 
-export function createClient() {
+export function createClient(): any {
   const isBrowser = typeof document !== 'undefined'
   const isProduction = typeof window !== 'undefined' && window.location.protocol === 'https:'
 
@@ -44,5 +44,5 @@ export function createClient() {
         },
       },
     }
-  )
+  ) as any
 }

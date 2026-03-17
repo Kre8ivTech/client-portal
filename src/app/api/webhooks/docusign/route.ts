@@ -12,8 +12,6 @@ export const runtime = 'nodejs';
  * Processes DocuSign envelope events: completed, declined, voided, recipient-signed
  */
 export async function POST(request: NextRequest) {
-  console.log('[DocuSign Webhook] Received webhook request');
-
   try {
     const body = await request.text();
     
@@ -23,18 +21,17 @@ export async function POST(request: NextRequest) {
                        request.headers.get('x-authorization-1');
       
       if (!signature) {
-        console.warn('[DocuSign Webhook] Missing signature header');
-        // Log but don't fail - return 200 to prevent retries
-        return NextResponse.json({ received: true, warning: 'Missing signature' });
+        console.error('[DocuSign Webhook] Missing signature header - rejecting request');
+        return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
       }
 
       if (!verifyWebhookSignature(body, signature, process.env.DOCUSIGN_WEBHOOK_SECRET)) {
-        console.error('[DocuSign Webhook] Invalid signature');
-        // Log but return 200 to prevent retries
-        return NextResponse.json({ received: true, warning: 'Invalid signature' });
+        console.error('[DocuSign Webhook] Invalid signature - rejecting request');
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
       }
     } else {
-      console.warn('[DocuSign Webhook] DOCUSIGN_WEBHOOK_SECRET not configured - skipping verification');
+      console.error('[DocuSign Webhook] DOCUSIGN_WEBHOOK_SECRET not configured - rejecting request for security');
+      return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
     }
 
     // Parse the DocuSign event payload
@@ -46,12 +43,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true, warning: 'Failed to parse payload' });
     }
 
-    console.log(`[DocuSign Webhook] Processing event: ${event.eventType} for envelope ${event.envelopeId}`);
-
     // Process the event
     await processDocuSignEvent(event);
 
-    console.log(`[DocuSign Webhook] Successfully processed event: ${event.eventType}`);
     return NextResponse.json({ received: true });
 
   } catch (error) {
@@ -186,8 +180,6 @@ async function processDocuSignEvent(event: DocuSignWebhookEvent): Promise<void> 
     return;
   }
 
-  console.log(`[DocuSign Webhook] Processing event for contract ${contractId}`);
-
   // Fetch contract to get organization_id
   const { data: contract, error: contractError } = await (supabaseAdmin as any)
     .from('contracts')
@@ -218,7 +210,7 @@ async function processDocuSignEvent(event: DocuSignWebhookEvent): Promise<void> 
       break;
 
     default:
-      console.log(`[DocuSign Webhook] Unhandled event type: ${event.eventType}`);
+      // Unhandled event type - no action needed
   }
 }
 
@@ -229,8 +221,6 @@ async function handleEnvelopeCompleted(
   contract: { id: string; organization_id: string; docusign_envelope_id: string | null },
   event: DocuSignWebhookEvent
 ): Promise<void> {
-  console.log(`[DocuSign Webhook] Envelope completed for contract ${contract.id}`);
-
   try {
     // Download signed document from DocuSign
     const documentBuffer = await downloadDocument(event.envelopeId, 'combined');
@@ -243,8 +233,6 @@ async function handleEnvelopeCompleted(
       documentBuffer,
       filename
     );
-
-    console.log(`[DocuSign Webhook] Uploaded signed document to S3: ${documentUrl}`);
 
     // Update contract
     const { error: updateError } = await (supabaseAdmin as any)
@@ -291,7 +279,6 @@ async function handleEnvelopeCompleted(
       document_url: documentUrl,
     });
 
-    console.log(`[DocuSign Webhook] Successfully processed envelope completion for contract ${contract.id}`);
   } catch (error) {
     console.error('[DocuSign Webhook] Error handling envelope completion:', error);
     throw error;
@@ -305,8 +292,6 @@ async function handleEnvelopeDeclined(
   contract: { id: string; organization_id: string; docusign_envelope_id: string | null },
   event: DocuSignWebhookEvent
 ): Promise<void> {
-  console.log(`[DocuSign Webhook] Envelope declined for contract ${contract.id}`);
-
   try {
     // Find the recipient who declined
     const declinedRecipient = event.recipients?.find(
@@ -350,7 +335,6 @@ async function handleEnvelopeDeclined(
       message: `Contract declined by ${declinedRecipient?.email || 'unknown signer'}`,
     });
 
-    console.log(`[DocuSign Webhook] Successfully processed envelope decline for contract ${contract.id}`);
   } catch (error) {
     console.error('[DocuSign Webhook] Error handling envelope decline:', error);
     throw error;
@@ -364,8 +348,6 @@ async function handleEnvelopeVoided(
   contract: { id: string; organization_id: string; docusign_envelope_id: string | null },
   event: DocuSignWebhookEvent
 ): Promise<void> {
-  console.log(`[DocuSign Webhook] Envelope voided for contract ${contract.id}`);
-
   try {
     // Update contract status
     const { error: updateError } = await (supabaseAdmin as any)
@@ -389,7 +371,6 @@ async function handleEnvelopeVoided(
       message: 'Contract envelope was voided/cancelled',
     });
 
-    console.log(`[DocuSign Webhook] Successfully processed envelope void for contract ${contract.id}`);
   } catch (error) {
     console.error('[DocuSign Webhook] Error handling envelope void:', error);
     throw error;
@@ -403,8 +384,6 @@ async function handleRecipientSigned(
   contract: { id: string; organization_id: string; docusign_envelope_id: string | null },
   event: DocuSignWebhookEvent
 ): Promise<void> {
-  console.log(`[DocuSign Webhook] Recipient signed for contract ${contract.id}`);
-
   try {
     // Find the recipient who just signed
     const signedRecipient = event.recipients?.find(
@@ -412,7 +391,6 @@ async function handleRecipientSigned(
     );
 
     if (!signedRecipient?.email) {
-      console.warn('[DocuSign Webhook] No signed recipient found in event');
       return;
     }
 
@@ -439,7 +417,6 @@ async function handleRecipientSigned(
       message: `${signedRecipient.email} signed the contract`,
     });
 
-    console.log(`[DocuSign Webhook] Successfully processed recipient signed for contract ${contract.id}`);
   } catch (error) {
     console.error('[DocuSign Webhook] Error handling recipient signed:', error);
     throw error;

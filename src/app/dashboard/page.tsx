@@ -10,13 +10,14 @@ import { InboxWrapper } from "@/components/dashboard/inbox-wrapper";
 import { NotificationBox } from "@/components/dashboard/notification-box";
 import { CriticalTicketsWidget } from "@/components/dashboard/critical-tickets-widget";
 import { SLAComplianceWidget } from "@/components/dashboard/sla-compliance-widget";
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
   const supabase = (await createServerSupabaseClient()) as any
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  if (!user) redirect('/login')
 
   const { data: profile } = await supabase
     .from('users')
@@ -34,6 +35,9 @@ export default async function DashboardPage() {
   let recentTickets: { id: string; ticket_number: number; subject: string; status: string; created_at: string }[] = []
   let calendarTickets: any[] = []
   
+  // Active projects count
+  let activeProjectCount = 0
+
   // Staff-specific data
   let assignedClientsCount = 0
   let assignedClients: { id: string; name: string; slug: string }[] = []
@@ -56,6 +60,15 @@ export default async function DashboardPage() {
     compliance_percentage: 100,
     avg_response_time_hours: 0,
     avg_resolution_time_hours: 0
+  }
+
+  // Fetch active project count
+  {
+    const { count } = await (supabase as any)
+      .from('projects')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'active')
+    activeProjectCount = count ?? 0
   }
 
   if (organizationId) {
@@ -287,8 +300,8 @@ export default async function DashboardPage() {
         <StatsCard
           icon={FolderKanban}
           title="Active Projects"
-          value="—"
-          description="On track"
+          value={String(activeProjectCount)}
+          description={activeProjectCount > 0 ? `${activeProjectCount} in progress` : "No active projects"}
           link="/dashboard/projects"
         />
         

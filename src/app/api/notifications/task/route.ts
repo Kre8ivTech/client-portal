@@ -13,6 +13,22 @@ import {
 import {
   NotificationType
 } from '@/lib/notifications'
+import { z } from 'zod'
+
+const taskNotificationSchema = z.object({
+  taskId: z.string().uuid('Invalid task ID format'),
+  taskType: z.enum(['service_request', 'project_request']),
+  notificationType: z.enum([
+    'service_request_created',
+    'service_request_assigned',
+    'service_request_updated',
+    'project_request_created',
+    'project_request_assigned',
+    'project_request_updated',
+    'task_acknowledgement_reminder',
+  ]),
+  context: z.record(z.unknown()).optional(),
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,42 +44,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Parse request body
+    // Parse and validate request body
     const body = await request.json()
-    const { taskId, taskType, notificationType, context } = body
+    const result = taskNotificationSchema.safeParse(body)
 
-    if (!taskId || !taskType || !notificationType) {
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: taskId, taskType, notificationType' },
+        { error: 'Validation failed', details: result.error.flatten() },
         { status: 400 }
       )
     }
 
-    // Validate task type
-    if (taskType !== 'service_request' && taskType !== 'project_request') {
-      return NextResponse.json(
-        { error: 'Invalid task type. Must be service_request or project_request' },
-        { status: 400 }
-      )
-    }
-
-    // Validate notification type
-    const validTypes: NotificationType[] = [
-      'service_request_created',
-      'service_request_assigned',
-      'service_request_updated',
-      'project_request_created',
-      'project_request_assigned',
-      'project_request_updated',
-      'task_acknowledgement_reminder',
-    ]
-
-    if (!validTypes.includes(notificationType)) {
-      return NextResponse.json(
-        { error: 'Invalid notification type' },
-        { status: 400 }
-      )
-    }
+    const { taskId, taskType, notificationType, context } = result.data
 
     // Build notification payloads
     const payloads = await buildTaskNotificationPayloads(

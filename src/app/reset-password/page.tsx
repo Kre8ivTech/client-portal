@@ -47,8 +47,9 @@ export default function ResetPasswordPage() {
       setMessage({ type: "error", text: "Passwords do not match." });
       return;
     }
-    if (password.length < 6) {
-      setMessage({ type: "error", text: "Password must be at least 6 characters." });
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      setMessage({ type: "error", text: "Password must be at least 8 characters with uppercase, lowercase, and a number." });
       return;
     }
     setLoading(true);
@@ -101,11 +102,11 @@ export default function ResetPasswordPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="At least 6 characters"
+                placeholder="At least 8 characters"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 className="w-full bg-slate-950/50 border-slate-800 text-white h-11"
                 disabled={loading}
                 autoComplete="new-password"
@@ -122,7 +123,7 @@ export default function ResetPasswordPage() {
                 value={confirm}
                 onChange={(e) => setConfirm(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 className="w-full bg-slate-950/50 border-slate-800 text-white h-11"
                 disabled={loading}
                 autoComplete="new-password"

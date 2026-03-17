@@ -98,7 +98,8 @@ export async function GET(request: NextRequest) {
 
     // Search by name
     if (query.search) {
-      dbQuery = dbQuery.ilike('name', `%${query.search}%`)
+      const sanitizedSearch = query.search.replace(/[%_*(),.]/g, '')
+      dbQuery = dbQuery.ilike('name', `%${sanitizedSearch}%`)
     }
 
     // Price filters

@@ -6,6 +6,7 @@ import { getPortalBranding } from "@/lib/actions/portal-branding";
 import { getBaseMetadata } from "@/lib/seo";
 import { Toaster } from "@/components/ui/toaster";
 import { validateEnvironment } from "@/lib/env-validation";
+import { sanitizeCssColor } from "@/lib/sanitize";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,7 +27,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const branding = await getPortalBranding();
-  const primaryVar = branding.primary_color.trim();
+  const primaryVar = sanitizeCssColor(branding.primary_color);
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className} suppressHydrationWarning>

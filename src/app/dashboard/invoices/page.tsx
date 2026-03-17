@@ -3,8 +3,9 @@ import { requireInvoiceAccess } from "@/lib/require-role";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Download, Plus, FileText, Eye, Send } from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import Link from "next/link";
+import { ExportCsvButton } from "@/components/invoices/export-csv-button";
 type InvoiceWithOrg = any;
 
 // Status badge styling
@@ -106,10 +107,7 @@ export default async function InvoicesPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
-            <Download size={18} />
-            Export CSV
-          </Button>
+          <ExportCsvButton />
           {canManage && (
             <Button className="gap-2" asChild>
               <Link href="/dashboard/admin/invoices/new">

@@ -2,12 +2,14 @@ import type { Metadata } from 'next'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, Clock, User, Share2, ThumbsUp, ThumbsDown, MessageSquare, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Clock, User, Share2, MessageSquare, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import { generatePageMetadata, truncateDescription, stripHtml } from '@/lib/seo'
+import { SafeHtml } from '@/components/ui/safe-html'
+import { ArticleFeedback } from '@/components/kb/article-feedback'
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>
@@ -116,28 +118,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
       {/* Article Content */}
       <article className="prose prose-slate prose-lg max-w-none prose-headings:font-black prose-headings:tracking-tight prose-a:text-blue-600 hover:prose-a:text-blue-700 prose-img:rounded-3xl prose-img:shadow-xl">
-        <div dangerouslySetInnerHTML={{ __html: article.content }} />
+        <SafeHtml html={article.content} />
       </article>
 
       {/* Helpful Feedback */}
       <Separator className="my-12" />
       
-      <div className="bg-slate-50 rounded-[32px] p-8 md:p-12 text-center space-y-6 border border-slate-100 shadow-inner">
-        <h3 className="text-xl font-bold text-slate-900">Was this article helpful?</h3>
-        <div className="flex justify-center gap-4">
-          <Button variant="outline" className="h-14 px-8 rounded-2xl bg-white border-slate-200 hover:border-blue-600 hover:bg-blue-50 transition-all gap-2 group">
-            <ThumbsUp size={20} className="group-hover:text-blue-600" />
-            <span className="font-bold">Yes, it helped!</span>
-          </Button>
-          <Button variant="outline" className="h-14 px-8 rounded-2xl bg-white border-slate-200 hover:border-red-600 hover:bg-red-50 transition-all gap-2 group">
-            <ThumbsDown size={20} className="group-hover:text-red-600" />
-            <span className="font-bold">Not really</span>
-          </Button>
-        </div>
-        <p className="text-sm text-slate-500 font-medium">
-          {article.helpful_count} people found this helpful
-        </p>
-      </div>
+      <ArticleFeedback articleId={article.id} initialCount={article.helpful_count || 0} />
 
       {/* Footer Navigation */}
       <div className="flex justify-between items-center py-12">

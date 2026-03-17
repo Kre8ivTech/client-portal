@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { verifySignedOAuthState } from "@/lib/security";
 
 const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID;
 const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET;
@@ -26,11 +27,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Verify state
-  let stateData: { userId: string; ts: number };
-  try {
-    stateData = JSON.parse(Buffer.from(state, "base64").toString());
-  } catch {
+  // Verify state signature
+  const stateData = verifySignedOAuthState(state) as { userId: string; ts: number } | null;
+  if (!stateData) {
     return NextResponse.redirect(
       new URL("/dashboard/integrations?error=invalid_state", request.url)
     );

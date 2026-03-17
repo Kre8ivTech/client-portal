@@ -28,18 +28,21 @@ export type Database = {
   };
   public: {
     Tables: {
+      // TODO: Regenerate types with `supabase gen types typescript --local > src/types/database.ts`
+      // The catch-all below masks type errors for tables not yet in this file.
+      // Once types are regenerated with all tables, remove this catch-all.
       [key: string]: {
-        Row: Record<string, any>;
-        Insert: Record<string, any>;
-        Update: Record<string, any>;
-        Relationships: Array<{
-          foreignKeyName: string;
-          columns: string[];
-          isOneToOne: boolean;
-          referencedRelation: string;
-          referencedColumns: string[];
-        }>;
-      };
+        Row: Record<string, any>
+        Insert: Record<string, any>
+        Update: Record<string, any>
+        Relationships: {
+          foreignKeyName: string
+          columns: string[]
+          isOneToOne: boolean
+          referencedRelation: string
+          referencedColumns: string[]
+        }[]
+      }
       audit_logs: {
         Row: {
           action: string;
@@ -1969,15 +1972,15 @@ export type Database = {
     };
     Views: {
       [key: string]: {
-        Row: Record<string, any>;
-        Relationships: Array<{
-          foreignKeyName: string;
-          columns: string[];
-          isOneToOne: boolean;
-          referencedRelation: string;
-          referencedColumns: string[];
-        }>;
-      };
+        Row: Record<string, any>
+        Relationships: {
+          foreignKeyName: string
+          columns: string[]
+          isOneToOne: boolean
+          referencedRelation: string
+          referencedColumns: string[]
+        }[]
+      }
       user_profiles: {
         Row: {
           avatar_url: string | null;
@@ -2007,7 +2010,7 @@ export type Database = {
       };
     };
     Functions: {
-      [key: string]: { Args: Record<string, any> | any; Returns: any };
+      [key: string]: { Args: Record<string, any> | any; Returns: any }
       get_user_organization_id: { Args: never; Returns: string };
       get_user_organization_type: { Args: never; Returns: string };
       is_admin_or_staff: { Args: never; Returns: boolean };
@@ -2017,7 +2020,7 @@ export type Database = {
       is_super_admin: { Args: never; Returns: boolean };
     };
     Enums: {
-      [key: string]: string;
+      [key: string]: string
       billing_interval: "monthly" | "yearly" | "one_time";
       coverage_type: "support" | "dev" | "both";
       dispute_status: "pending" | "under_review" | "resolved" | "rejected";

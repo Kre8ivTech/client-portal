@@ -1,5 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+
+const createNotificationSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(500, 'Title must be at most 500 characters'),
+  content: z.string().min(1, 'Content is required').max(5000, 'Content must be at most 5000 characters'),
+  type: z.enum(['platform_wide', 'staff_specific', 'client_specific', 'organization_specific']).optional(),
+  target_audience: z.enum(['all', 'staff', 'clients', 'specific_users', 'specific_organizations']).optional(),
+  priority: z.enum(['info', 'low', 'medium', 'high', 'critical']).optional().default('info'),
+  expires_at: z.string().datetime().nullable().optional(),
+  target_organization_ids: z.array(z.string().uuid()).optional(),
+  target_user_ids: z.array(z.string().uuid()).optional(),
+})
 
 export async function GET(request: NextRequest) {
   try {
@@ -62,8 +74,17 @@ export async function POST(request: NextRequest) {
     const isAccountManager = profile.is_account_manager
     const isStaff = profile.role === 'staff' || profile.role === 'partner_staff'
 
-    // Parse request body
+    // Parse and validate request body
     const body = await request.json()
+    const result = createNotificationSchema.safeParse(body)
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: result.error.flatten() },
+        { status: 400 }
+      )
+    }
+
     const {
       title,
       content,
@@ -73,15 +94,7 @@ export async function POST(request: NextRequest) {
       expires_at,
       target_organization_ids,
       target_user_ids,
-    } = body
-
-    // Validate required fields
-    if (!title || !content) {
-      return NextResponse.json(
-        { error: 'Title and content are required' },
-        { status: 400 }
-      )
-    }
+    } = result.data
 
     // Validate permissions based on notification type
     if (!isAdmin) {
@@ -133,11 +146,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Handle target IDs
-    if (target_organization_ids && Array.isArray(target_organization_ids)) {
+    if (target_organization_ids) {
       notificationData.target_organization_ids = target_organization_ids
     }
 
-    if (target_user_ids && Array.isArray(target_user_ids)) {
+    if (target_user_ids) {
       notificationData.target_user_ids = target_user_ids
     }
 

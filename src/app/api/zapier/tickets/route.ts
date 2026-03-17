@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyApiKey, hasScope } from "@/lib/zapier/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { z } from "zod";
+
+const createZapierTicketSchema = z.object({
+  subject: z.string().min(5, "Subject must be at least 5 characters").max(500, "Subject must be at most 500 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters").max(10000, "Description must be at most 10,000 characters"),
+  priority: z.enum(["low", "medium", "high", "critical"]).optional().default("medium"),
+  category: z.string().max(200).nullable().optional(),
+});
 
 // GET: List tickets (for Zapier polling triggers)
 export async function GET(request: NextRequest) {
@@ -65,14 +73,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { subject, description, priority, category } = body;
+    const result = createZapierTicketSchema.safeParse(body);
 
-    if (!subject || !description) {
+    if (!result.success) {
       return NextResponse.json(
-        { error: "subject and description are required" },
+        { error: "Validation failed", details: result.error.flatten() },
         { status: 400 }
       );
     }
+
+    const { subject, description, priority, category } = result.data;
 
     // Get the next ticket number
     const { data: lastTicket } = await supabaseAdmin

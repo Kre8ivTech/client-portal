@@ -8,14 +8,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { sendTemplatedEmail } from '@/lib/notifications/providers/email'
-
-// Use admin client to bypass RLS
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-) as any
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,6 +18,8 @@ export async function GET(request: NextRequest) {
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const supabaseAdmin = getSupabaseAdmin() as any
 
     console.log('[Cron] Starting task acknowledgement check...')
 

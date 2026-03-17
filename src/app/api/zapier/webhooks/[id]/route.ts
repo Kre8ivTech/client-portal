@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { verifyApiKey } from "@/lib/zapier/auth";
+import { z } from "zod";
+
+const updateWebhookSchema = z.object({
+  url: z.string().url("Invalid URL format").optional(),
+  events: z.array(z.string().min(1)).optional(),
+  is_active: z.boolean().optional(),
+});
 
 type RouteParams = {
   params: Promise<{ id: string }>;
@@ -84,14 +91,26 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const { is_active, url } = body;
+    const result = updateWebhookSchema.safeParse(body);
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: result.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    const { is_active, url, events } = result.data;
 
     const updateData: any = {};
-    if (typeof is_active === "boolean") {
+    if (is_active !== undefined) {
       updateData.is_active = is_active;
     }
-    if (url) {
+    if (url !== undefined) {
       updateData.url = url;
+    }
+    if (events !== undefined) {
+      updateData.events = events;
     }
 
     const { data, error } = await supabase

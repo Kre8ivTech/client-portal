@@ -115,6 +115,7 @@ export function useMessageableUsers(searchQuery: string = "") {
   });
 }
 
+// @deprecated - currently unused
 export function useExistingConversation(userId: string) {
   const supabase = createClient();
 

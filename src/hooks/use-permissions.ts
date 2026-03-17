@@ -87,6 +87,7 @@ export function useHasAllPermissions(
 /**
  * Client-side permission check helper
  * Returns true if user has the permission, false otherwise
+ * @deprecated - currently unused
  */
 export async function checkPermission(
   userId: string,

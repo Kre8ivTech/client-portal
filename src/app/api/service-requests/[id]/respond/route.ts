@@ -31,7 +31,7 @@ export async function POST(
 
     // Get user profile and check role
     const { data: profile, error: profileError } = await supabase
-      .from('profiles')
+      .from('users')
       .select('id, organization_id, role')
       .eq('id', user.id)
       .single()
@@ -138,8 +138,22 @@ export async function POST(
       console.error('Error fetching updated request:', updateFetchError)
     }
 
-    // TODO: Send notification to client about new response
-    // await notifyClientOfResponse(serviceRequest.requested_by, id)
+    // Send notification to client about new response
+    try {
+      await (supabase as any).from('notifications').insert({
+        title: 'Service Request Update',
+        content: 'Your service request has received a new response.',
+        type: 'staff_specific',
+        priority: 'medium',
+        target_audience: 'specific_users',
+        target_user_ids: [serviceRequest.requested_by],
+        action_url: `/dashboard/service/${serviceRequest.id}`,
+        created_by: user.id,
+        is_active: true,
+      })
+    } catch {
+      // Notification is best-effort, don't fail the request
+    }
 
     return NextResponse.json(
       {

@@ -1,14 +1,21 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Search, Book, FileText, ChevronRight, HelpCircle, LifeBuoy, Zap } from 'lucide-react'
+import { Book, FileText, ChevronRight, HelpCircle, LifeBuoy, Zap } from 'lucide-react'
 import Link from 'next/link'
+import { KBSearchForm } from '@/components/kb/kb-search-form'
 
-export default async function KnowledgeBasePage() {
+export default async function KnowledgeBasePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>
+}) {
+  const { q } = await searchParams
   const supabase = (await createServerSupabaseClient()) as any
-  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
   // Fetch categories
   const { data: categories } = await supabase
     .from('kb_categories')
@@ -16,12 +23,17 @@ export default async function KnowledgeBasePage() {
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
 
-  // Fetch featured articles
-  const { data: featuredArticles } = await supabase
+  // Fetch featured articles (with optional search filter)
+  let articlesQuery = supabase
     .from('kb_articles')
     .select('id, title, excerpt, slug, category_id')
     .eq('status', 'published')
-    .limit(5)
+
+  if (q) {
+    articlesQuery = articlesQuery.or(`title.ilike.%${q}%,excerpt.ilike.%${q}%`)
+  }
+
+  const { data: featuredArticles } = await articlesQuery.limit(5)
 
   return (
     <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -34,14 +46,7 @@ export default async function KnowledgeBasePage() {
         <div className="max-w-2xl mx-auto relative group">
           <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 h-5 w-5" />
-            <Input 
-              placeholder="Search for articles, guides, and more..." 
-              className="h-16 pl-12 pr-32 rounded-2xl border-slate-200 bg-white shadow-xl text-lg focus:ring-blue-600"
-            />
-            <Button className="absolute right-2 top-2 h-12 px-8 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold shadow-lg shadow-blue-200 transition-all active:scale-95">
-              Search
-            </Button>
+            <KBSearchForm />
           </div>
         </div>
       </div>

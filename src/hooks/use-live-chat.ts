@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 
@@ -33,7 +33,7 @@ export interface ChatMessage {
  * Handles session creation, messaging, and real-time updates
  */
 export function useLiveChat(visitorName: string, visitorEmail: string) {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const queryClient = useQueryClient()
   const [sessionId, setSessionId] = useState<string | null>(null)
 
@@ -208,9 +208,10 @@ export function useLiveChat(visitorName: string, visitorEmail: string) {
 /**
  * Hook for managing live chat as an agent
  * Handles accepting sessions, sending messages, and transferring
+ * @deprecated - currently unused
  */
 export function useAgentChat(agentId: string) {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const queryClient = useQueryClient()
 
   // Get waiting sessions (queue)

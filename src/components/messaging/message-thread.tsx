@@ -288,7 +288,7 @@ export function MessageThread({ conversation, messages, userId, onSendMessage }:
               const showAvatar = idx === 0 || messages[idx - 1].sender_id !== msg.sender_id
 
               return (
-                <div key={idx} className={cn(
+                <div key={msg.id} className={cn(
                   "flex gap-3",
                   isMe ? "flex-row-reverse" : "flex-row"
                 )}>

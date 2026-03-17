@@ -3,7 +3,9 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -94,14 +96,14 @@ export async function POST(request: NextRequest) {
 
     await s3Client.send(command);
 
-    // Construct the public URL
-    const avatarUrl = `https://${BUCKET_NAME}.s3.${process.env.AWS_REGION || "us-east-1"}.amazonaws.com/${objectKey}`;
-
-    // Update profile with the new avatar URL
+    // Store the S3 object key in the profile rather than a hardcoded public URL.
+    // This avoids assuming the bucket allows public reads and lets us generate
+    // presigned URLs on demand. Consumers of avatar_url should check whether the
+    // stored value is a full URL or an object key and resolve accordingly.
     const { error: updateError } = await (supabase as any)
       .from("profiles")
       .update({
-        avatar_url: avatarUrl,
+        avatar_url: objectKey,
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", user.id);
@@ -113,9 +115,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate a presigned URL for immediate client use (valid for 1 hour)
+    const getCommand = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: objectKey,
+    });
+    const presignedUrl = await getSignedUrl(s3Client, getCommand, {
+      expiresIn: 3600,
+    });
+
     return NextResponse.json({
       success: true,
-      avatar_url: avatarUrl,
+      avatar_url: presignedUrl,
     });
   } catch (error) {
     return NextResponse.json(

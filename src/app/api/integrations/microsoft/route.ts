@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createSignedOAuthState } from "@/lib/security";
 
 const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID;
 const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET;
@@ -29,8 +30,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Generate state token for CSRF protection
-  const state = Buffer.from(JSON.stringify({ userId: user.id, ts: Date.now() })).toString("base64");
+  // Generate signed state token for CSRF protection
+  const state = createSignedOAuthState({ userId: user.id, ts: Date.now() });
 
   const authUrl = new URL("https://login.microsoftonline.com/common/oauth2/v2.0/authorize");
   authUrl.searchParams.set("client_id", MICROSOFT_CLIENT_ID);

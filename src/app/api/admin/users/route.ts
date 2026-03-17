@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
@@ -248,8 +249,8 @@ export async function POST(request: Request) {
     // Use admin client to create user in Supabase Auth
     const supabaseAdmin = getSupabaseAdmin();
     
-    // Generate a temporary password (user will need to reset it)
-    const temporaryPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
+    // Generate a cryptographically secure temporary password (user will need to reset it)
+    const temporaryPassword = crypto.randomBytes(24).toString("base64url");
     
     const { data: newAuthUser, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,

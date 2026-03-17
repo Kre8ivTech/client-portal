@@ -3,12 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from '@/components/ui/badge'
 import { FileText, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 export default async function ContractsPage() {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   
-  if (!user) return null
+  if (!user) redirect('/login')
 
   // Fetch client's contracts
   const { data: contracts, error } = await (supabase as any)

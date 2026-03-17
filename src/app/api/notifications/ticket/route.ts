@@ -14,6 +14,22 @@ import {
   formatNotificationMessage, 
   NotificationType 
 } from '@/lib/notifications'
+import { z } from 'zod'
+
+const ticketNotificationSchema = z.object({
+  ticketId: z.string().uuid('Invalid ticket ID format'),
+  notificationType: z.enum([
+    'ticket_created',
+    'ticket_updated',
+    'ticket_comment',
+    'ticket_assigned',
+    'ticket_resolved',
+    'ticket_closed',
+    'sla_warning',
+    'sla_breach',
+  ]),
+  context: z.record(z.unknown()).optional(),
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,35 +45,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Parse request body
+    // Parse and validate request body
     const body = await request.json()
-    const { ticketId, notificationType, context } = body
+    const result = ticketNotificationSchema.safeParse(body)
 
-    if (!ticketId || !notificationType) {
+    if (!result.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: ticketId, notificationType' },
+        { error: 'Validation failed', details: result.error.flatten() },
         { status: 400 }
       )
     }
 
-    // Validate notification type
-    const validTypes: NotificationType[] = [
-      'ticket_created',
-      'ticket_updated',
-      'ticket_comment',
-      'ticket_assigned',
-      'ticket_resolved',
-      'ticket_closed',
-      'sla_warning',
-      'sla_breach',
-    ]
-
-    if (!validTypes.includes(notificationType)) {
-      return NextResponse.json(
-        { error: 'Invalid notification type' },
-        { status: 400 }
-      )
-    }
+    const { ticketId, notificationType, context } = result.data
 
     // Build notification payloads
     const payloads = await buildTicketNotificationPayloads(

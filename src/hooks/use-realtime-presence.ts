@@ -1,67 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
-export interface PresenceState {
-  [userId: string]: Array<{
-    user_id: string
-    online_at: string
-    presence_ref: string
-  }>
-}
-
-/**
- * Hook to track user presence in a specific channel
- * Returns the current presence state showing who is online
- * @param channelName - Name of the presence channel to join
- * @param userId - Current user's ID
- */
-export function useRealtimePresence(channelName: string, userId?: string) {
-  const supabase = createClient()
-  const [presenceState, setPresenceState] = useState<PresenceState>({})
-  const [onlineUsers, setOnlineUsers] = useState<string[]>([])
-
-  useEffect(() => {
-    if (!userId) return
-
-    const channel = supabase.channel(channelName, {
-      config: {
-        presence: {
-          key: userId,
-        },
-      },
-    })
-
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState() as PresenceState
-        setPresenceState(state)
-        setOnlineUsers(Object.keys(state))
-      })
-      .on('presence', { event: 'join' }, ({ key, newPresences }: any) => {
-        console.log('User joined:', key, newPresences)
-      })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }: any) => {
-        console.log('User left:', key, leftPresences)
-      })
-      .subscribe(async (status: any) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({
-            user_id: userId,
-            online_at: new Date().toISOString(),
-          })
-        }
-      })
-
-    return () => {
-      channel.untrack()
-      supabase.removeChannel(channel)
-    }
-  }, [supabase, channelName, userId])
-
-  return { presenceState, onlineUsers }
-}
+// useRealtimePresence removed - was unused. Restore from git history if needed.
 
 /**
  * Hook to broadcast and receive real-time events in a channel
@@ -74,31 +16,34 @@ export function useRealtimeBroadcast<T = any>(
   eventType: string,
   onEvent?: (payload: T) => void
 ) {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
+  const channelRef = useRef<any>(null)
 
   useEffect(() => {
-    if (!onEvent) return
-
     const channel = supabase
       .channel(channelName)
       .on('broadcast', { event: eventType }, (payload: any) => {
-        onEvent(payload.payload as T)
+        onEvent?.(payload.payload as T)
       })
       .subscribe()
 
+    channelRef.current = channel
+
     return () => {
       supabase.removeChannel(channel)
+      channelRef.current = null
     }
-  }, [supabase, channelName, eventType, onEvent])
+  }, [supabase, channelName, eventType])
 
-  const broadcast = async (payload: T) => {
-    const channel = supabase.channel(channelName)
-    await channel.send({
-      type: 'broadcast',
-      event: eventType,
-      payload,
-    })
-  }
+  const broadcast = useCallback(async (payload: T) => {
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: 'broadcast',
+        event: eventType,
+        payload,
+      })
+    }
+  }, [eventType])
 
   return { broadcast }
 }

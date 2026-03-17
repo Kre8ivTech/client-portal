@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,7 +34,8 @@ export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const supabase = createClient();
+  const isInitializingRef = useRef(false);
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -59,6 +60,9 @@ export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps
       setInitError("Please sign in to use the AI assistant.");
       return;
     }
+
+    if (isInitializingRef.current) return;
+    isInitializingRef.current = true;
 
     try {
       // Use null for organization_id if not provided (will use global config)
@@ -95,6 +99,8 @@ export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps
     } catch (error: any) {
       console.error("Failed to initialize conversation:", error);
       setInitError("Unable to start conversation. Please try again.");
+    } finally {
+      isInitializingRef.current = false;
     }
   };
 
@@ -318,7 +324,7 @@ export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps
                         ref={inputRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
+                        onKeyDown={handleKeyPress}
                         placeholder="Ask me anything..."
                         disabled={loading || !conversationId}
                         className="flex-1 bg-background"
@@ -346,6 +352,7 @@ export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps
           size="lg"
           className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl z-50 p-0 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 hover:scale-105 transition-all"
           onClick={() => setIsOpen(true)}
+          aria-label="Open AI assistant"
         >
           <Sparkles className="h-6 w-6" />
         </Button>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 
@@ -11,7 +11,7 @@ import { createClient } from '@/lib/supabase/client'
  */
 export function useRealtimeMessages(conversationId?: string) {
   const queryClient = useQueryClient()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const channel = supabase
@@ -25,8 +25,6 @@ export function useRealtimeMessages(conversationId?: string) {
           ...(conversationId && { filter: `conversation_id=eq.${conversationId}` }),
         },
         (payload: any) => {
-          console.log('Message change detected:', payload)
-          
           // Invalidate specific conversation messages if conversationId provided
           if (conversationId) {
             queryClient.invalidateQueries({ 
@@ -66,7 +64,7 @@ export function useRealtimeMessages(conversationId?: string) {
  */
 export function useRealtimeConversations() {
   const queryClient = useQueryClient()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const channel = supabase
@@ -75,8 +73,6 @@ export function useRealtimeConversations() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'conversations' },
         (payload: any) => {
-          console.log('Conversation change detected:', payload)
-          
           // Invalidate conversations list
           queryClient.invalidateQueries({ 
             queryKey: ['conversations'] 

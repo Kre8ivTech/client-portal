@@ -5,15 +5,10 @@
  * Checks SLA status whenever tickets are accessed and triggers notifications
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { sendNotifications, buildTicketNotificationPayloads } from './send'
 import { formatNotificationMessage } from './index'
 import { getSLASettings, getNotificationCooldownMs } from './settings'
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-) as any
 
 interface SLACheckResult {
   checked: number
@@ -36,6 +31,8 @@ export async function checkAndNotifySLA(): Promise<SLACheckResult> {
     if (!settings.enabled || !settings.cron_enabled) {
       return { checked: 0, notified: 0, tickets: [] }
     }
+
+    const supabaseAdmin = getSupabaseAdmin()
 
     // Get tickets needing SLA notifications
     const { data: tickets, error } = await supabaseAdmin.rpc(
@@ -131,6 +128,8 @@ export async function checkTicketSLA(ticketId: string): Promise<boolean> {
     if (!settings.enabled) {
       return false
     }
+
+    const supabaseAdmin = getSupabaseAdmin()
 
     // Get the specific ticket with SLA info
     const { data: ticket, error } = await supabaseAdmin

@@ -43,7 +43,9 @@ export async function POST(
     }
 
     const p = profile as { organization_id: string | null; role: string }
-    if (p.organization_id !== invoice.organization_id) {
+    const isSuperAdmin = p.role === 'super_admin'
+    const isStaff = p.role === 'staff'
+    if (!isSuperAdmin && !isStaff && p.organization_id !== invoice.organization_id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

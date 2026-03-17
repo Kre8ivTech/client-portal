@@ -19,6 +19,20 @@ export type AppSettings = {
   timezone: string | null;
 };
 
+// Sensitive field names that should never be exposed to non-admin users
+const SENSITIVE_SETTINGS_KEYS = [
+  "openrouter_api_key",
+  "anthropic_api_key",
+  "openai_api_key",
+  "gemini_api_key",
+  "stripe_live_secret_key",
+  "stripe_live_webhook_secret",
+  "stripe_test_secret_key",
+  "stripe_test_webhook_secret",
+  "recaptcha_secret_key",
+  "docusign_secret",
+] as const;
+
 export async function getAppSettings(): Promise<AppSettings> {
   const supabase = await createServerSupabaseClient();
   const { data, error } = await supabase
@@ -41,6 +55,32 @@ export async function getAppSettings(): Promise<AppSettings> {
       gemini_api_key: null,
       timezone: null,
     };
+  }
+
+  // Strip sensitive API keys for non-admin users
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const role = (profile as { role?: string } | null)?.role;
+    const isAdmin = role === "super_admin" || role === "staff";
+
+    if (!isAdmin) {
+      const settings = Object.assign({}, data) as Record<string, unknown>;
+      for (const key of SENSITIVE_SETTINGS_KEYS) {
+        if (key in settings) {
+          delete settings[key];
+        }
+      }
+      return settings as AppSettings;
+    }
   }
 
   return data as AppSettings;

@@ -24,7 +24,7 @@ import {
 import { format, differenceInHours, isPast } from 'date-fns'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, X, AlertCircle } from 'lucide-react'
+import { Search, X, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Database } from '@/types/database'
 import { cn } from '@/lib/utils'
@@ -35,6 +35,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+
+const PAGE_SIZE = 25
 
 type Ticket = Database['public']['Tables']['tickets']['Row'] & {
   first_response_due_at?: string | null
@@ -85,6 +87,7 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
   const [priorityFilter, setPriorityFilter] = useState('all')
   const [clientFilter, setClientFilter] = useState('all')
   const [slaFilter, setSlaFilter] = useState('all')
+  const [page, setPage] = useState(1)
 
   const ticketSelect = organizations && organizations.length > 0
     ? `
@@ -96,19 +99,27 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
         organization:organizations(id, name)
       `
 
-  const { data: tickets, isError, error } = useQuery({
-    queryKey: ['tickets'],
+  const { data: ticketsResponse, isError, error } = useQuery({
+    queryKey: ['tickets', page],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const from = (page - 1) * PAGE_SIZE
+      const to = page * PAGE_SIZE - 1
+
+      const { data, error, count } = await supabase
         .from('tickets')
-        .select(ticketSelect)
+        .select(ticketSelect, { count: 'exact' })
         .order('created_at', { ascending: false })
+        .range(from, to)
 
       if (error) throw error
-      return data as Ticket[]
+      return { tickets: data as Ticket[], totalCount: count ?? 0 }
     },
-    initialData: initialTickets,
+    initialData: { tickets: initialTickets, totalCount: initialTickets.length },
   })
+
+  const tickets = ticketsResponse?.tickets ?? []
+  const totalCount = ticketsResponse?.totalCount ?? 0
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
   // Filter tickets based on search and filters
   const filteredTickets = useMemo(() => {
@@ -181,6 +192,7 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
     setPriorityFilter('all')
     setClientFilter('all')
     setSlaFilter('all')
+    setPage(1)
   }
 
   if (isError) {
@@ -272,11 +284,12 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
       </div>
 
       {/* Results count */}
-      {hasActiveFilters && (
-        <p className="text-sm text-slate-500">
-          Showing {filteredTickets.length} of {tickets?.length ?? 0} tickets
-        </p>
-      )}
+      <p className="text-sm text-slate-500">
+        {hasActiveFilters
+          ? `Showing ${filteredTickets.length} of ${totalCount} tickets`
+          : `Showing ${Math.min((page - 1) * PAGE_SIZE + 1, totalCount)}–${Math.min(page * PAGE_SIZE, totalCount)} of ${totalCount} tickets`
+        }
+      </p>
 
       {/* Priority Tickets Table */}
       {priorityTickets.length > 0 && (
@@ -304,6 +317,37 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
           hasActiveFilters={hasActiveFilters}
         />
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t pt-4">
+          <p className="text-sm text-slate-500">
+            Page {page} of {totalPages}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="gap-1"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="gap-1"
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

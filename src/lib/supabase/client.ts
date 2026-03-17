@@ -1,27 +1,36 @@
 import { createBrowserClient } from '@supabase/ssr'
+import type { Database } from '@/types/database'
 
 export function createClient() {
   const isBrowser = typeof document !== 'undefined'
+  const isProduction = typeof window !== 'undefined' && window.location.protocol === 'https:'
 
-  return createBrowserClient(
+  return createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name: string) {
           if (!isBrowser) return undefined
-          return document.cookie
+          const match = document.cookie
             .split('; ')
             .find((row) => row.startsWith(`${name}=`))
-            ?.split('=')[1]
+          if (!match) return undefined
+          // Preserve full value including '=' characters (common in base64 JWTs)
+          return match.split('=').slice(1).join('=')
         },
         set(name: string, value: string, options: any) {
           if (!isBrowser) return
           try {
-            document.cookie = `${name}=${value}; path=${options?.path || '/'}; ${
-              options?.maxAge ? `max-age=${options.maxAge}` : ''
-            }; ${options?.sameSite ? `samesite=${options.sameSite}` : 'samesite=lax'}`
-          } catch (error) {
+            const parts = [
+              `${name}=${value}`,
+              `path=${options?.path || '/'}`,
+            ]
+            if (options?.maxAge) parts.push(`max-age=${options.maxAge}`)
+            parts.push(`samesite=${options?.sameSite || 'lax'}`)
+            if (isProduction || options?.secure) parts.push('secure')
+            document.cookie = parts.join('; ')
+          } catch {
             // Ignore cookie errors - typically from third-party restrictions
           }
         },
@@ -29,11 +38,11 @@ export function createClient() {
           if (!isBrowser) return
           try {
             document.cookie = `${name}=; path=${options?.path || '/'}; max-age=0`
-          } catch (error) {
+          } catch {
             // Ignore cookie errors
           }
         },
       },
     }
-  ) as any
+  )
 }

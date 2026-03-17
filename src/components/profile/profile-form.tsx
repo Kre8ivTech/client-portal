@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import { Loader2 } from "lucide-react";
 
 export function ProfileForm({
   defaultName,
@@ -36,9 +38,32 @@ export function ProfileForm({
   };
 }) {
   const [sameAsBusiness, setSameAsBusiness] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const formData = new FormData(e.currentTarget);
+      await updateProfile(formData);
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update profile",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <form action={updateProfile} className="space-y-8">
+    <form onSubmit={handleSubmit} className="space-y-8">
       {/* Basic Information */}
       <div>
         <h3 className="text-base font-semibold text-slate-900 mb-4">
@@ -270,8 +295,15 @@ export function ProfileForm({
       </div>
 
       <div className="mt-8 flex justify-end">
-        <Button type="submit" className="px-8 shadow-md">
-          Save Changes
+        <Button type="submit" className="px-8 shadow-md" disabled={loading}>
+          {loading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
         </Button>
       </div>
     </form>

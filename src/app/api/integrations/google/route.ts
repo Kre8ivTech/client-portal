@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createSignedOAuthState } from "@/lib/security";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -27,8 +28,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Generate state token for CSRF protection
-  const state = Buffer.from(JSON.stringify({ userId: user.id, ts: Date.now() })).toString("base64");
+  // Generate signed state token for CSRF protection
+  const state = createSignedOAuthState({ userId: user.id, ts: Date.now() });
 
   const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   authUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);

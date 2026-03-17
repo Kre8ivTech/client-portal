@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -9,15 +9,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Save } from 'lucide-react'
 import { getAppSettings, updateAppSettings, type AppSettings } from '@/lib/actions/app-settings'
 import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 
 export default function AISettingsPage() {
+  const supabase = useMemo(() => createClient(), [])
+  const [isAuthed, setIsAuthed] = useState(false)
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) {
+        window.location.href = '/login'
+        return
+      }
+      const { data: profile } = await (supabase as any)
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      if (!profile || !['super_admin', 'staff'].includes(profile.role)) {
+        window.location.href = '/dashboard'
+        return
+      }
+      setIsAuthed(true)
+    })
+  }, [supabase])
+
+  useEffect(() => {
+    if (!isAuthed) return
     loadSettings()
-  }, [])
+  }, [isAuthed])
 
   async function loadSettings() {
     try {

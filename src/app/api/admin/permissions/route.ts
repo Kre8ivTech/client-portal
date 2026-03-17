@@ -179,26 +179,57 @@ export async function PUT(request: NextRequest) {
 
     const { role, permission_ids } = result.data
 
-    // Delete existing role permissions
-    await (supabase as any)
+    // Snapshot existing permissions so we can restore on failure
+    const { data: existingPermissions } = await (supabase as any)
       .from('role_permissions')
-      .delete()
+      .select('role, permission_id, granted_by')
       .eq('role', role)
 
-    // Insert new permissions
+    // Insert new permissions first (before deleting old ones)
     if (permission_ids.length > 0) {
-      const { error } = await (supabase as any)
+      const { error: insertError } = await (supabase as any)
         .from('role_permissions')
-        .insert(
+        .upsert(
           permission_ids.map((permission_id) => ({
             role,
             permission_id,
             granted_by: user.id,
-          }))
+          })),
+          { onConflict: 'role,permission_id' }
         )
 
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
+      if (insertError) {
+        return NextResponse.json({ error: insertError.message }, { status: 500 })
+      }
+    }
+
+    // Delete permissions that are no longer assigned (only after successful insert)
+    if (permission_ids.length > 0) {
+      const { error: deleteError } = await (supabase as any)
+        .from('role_permissions')
+        .delete()
+        .eq('role', role)
+        .not('permission_id', 'in', `(${permission_ids.join(',')})`)
+
+      if (deleteError) {
+        // Non-fatal: new permissions are in place, but stale ones remain
+        console.error('Failed to clean up old role permissions:', deleteError)
+      }
+    } else {
+      // No new permissions - delete all existing ones
+      const { error: deleteError } = await (supabase as any)
+        .from('role_permissions')
+        .delete()
+        .eq('role', role)
+
+      if (deleteError) {
+        // Attempt to restore from snapshot
+        if (existingPermissions && existingPermissions.length > 0) {
+          await (supabase as any)
+            .from('role_permissions')
+            .upsert(existingPermissions, { onConflict: 'role,permission_id' })
+        }
+        return NextResponse.json({ error: deleteError.message }, { status: 500 })
       }
     }
 

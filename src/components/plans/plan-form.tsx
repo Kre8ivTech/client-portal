@@ -5,6 +5,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { X, Plus, Loader2, DollarSign, Clock, Zap } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -85,6 +86,7 @@ interface PlanFormProps {
 export function PlanForm({ open, onOpenChange, plan, onSuccess }: PlanFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [newFeature, setNewFeature] = useState('')
+  const { toast } = useToast()
 
   const isEditing = !!plan
 
@@ -176,12 +178,19 @@ export function PlanForm({ open, onOpenChange, plan, onSuccess }: PlanFormProps)
         throw new Error(error.error || 'Failed to save plan')
       }
 
+      toast({
+        title: 'Success',
+        description: isEditing ? 'Plan updated successfully' : 'Plan created successfully',
+      })
       onSuccess()
       onOpenChange(false)
       form.reset()
     } catch (error) {
-      console.error('Error saving plan:', error)
-      alert(error instanceof Error ? error.message : 'Failed to save plan')
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to save plan',
+        variant: 'destructive',
+      })
     } finally {
       setIsLoading(false)
     }

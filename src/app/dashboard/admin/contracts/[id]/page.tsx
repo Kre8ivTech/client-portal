@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { format } from 'date-fns'
 import { ContractSigners } from '@/components/admin/contracts/contract-signers'
+import { SafeHtml } from '@/components/ui/safe-html'
 
 export default async function ContractDetailPage({
   params,
@@ -127,8 +128,8 @@ export default async function ContractDetailPage({
             </CardHeader>
             <CardContent className="p-8 pt-10 prose prose-slate max-w-none">
               {contract.content_html ? (
-                <div 
-                  dangerouslySetInnerHTML={{ __html: contract.content_html }} 
+                <SafeHtml
+                  html={contract.content_html}
                   className="min-h-[400px] border p-8 rounded shadow-inner bg-white font-serif text-slate-800 leading-relaxed"
                 />
               ) : (

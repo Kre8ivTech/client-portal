@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { sendRawEmail } from '@/lib/notifications/providers/email'
 import { requireRole } from '@/lib/require-role'
+import { z } from 'zod'
+
+const testEmailSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  template: z.string().max(50000).optional(),
+  subject: z.string().max(500).optional(),
+})
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,11 +36,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { email, template, subject } = await request.json()
+    const body = await request.json()
+    const validation = testEmailSchema.safeParse(body)
 
-    if (!email) {
-      return NextResponse.json({ error: 'Email address is required' }, { status: 400 })
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: validation.error.flatten() },
+        { status: 400 }
+      )
     }
+
+    const { email, template, subject } = validation.data
 
     const result = await sendRawEmail({
       to: email,

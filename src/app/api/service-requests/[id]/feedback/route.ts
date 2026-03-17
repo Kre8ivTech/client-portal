@@ -124,10 +124,33 @@ export async function POST(
       console.error('Error fetching updated request:', updateFetchError)
     }
 
-    // TODO: Send notification to admin about client feedback
-    // if (!result.data.is_approval) {
-    //   await notifyAdminOfClientFeedback(serviceRequest.organization_id, id)
-    // }
+    // Send notification to admin/staff about client feedback
+    try {
+      const { data: admins } = await (supabase as any)
+        .from('users')
+        .select('id')
+        .in('role', ['super_admin', 'staff'])
+
+      if (admins && admins.length > 0) {
+        await (supabase as any).from('notifications').insert({
+          title: result.data.is_approval
+            ? 'Service Request Approved'
+            : 'Client Feedback Received',
+          content: result.data.is_approval
+            ? 'A client has approved a service request.'
+            : 'A client has provided feedback on a service request.',
+          type: 'staff_specific',
+          priority: 'medium',
+          target_audience: 'specific_users',
+          target_user_ids: admins.map((a: any) => a.id),
+          action_url: `/dashboard/admin/service-requests`,
+          created_by: user.id,
+          is_active: true,
+        })
+      }
+    } catch {
+      // Notification is best-effort, don't fail the request
+    }
 
     const message = result.data.is_approval
       ? 'Service request approved successfully'

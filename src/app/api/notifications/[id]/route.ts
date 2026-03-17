@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+
+const updateNotificationSchema = z.object({
+  title: z.string().min(1).max(500).optional(),
+  content: z.string().min(1).max(5000).optional(),
+  priority: z.enum(['info', 'low', 'medium', 'high', 'critical']).optional(),
+  expires_at: z.string().datetime().nullable().optional(),
+  is_active: z.boolean().optional(),
+})
 
 type RouteParams = {
   params: Promise<{ id: string }>
@@ -92,16 +101,18 @@ export async function PATCH(
       )
     }
 
-    // Parse request body
+    // Parse and validate request body
     const body = await request.json()
-    const updateData: any = {}
+    const result = updateNotificationSchema.safeParse(body)
 
-    // Allow updating specific fields
-    if (body.title !== undefined) updateData.title = body.title
-    if (body.content !== undefined) updateData.content = body.content
-    if (body.priority !== undefined) updateData.priority = body.priority
-    if (body.expires_at !== undefined) updateData.expires_at = body.expires_at
-    if (body.is_active !== undefined) updateData.is_active = body.is_active
+    if (!result.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: result.error.flatten() },
+        { status: 400 }
+      )
+    }
+
+    const updateData = result.data
 
     // Update notification
     const { data: updated, error: updateError } = await (supabase as any)

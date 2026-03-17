@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { getAIResponse } from '@/lib/actions/ai'
 import { Bot, Send, User, Sparkles, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
 
 type Message = {
   role: 'user' | 'assistant'
@@ -15,6 +16,8 @@ type Message = {
 }
 
 export default function AIAssistantPage() {
+  const supabase = useMemo(() => createClient(), [])
+  const [isAuthed, setIsAuthed] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
     { role: 'assistant', content: 'Hello! I am your AI Assistant. How can I help you today?' }
   ])
@@ -23,10 +26,19 @@ export default function AIAssistantPage() {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) window.location.href = '/login'
+      else setIsAuthed(true)
+    })
+  }, [supabase])
+
+  useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages])
+
+  if (!isAuthed) return null
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

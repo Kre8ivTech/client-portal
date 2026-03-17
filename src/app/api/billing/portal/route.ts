@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { z } from "zod";
+
+const billingPortalSchema = z.object({
+  returnUrl: z.string().startsWith("/", "returnUrl must be a relative path starting with '/'").max(500).optional(),
+});
 
 // Lazy-load Stripe to prevent build-time initialization errors
 async function getStripeInstance() {
@@ -61,7 +66,18 @@ export async function POST(request: NextRequest) {
 
     // Get return URL from request body or use default
     const body = await request.json().catch(() => ({}));
-    const returnUrl = body.returnUrl || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing`;
+    const validation = billingPortalSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: validation.error.flatten() },
+        { status: 400 },
+      );
+    }
+
+    const returnUrl = validation.data.returnUrl
+      ? `${process.env.NEXT_PUBLIC_APP_URL}${validation.data.returnUrl}`
+      : `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/billing`;
 
     // Create Stripe billing portal session
     const session = await stripe.billingPortal.sessions.create({

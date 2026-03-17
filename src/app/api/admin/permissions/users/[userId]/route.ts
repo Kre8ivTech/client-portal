@@ -103,38 +103,68 @@ export async function PUT(
 
     const { grants = [], denies = [] } = result.data
 
-    // Delete existing user permissions
-    await (supabase as any)
+    // Snapshot existing permissions so we can restore on failure
+    const { data: existingPermissions } = await (supabase as any)
       .from('user_permissions')
-      .delete()
+      .select('user_id, permission_id, granted, modified_by')
       .eq('user_id', userId)
 
-    // Insert grants
-    if (grants.length > 0) {
-      await (supabase as any)
+    // Build all new permission rows
+    const newPermissions = [
+      ...grants.map((permission_id) => ({
+        user_id: userId,
+        permission_id,
+        granted: true,
+        modified_by: user.id,
+      })),
+      ...denies.map((permission_id) => ({
+        user_id: userId,
+        permission_id,
+        granted: false,
+        modified_by: user.id,
+      })),
+    ]
+
+    // Upsert new permissions first (before deleting old ones)
+    if (newPermissions.length > 0) {
+      const { error: upsertError } = await (supabase as any)
         .from('user_permissions')
-        .insert(
-          grants.map((permission_id) => ({
-            user_id: userId,
-            permission_id,
-            granted: true,
-            modified_by: user.id,
-          }))
-        )
+        .upsert(newPermissions, { onConflict: 'user_id,permission_id' })
+
+      if (upsertError) {
+        return NextResponse.json({ error: upsertError.message }, { status: 500 })
+      }
     }
 
-    // Insert denies
-    if (denies.length > 0) {
-      await (supabase as any)
+    // Delete permissions that are no longer assigned (only after successful upsert)
+    const allNewIds = [...grants, ...denies]
+    if (allNewIds.length > 0) {
+      const { error: deleteError } = await (supabase as any)
         .from('user_permissions')
-        .insert(
-          denies.map((permission_id) => ({
-            user_id: userId,
-            permission_id,
-            granted: false,
-            modified_by: user.id,
-          }))
-        )
+        .delete()
+        .eq('user_id', userId)
+        .not('permission_id', 'in', `(${allNewIds.join(',')})`)
+
+      if (deleteError) {
+        // Non-fatal: new permissions are in place, but stale ones remain
+        console.error('Failed to clean up old user permissions:', deleteError)
+      }
+    } else {
+      // No new permissions - delete all existing ones
+      const { error: deleteError } = await (supabase as any)
+        .from('user_permissions')
+        .delete()
+        .eq('user_id', userId)
+
+      if (deleteError) {
+        // Attempt to restore from snapshot
+        if (existingPermissions && existingPermissions.length > 0) {
+          await (supabase as any)
+            .from('user_permissions')
+            .upsert(existingPermissions, { onConflict: 'user_id,permission_id' })
+        }
+        return NextResponse.json({ error: deleteError.message }, { status: 500 })
+      }
     }
 
     return NextResponse.json({

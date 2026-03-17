@@ -13,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, Loader2, Eye } from 'lucide-react'
 import Link from 'next/link'
 import { useToast } from '@/hooks/use-toast'
+import { SafeHtml } from '@/components/ui/safe-html'
 
 interface ArticleFormProps {
   article?: any
@@ -343,7 +344,7 @@ export function ArticleForm({ article, categories, userId }: ArticleFormProps) {
                 {formData.excerpt && (
                   <p className="lead text-slate-600">{formData.excerpt}</p>
                 )}
-                <div dangerouslySetInnerHTML={{ __html: formData.content || '<p>No content yet...</p>' }} />
+                <SafeHtml html={formData.content || '<p>No content yet...</p>'} />
               </div>
             </CardContent>
           </Card>

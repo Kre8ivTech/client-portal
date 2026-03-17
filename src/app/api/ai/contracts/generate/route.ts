@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { streamText, convertToModelMessages, UIMessage } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
 
 const systemPrompt = `You are an expert legal document assistant helping to create professional contract templates.
 
@@ -41,13 +43,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user has admin role
-    const { data: profile } = await supabase
-      .from("profiles")
+    const { data: profile } = await (supabase as any)
+      .from("users")
       .select("role")
       .eq("id", user.id)
       .single();
 
-    if (!profile || profile.role !== "admin") {
+    if (!profile || !["super_admin", "staff"].includes(profile.role)) {
       return NextResponse.json({ error: "Forbidden - Admin access required" }, { status: 403 });
     }
 
@@ -64,11 +66,40 @@ export async function POST(request: NextRequest) {
       contextualPrompt += `\n\nThe user is creating a ${contractType} template${templateName ? ` called "${templateName}"` : ''}.`;
     }
 
+    // Resolve API key from app_settings or env
+    let openRouterKey = process.env.OPENROUTER_API_KEY;
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const supabaseAdmin = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY
+      );
+      const { data: settings } = await supabaseAdmin
+        .from("app_settings")
+        .select("openrouter_api_key")
+        .eq("id", "00000000-0000-0000-0000-000000000001")
+        .single();
+      if (settings?.openrouter_api_key) {
+        openRouterKey = settings.openrouter_api_key;
+      }
+    }
+
+    if (!openRouterKey) {
+      return NextResponse.json(
+        { error: "AI service not configured. Set OPENROUTER_API_KEY." },
+        { status: 503 }
+      );
+    }
+
+    const openrouter = createOpenAI({
+      baseURL: "https://openrouter.ai/api/v1",
+      apiKey: openRouterKey,
+    });
+
     // Convert UI messages to model messages
     const modelMessages = await convertToModelMessages(messages as UIMessage[]);
 
     const result = streamText({
-      model: "anthropic/claude-sonnet-4-20250514",
+      model: openrouter("anthropic/claude-sonnet-4-20250514"),
       system: contextualPrompt,
       messages: modelMessages,
     });

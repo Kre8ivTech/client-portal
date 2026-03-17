@@ -4,8 +4,8 @@ import { TICKET_PRIORITIES } from '@/lib/ticket-priority'
 export const ticketPrioritySchema = z.enum(TICKET_PRIORITIES)
 
 export const createTicketSchema = z.object({
-  subject: z.string().min(5, { message: 'Subject must be at least 5 characters.' }),
-  description: z.string().min(20, { message: 'Description must be at least 20 characters.' }),
+  subject: z.string().min(5, { message: 'Subject must be at least 5 characters.' }).max(500, { message: 'Subject must be at most 500 characters.' }),
+  description: z.string().min(20, { message: 'Description must be at least 20 characters.' }).max(10000, { message: 'Description must be at most 10,000 characters.' }),
   priority: ticketPrioritySchema,
   category: z.string().min(1, { message: 'Please select a category.' }),
   due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').nullable().optional(),

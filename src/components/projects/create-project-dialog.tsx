@@ -23,6 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import {
   createProjectSchema,
   PROJECT_STATUS_OPTIONS,
@@ -68,6 +69,7 @@ export function CreateProjectDialog({ staffUsers, organizations, userOrganizatio
   const [selectedOrgs, setSelectedOrgs] = useState<OrgSelection[]>([]);
   const router = useRouter();
   const supabase = createClient();
+  const { toast } = useToast();
 
   const form = useForm<any>({
     resolver: zodResolver(createProjectSchema),
@@ -173,6 +175,10 @@ export function CreateProjectDialog({ staffUsers, organizations, userOrganizatio
         }
       }
 
+      toast({
+        title: "Success",
+        description: "Project created successfully",
+      });
       setOpen(false);
       form.reset();
       setSelectedMembers([]);
@@ -180,7 +186,11 @@ export function CreateProjectDialog({ staffUsers, organizations, userOrganizatio
       router.refresh();
       router.push(`/dashboard/projects/${project.id}`);
     } catch (error) {
-      console.error("Failed to create project:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create project",
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }

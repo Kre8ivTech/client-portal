@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { z } from 'zod'
+
+const loginAuditSchema = z.object({
+  method: z.string().max(100).optional().default('password'),
+})
 
 /**
  * POST /api/audit/login
@@ -15,7 +20,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}))
-    const method = body.method || 'password'
+    const validation = loginAuditSchema.safeParse(body)
+    const method = validation.success ? validation.data.method : 'password'
 
     // Get user's organization_id
     const { data: profile } = await supabase

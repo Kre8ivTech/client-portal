@@ -116,6 +116,7 @@ export function LiveChatWidget({
             size="icon" 
             className="h-8 w-8 text-slate-400 hover:text-white" 
             onClick={() => setIsMinimized(!isMinimized)}
+            aria-label="Minimize chat"
           >
             {isMinimized ? <Maximize2 size={16} /> : <Minus size={16} />}
           </Button>
@@ -124,6 +125,7 @@ export function LiveChatWidget({
             size="icon" 
             className="h-8 w-8 text-slate-400 hover:text-white" 
             onClick={handleClose}
+            aria-label="Close chat"
           >
             <X size={16} />
           </Button>

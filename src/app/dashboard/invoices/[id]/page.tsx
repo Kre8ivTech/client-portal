@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Download, ArrowLeft, DollarSign, Calendar, CreditCard } from 'lucide-react'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { generatePageMetadata } from '@/lib/seo'
 
 interface PageProps {
@@ -51,7 +51,7 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return <div>Unauthorized</div>
+    redirect('/login')
   }
 
   // Fetch invoice with line items and payment history
@@ -92,12 +92,48 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
     .single()
 
   if (!profile) {
-    return <div>Profile not found</div>
+    return (
+      <div className="max-w-md mx-auto mt-16">
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Not Found</CardTitle>
+            <CardDescription>Your user profile could not be loaded. Please contact support.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/dashboard/invoices">
+              <Button variant="outline">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Invoices
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   const p = profile as { organization_id: string | null; role: string; is_account_manager: boolean }
-  if (p.organization_id !== invoice.organization_id) {
-    return <div>Access denied</div>
+  const isSuperAdmin = p.role === 'super_admin'
+  const isStaff = p.role === 'staff'
+  if (!isSuperAdmin && !isStaff && p.organization_id !== invoice.organization_id) {
+    return (
+      <div className="max-w-md mx-auto mt-16">
+        <Card>
+          <CardHeader>
+            <CardTitle>Access Denied</CardTitle>
+            <CardDescription>You do not have permission to view this invoice.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/dashboard/invoices">
+              <Button variant="outline">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Invoices
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   const isAccountManager = p.role === 'super_admin' || (p.role === 'staff' && p.is_account_manager)

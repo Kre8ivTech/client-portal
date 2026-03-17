@@ -2,7 +2,8 @@ const REQUIRED_SERVER_ENV_VARS = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPAB
 
 /**
  * Validate critical environment variables at startup.
- * Throws an Error in server environments when required values are missing.
+ * During build (next build), logs a warning instead of throwing.
+ * At runtime, throws an Error when required values are missing.
  */
 export function validateEnvironment(): void {
   const missing = REQUIRED_SERVER_ENV_VARS.filter((key) => {
@@ -11,6 +12,13 @@ export function validateEnvironment(): void {
   })
 
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(", ")}`)
+    const message = `Missing required environment variables: ${missing.join(", ")}`
+    // During next build, NEXT_PHASE is set to 'phase-production-build'
+    const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build'
+    if (isBuildPhase) {
+      console.warn(`[env-validation] WARNING: ${message}`)
+      return
+    }
+    throw new Error(message)
   }
 }

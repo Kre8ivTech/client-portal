@@ -215,12 +215,12 @@ export interface BillingDispute {
   time_entry_id: string | null
   dispute_type: DisputeType
   description: string
-  supporting_documents: string[]
+  supporting_documents: string[] | null
   status: DisputeStatus
   resolution: string | null
   resolved_by: string | null
   resolved_at: string | null
-  credit_amount: number
+  credit_amount: number | null
   credit_applied_to_invoice_id: string | null
   created_at: string
   updated_at: string

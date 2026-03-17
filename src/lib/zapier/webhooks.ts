@@ -61,8 +61,8 @@ export async function triggerWebhooks(
       await sendWebhook(webhook.id, webhook.url, payload);
     });
 
-    // Don't await - fire and forget
-    Promise.allSettled(promises);
+    // Await so webhooks complete before serverless function exits
+    await Promise.allSettled(promises);
   } catch (error) {
     console.error("Error triggering webhooks:", error);
   }

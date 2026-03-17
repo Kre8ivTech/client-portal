@@ -2,7 +2,39 @@
  * Security utilities for input sanitization and validation
  */
 
+import crypto from 'crypto';
 import DOMPurify from 'isomorphic-dompurify';
+
+const STATE_SECRET = process.env.OAUTH_STATE_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY || 'fallback-dev-secret';
+
+/**
+ * Create a signed OAuth state parameter.
+ * Format: base64url(json) + '.' + hmac_signature
+ */
+export function createSignedOAuthState(data: Record<string, unknown>): string {
+  const payload = Buffer.from(JSON.stringify(data)).toString('base64url');
+  const signature = crypto.createHmac('sha256', STATE_SECRET).update(payload).digest('base64url');
+  return `${payload}.${signature}`;
+}
+
+/**
+ * Verify and decode a signed OAuth state parameter.
+ * Returns null if signature is invalid.
+ */
+export function verifySignedOAuthState(state: string): Record<string, unknown> | null {
+  try {
+    const parts = state.split('.');
+    if (parts.length !== 2) return null;
+    const [payload, signature] = parts;
+    const expectedSignature = crypto.createHmac('sha256', STATE_SECRET).update(payload).digest('base64url');
+    if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
+      return null;
+    }
+    return JSON.parse(Buffer.from(payload, 'base64url').toString());
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Sanitize HTML content to prevent XSS attacks

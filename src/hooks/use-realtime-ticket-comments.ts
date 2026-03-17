@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 
@@ -11,7 +11,7 @@ import { createClient } from '@/lib/supabase/client'
  */
 export function useRealtimeTicketComments(ticketId?: string) {
   const queryClient = useQueryClient()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
     const channel = supabase
@@ -25,8 +25,6 @@ export function useRealtimeTicketComments(ticketId?: string) {
           ...(ticketId && { filter: `ticket_id=eq.${ticketId}` }),
         },
         (payload: any) => {
-          console.log('Ticket comment change detected:', payload)
-          
           // Invalidate specific ticket comments if ticketId provided
           if (ticketId) {
             queryClient.invalidateQueries({ 

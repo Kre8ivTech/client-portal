@@ -1,9 +1,13 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { ChevronLeft, FileText, Calendar, Clock, Download, ShieldCheck } from 'lucide-react'
+import { ChevronLeft, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
+import { SafeHtml } from '@/components/ui/safe-html'
+import { redirect } from 'next/navigation'
+import { ContractDownloadButton } from '@/components/contracts/contract-download-button'
 
 export default async function ClientContractDetailPage({
   params,
@@ -15,7 +19,7 @@ export default async function ClientContractDetailPage({
 
   // Check auth
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
+  if (!user) redirect('/login')
 
   // Fetch contract details (RLS should limit to user's contracts)
   const { data: contract, error } = await (supabase as any)
@@ -64,16 +68,23 @@ export default async function ClientContractDetailPage({
           <p className="text-slate-500">{contract.description}</p>
         </div>
 
-        {contract.status === 'signed' || contract.status === 'completed' ? (
-          <Button className="bg-emerald-600 hover:bg-emerald-700 gap-2">
-            <Download className="h-4 w-4" />
-            Download Signed Copy
-          </Button>
-        ) : (
-          <Button className="bg-primary hover:bg-primary/90 gap-2 shadow-lg shadow-primary/20">
-            <ShieldCheck className="h-4 w-4" />
-            Sign with DocuSign
-          </Button>
+        {(contract.status === 'signed' || contract.status === 'completed') && (
+          <ContractDownloadButton contractId={id} />
+        )}
+        {(contract.status === 'sent' || contract.status === 'pending_signature') && (
+          <Badge variant="outline" className="bg-yellow-100 text-yellow-700 border-yellow-200 px-4 py-2 text-sm font-bold">
+            Awaiting Signature
+          </Badge>
+        )}
+        {(contract.status === 'draft' || contract.status === 'pending') && (
+          <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200 px-4 py-2 text-sm font-bold">
+            Pending Review
+          </Badge>
+        )}
+        {contract.status === 'cancelled' && (
+          <Badge variant="outline" className="bg-red-100 text-red-600 border-red-200 px-4 py-2 text-sm font-bold">
+            Cancelled
+          </Badge>
         )}
       </div>
 
@@ -81,8 +92,8 @@ export default async function ClientContractDetailPage({
         <div className="lg:col-span-3">
           <Card className="border-slate-200 shadow-sm">
             <CardContent className="p-8 pt-12">
-              <div 
-                dangerouslySetInnerHTML={{ __html: contract.content_html }} 
+              <SafeHtml
+                html={contract.content_html}
                 className="min-h-[600px] border p-12 rounded bg-white font-serif text-slate-800 leading-relaxed shadow-inner overflow-auto"
               />
             </CardContent>
@@ -126,18 +137,6 @@ export default async function ClientContractDetailPage({
         </div>
       </div>
     </div>
-  )
-}
-
-function Button({ children, className, variant = 'primary', ...props }: any) {
-  const variants: any = {
-    primary: 'bg-primary text-white hover:bg-primary/90',
-    outline: 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-  }
-  return (
-    <button className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 ${variants[variant]} ${className}`} {...props}>
-      {children}
-    </button>
   )
 }
 

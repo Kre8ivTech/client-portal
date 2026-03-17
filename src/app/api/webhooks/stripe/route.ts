@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { getStripeClient, getStripeConfig } from '@/lib/stripe'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { triggerWebhooks } from '@/lib/zapier/webhooks'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 
@@ -38,42 +37,43 @@ export async function POST(request: NextRequest) {
   }
 
 
-  const supabase = await createServerSupabaseClient()
+  // Use admin client for webhook handlers since there is no user session context
+  const adminDb = supabaseAdmin
 
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
-        await handleCheckoutSessionCompleted(session, supabase)
+        await handleCheckoutSessionCompleted(session, adminDb)
         break
       }
 
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        await handlePaymentIntentSucceeded(paymentIntent, supabase)
+        await handlePaymentIntentSucceeded(paymentIntent, adminDb)
         break
       }
 
       case 'payment_intent.payment_failed': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        await handlePaymentIntentFailed(paymentIntent, supabase)
+        await handlePaymentIntentFailed(paymentIntent, adminDb)
         break
       }
 
       case 'invoice.paid': {
         const invoice = event.data.object as Stripe.Invoice
-        await handleInvoicePaid(invoice, supabase)
+        await handleInvoicePaid(invoice, adminDb)
         break
       }
 
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
-        await handleInvoicePaymentFailed(invoice, supabase)
+        await handleInvoicePaymentFailed(invoice, adminDb)
         break
       }
 
       default:
-        console.log(`Unhandled event type: ${event.type}`)
+        // No-op for unhandled event types
     }
 
     return NextResponse.json({ received: true })
@@ -88,12 +88,11 @@ export async function POST(request: NextRequest) {
 
 async function handleCheckoutSessionCompleted(
   session: Stripe.Checkout.Session,
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>
+  supabase: typeof supabaseAdmin
 ) {
   const invoiceId = session.metadata?.invoice_id
 
   if (!invoiceId) {
-    console.warn('Checkout session completed but no invoice_id in metadata')
     return
   }
 
@@ -117,7 +116,7 @@ async function handleCheckoutSessionCompleted(
 
   // Record payment in invoice_payments table
   if (session.payment_intent && typeof session.payment_intent === 'string') {
-    await (supabase as any).from('invoice_payments').insert({
+    const { error: paymentError } = await (supabase as any).from('invoice_payments').insert({
       invoice_id: invoiceId,
       amount: session.amount_total || 0,
       payment_method: 'stripe',
@@ -125,6 +124,9 @@ async function handleCheckoutSessionCompleted(
       status: 'completed',
       paid_at: new Date().toISOString(),
     })
+    if (paymentError) {
+      console.error('Failed to record payment in invoice_payments:', paymentError)
+    }
   }
 
   // Trigger webhook for invoice paid
@@ -138,17 +140,15 @@ async function handleCheckoutSessionCompleted(
     triggerWebhooks('invoice.paid', invoiceData.organization_id, invoiceData)
   }
 
-  console.log(`Invoice ${invoiceId} marked as paid via checkout session ${session.id}`)
 }
 
 async function handlePaymentIntentSucceeded(
   paymentIntent: Stripe.PaymentIntent,
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>
+  supabase: typeof supabaseAdmin
 ) {
   const invoiceId = paymentIntent.metadata?.invoice_id
 
   if (!invoiceId) {
-    console.warn('Payment intent succeeded but no invoice_id in metadata')
     return
   }
 
@@ -169,12 +169,11 @@ async function handlePaymentIntentSucceeded(
     throw error
   }
 
-  console.log(`Invoice ${invoiceId} marked as paid via payment intent ${paymentIntent.id}`)
 }
 
 async function handlePaymentIntentFailed(
   paymentIntent: Stripe.PaymentIntent,
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>
+  supabase: typeof supabaseAdmin
 ) {
   const invoiceId = paymentIntent.metadata?.invoice_id
 
@@ -198,12 +197,11 @@ async function handlePaymentIntentFailed(
 
 async function handleInvoicePaid(
   invoice: Stripe.Invoice,
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>
+  supabase: typeof supabaseAdmin
 ) {
   const invoiceId = invoice.metadata?.invoice_id
 
   if (!invoiceId) {
-    console.warn('Stripe invoice paid but no invoice_id in metadata')
     return
   }
 
@@ -233,12 +231,11 @@ async function handleInvoicePaid(
     triggerWebhooks('invoice.paid', invoiceData.organization_id, invoiceData)
   }
 
-  console.log(`Invoice ${invoiceId} marked as paid via Stripe invoice ${invoice.id}`)
 }
 
 async function handleInvoicePaymentFailed(
   invoice: Stripe.Invoice,
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>
+  supabase: typeof supabaseAdmin
 ) {
   const invoiceId = invoice.metadata?.invoice_id
 

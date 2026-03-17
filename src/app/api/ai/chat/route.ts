@@ -3,6 +3,13 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
+
+const chatMessageSchema = z.object({
+  message: z.string().min(1, "Message is required").max(10000, "Message must be at most 10,000 characters"),
+  conversation_id: z.string().uuid("Invalid conversation ID format").optional(),
+  organization_id: z.string().uuid("Invalid organization ID format").optional(),
+});
 
 // Helper to get system settings (privileged)
 async function getSystemSettings() {
@@ -42,7 +49,6 @@ function getOpenAIClient(apiKey: string) {
 }
 
 async function getOpenRouterResponse(messages: any[], systemPrompt: string, apiKey: string) {
-  console.log("Attempting OpenRouter...");
   const client = getOpenRouterClient(apiKey);
   const response = await client.chat.completions.create({
     model: "anthropic/claude-3.5-sonnet",
@@ -57,7 +63,6 @@ async function getOpenRouterResponse(messages: any[], systemPrompt: string, apiK
 }
 
 async function getAnthropicResponse(messages: any[], systemPrompt: string, apiKey: string) {
-  console.log("Attempting Anthropic fallback...");
   const client = getAnthropicClient(apiKey);
   // Convert messages to Anthropic format (no system role in messages array)
   const anthropicMessages = messages.map((m) => ({
@@ -76,7 +81,6 @@ async function getAnthropicResponse(messages: any[], systemPrompt: string, apiKe
 }
 
 async function getOpenAIResponse(messages: any[], systemPrompt: string, apiKey: string) {
-  console.log("Attempting OpenAI fallback...");
   const client = getOpenAIClient(apiKey);
   const response = await client.chat.completions.create({
     model: "gpt-4o",
@@ -99,11 +103,38 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { conversation_id, message, organization_id } = body;
+    const result = chatMessageSchema.safeParse(body);
 
-    if (!conversation_id || !message) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: result.error.flatten() },
+        { status: 400 }
+      );
     }
+
+    const { conversation_id, message, organization_id: requestedOrgId } = result.data;
+
+    if (!conversation_id) {
+      return NextResponse.json({ error: "conversation_id is required" }, { status: 400 });
+    }
+
+    // Fetch the user's record to get their actual organization_id and role
+    const { data: userRecord, error: userRecordError } = await (supabase as any)
+      .from("users")
+      .select("organization_id, role")
+      .eq("id", user.id)
+      .single();
+
+    if (userRecordError || !userRecord) {
+      return NextResponse.json({ error: "User record not found" }, { status: 403 });
+    }
+
+    // Only super_admin and staff can use a different organization_id
+    const typedUserRecord = userRecord as { organization_id: string | null; role: string };
+    const isPrivilegedRole = typedUserRecord.role === "super_admin" || typedUserRecord.role === "staff";
+    const organization_id = (isPrivilegedRole && requestedOrgId)
+      ? requestedOrgId
+      : typedUserRecord.organization_id;
 
     // Fetch context data (handle missing tables gracefully)
     let conversationMessages: any[] = [];

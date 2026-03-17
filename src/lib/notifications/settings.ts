@@ -4,12 +4,7 @@
  * Helper functions to read and manage SLA monitoring settings from the database
  */
 
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-) as any
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 export interface SLAMonitoringSettings {
   enabled: boolean
@@ -44,6 +39,7 @@ const DEFAULT_SETTINGS: SLAMonitoringSettings = {
  */
 export async function getSLASettings(): Promise<SLAMonitoringSettings> {
   try {
+    const supabaseAdmin = getSupabaseAdmin()
     const { data, error } = await supabaseAdmin
       .from('feature_settings')
       .select('value')
@@ -72,6 +68,7 @@ export async function updateSLASettings(
     const currentSettings = await getSLASettings()
     const newSettings = { ...currentSettings, ...settings }
 
+    const supabaseAdmin = getSupabaseAdmin()
     const { error } = await supabaseAdmin
       .from('feature_settings')
       .update({ value: newSettings })

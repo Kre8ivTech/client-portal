@@ -24,14 +24,22 @@ export async function GET(request: NextRequest) {
     if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
       isAuthorized = true
     } else {
-      // Check if called by authenticated user
+      // Check if called by authenticated staff/admin user
       const supabase = await createServerSupabaseClient()
       const {
         data: { user },
       } = await supabase.auth.getUser()
 
       if (user) {
-        isAuthorized = true
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+
+        if (profile && (profile.role === 'admin' || profile.role === 'staff')) {
+          isAuthorized = true
+        }
       }
     }
 

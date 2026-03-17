@@ -2,10 +2,25 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import { cookies, headers } from 'next/headers'
 
+function sanitizeRedirectPath(path: string): string {
+  // Only allow relative paths starting with /
+  // Prevent open redirect via //, protocol://, or encoded variants
+  if (!path || !path.startsWith('/') || path.startsWith('//') || path.includes('://')) {
+    return '/dashboard'
+  }
+  // Remove any control characters or encoded newlines
+  const cleaned = decodeURIComponent(path).replace(/[\x00-\x1f\x7f]/g, '')
+  if (cleaned.startsWith('//') || cleaned.includes('://')) {
+    return '/dashboard'
+  }
+  return path
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
+  const rawNext = searchParams.get('next') ?? '/dashboard'
+  const next = sanitizeRedirectPath(rawNext)
 
   if (code) {
     const cookieStore = await cookies()

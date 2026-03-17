@@ -88,7 +88,8 @@ export async function GET(request: NextRequest) {
       dbQuery = dbQuery.eq("parent_org_id", query.parent_org_id);
     }
     if (query.search) {
-      dbQuery = dbQuery.or(`name.ilike.%${query.search}%,slug.ilike.%${query.search}%`);
+      const sanitizedSearch = query.search.replace(/[%_*(),.]/g, '');
+      dbQuery = dbQuery.or(`name.ilike.%${sanitizedSearch}%,slug.ilike.%${sanitizedSearch}%`);
     }
 
     // Apply pagination

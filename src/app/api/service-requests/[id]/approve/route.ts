@@ -61,8 +61,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Service request not found' }, { status: 404 })
     }
 
-    // Verify org access
-    if (existingRequest.organization_id !== p.organization_id) {
+    // Verify org access - super_admin can access all orgs
+    const isSuperAdmin = p.role === 'super_admin'
+    if (!isSuperAdmin && existingRequest.organization_id !== p.organization_id) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

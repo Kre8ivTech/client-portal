@@ -5,7 +5,7 @@
  * and logs all notifications to the database
  */
 
-import { createClient } from '@supabase/supabase-js'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { 
   NotificationPayload, 
   NotificationResult, 
@@ -15,12 +15,6 @@ import { sendEmail } from './providers/email'
 import { sendSMS } from './providers/sms'
 import { sendSlack } from './providers/slack'
 import { sendWhatsApp } from './providers/whatsapp'
-
-// Use admin client for logging notifications (bypasses RLS)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-) as any
 
 /**
  * Send a notification through the specified channel
@@ -97,6 +91,7 @@ async function logNotification(
   result: NotificationResult
 ): Promise<void> {
   try {
+    const supabaseAdmin = getSupabaseAdmin()
     const { error } = await supabaseAdmin.from('notification_log').insert({
       organization_id: payload.organizationId,
       user_id: payload.userId || null,
@@ -128,6 +123,7 @@ async function logNotification(
  * Get notification preferences for a user
  */
 export async function getUserNotificationPreferences(userId: string) {
+  const supabaseAdmin = getSupabaseAdmin()
   const { data, error } = await supabaseAdmin
     .from('users')
     .select('notification_preferences, email')
@@ -146,6 +142,7 @@ export async function getUserNotificationPreferences(userId: string) {
  * Get notification preferences for an organization
  */
 export async function getOrgNotificationPreferences(orgId: string) {
+  const supabaseAdmin = getSupabaseAdmin()
   const { data, error } = await supabaseAdmin
     .from('organizations')
     .select('notification_preferences')
@@ -168,6 +165,8 @@ export async function buildTicketNotificationPayloads(
   notificationType: NotificationPayload['type'],
   context?: Record<string, any>
 ): Promise<NotificationPayload[]> {
+  const supabaseAdmin = getSupabaseAdmin()
+
   // Get ticket details
   const { data: ticket, error: ticketError } = await supabaseAdmin
     .from('tickets')
@@ -295,6 +294,7 @@ export async function buildTaskNotificationPayloads(
   context?: Record<string, any>
 ): Promise<NotificationPayload[]> {
   const tableName = taskType === 'service_request' ? 'service_requests' : 'project_requests'
+  const supabaseAdmin = getSupabaseAdmin()
 
   // Get task details
   const { data: task, error: taskError } = await supabaseAdmin

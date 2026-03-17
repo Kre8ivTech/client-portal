@@ -86,6 +86,8 @@ export default function MessagesPage() {
   }, [supabase]);
 
   useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+
     async function init() {
       const {
         data: { user },
@@ -96,7 +98,7 @@ export default function MessagesPage() {
       await refreshConversations();
       setLoading(false);
 
-      const channel = supabase
+      channel = supabase
         .channel("conversations_changes")
         .on(
           "postgres_changes",
@@ -110,13 +112,15 @@ export default function MessagesPage() {
           },
         )
         .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
     }
 
     init();
+
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [supabase, refreshConversations]);
 
   useEffect(() => {

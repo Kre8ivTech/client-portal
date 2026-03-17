@@ -217,7 +217,9 @@ export async function deleteUser(userId: string) {
 
   try {
     // Delete from Supabase Auth (this will cascade to public.users and public.profiles via triggers/FKs)
-    const { error: deleteError } = await supabase.auth.admin.deleteUser(userId)
+    // Must use admin client - auth.admin.deleteUser requires service role key
+    const supabaseAdmin = getSupabaseAdmin()
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
 
     if (deleteError) {
       console.error('Error deleting user from auth:', deleteError)

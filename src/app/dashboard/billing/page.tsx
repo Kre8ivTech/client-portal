@@ -1,5 +1,5 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { PlanAssignmentWidget } from "@/components/plan-assignments";
+import { AssignPlanModal, PlanAssignmentWidget } from "@/components/plan-assignments";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -129,13 +129,23 @@ export default async function BillingPage() {
             <div className="max-w-md space-y-2">
               <h2 className="text-xl font-bold text-slate-900">No Active Plan Found</h2>
               <p className="text-slate-500 text-sm">
-                Your organization doesn&apos;t have an active subscription yet. Contact support or upgrade to get
-                started with Support and Dev pools.
+                {isAdmin
+                  ? "Assign a plan to activate billing, support hours, and development pools for this organization."
+                  : "Your organization doesn&apos;t have an active subscription yet. Contact support or upgrade to get started with Support and Dev pools."}
               </p>
             </div>
-            <Button size="lg" className="px-8">
-              View Available Plans
-            </Button>
+            {isAdmin ? (
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <AssignPlanModal organizationId={p.organization_id} />
+                <Button size="lg" variant="outline" className="px-8" asChild>
+                  <Link href="/dashboard/plans">View Available Plans</Link>
+                </Button>
+              </div>
+            ) : (
+              <Button size="lg" className="px-8" asChild>
+                <Link href="/dashboard/plans">View Available Plans</Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (

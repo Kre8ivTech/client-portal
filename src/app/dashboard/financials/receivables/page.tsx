@@ -26,12 +26,12 @@ export default async function ReceivablesPage() {
   // Fetch unpaid invoices
   const { data: unpaidInvoices } = await supabase
     .from("invoices")
-    .select("id, invoice_number, amount, currency, due_date, created_at")
+    .select("id, invoice_number, total, balance_due, currency, due_date, created_at")
     .in("status", ["pending", "overdue"])
     .order("due_date", { ascending: true });
 
   // Calculate AR metrics
-  const totalAR = unpaidInvoices?.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0) || 0;
+  const totalAR = unpaidInvoices?.reduce((sum: number, inv: any) => sum + (inv.balance_due || 0), 0) || 0;
 
   const now = new Date();
   const aged30 = unpaidInvoices?.filter((inv: any) => {
@@ -52,9 +52,9 @@ export default async function ReceivablesPage() {
     return daysOverdue > 60;
   }) || [];
 
-  const aged30Total = aged30.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
-  const aged60Total = aged60.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
-  const aged90PlusTotal = aged90Plus.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0);
+  const aged30Total = aged30.reduce((sum: number, inv: any) => sum + (inv.balance_due || 0), 0);
+  const aged60Total = aged60.reduce((sum: number, inv: any) => sum + (inv.balance_due || 0), 0);
+  const aged90PlusTotal = aged90Plus.reduce((sum: number, inv: any) => sum + (inv.balance_due || 0), 0);
 
   return (
     <div className="space-y-6">
@@ -150,7 +150,7 @@ export default async function ReceivablesPage() {
                     <TableRow key={invoice.id}>
                       <TableCell className="font-medium">{invoice.invoice_number}</TableCell>
                       <TableCell>
-                        {invoice.currency} {((invoice.amount || 0) / 100).toFixed(2)}
+                        {invoice.currency} {((invoice.balance_due || 0) / 100).toFixed(2)}
                       </TableCell>
                       <TableCell>
                         {invoice.due_date

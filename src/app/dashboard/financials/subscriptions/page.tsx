@@ -26,7 +26,7 @@ export default async function SubscriptionsPage() {
   // Fetch active plan assignments (subscriptions)
   const { data: subscriptions } = await supabase
     .from("plan_assignments")
-    .select("id, status, start_date, end_date, monthly_cost, plans(name)")
+    .select("id, status, start_date, next_billing_date, plans(name, monthly_fee)")
     .eq("status", "active")
     .order("start_date", { ascending: false });
 
@@ -36,7 +36,7 @@ export default async function SubscriptionsPage() {
     .eq("status", "active");
 
   // Calculate MRR
-  const mrr = subscriptions?.reduce((sum: number, sub: any) => sum + (sub.monthly_cost || 0), 0) || 0;
+  const mrr = subscriptions?.reduce((sum: number, sub: any) => sum + ((sub.plans as any)?.monthly_fee || 0), 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -110,9 +110,9 @@ export default async function SubscriptionsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Plan</TableHead>
-                  <TableHead>Monthly Cost</TableHead>
+                  <TableHead>Monthly Value</TableHead>
                   <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
+                  <TableHead>Next Billing</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -122,10 +122,10 @@ export default async function SubscriptionsPage() {
                     <TableCell className="font-medium">
                       {(sub.plans as any)?.name || "Unknown Plan"}
                     </TableCell>
-                    <TableCell>${((sub.monthly_cost || 0) / 100).toFixed(2)}</TableCell>
+                    <TableCell>${((((sub.plans as any)?.monthly_fee as number) || 0) / 100).toFixed(2)}</TableCell>
                     <TableCell>{new Date(sub.start_date).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      {sub.end_date ? new Date(sub.end_date).toLocaleDateString() : "Ongoing"}
+                      {sub.next_billing_date ? new Date(sub.next_billing_date).toLocaleDateString() : "—"}
                     </TableCell>
                     <TableCell>
                       <Badge variant="default">{sub.status}</Badge>

@@ -39,7 +39,7 @@ export default async function InvoicingRevenuePage() {
     supabase.from("invoices").select("id", { count: "exact", head: true }).eq("status", "overdue"),
     supabase
       .from("invoices")
-      .select("id, invoice_number, amount, currency, status, due_date, created_at")
+      .select("id, invoice_number, total, currency, status, due_date, created_at")
       .order("created_at", { ascending: false })
       .limit(10),
   ]);
@@ -47,10 +47,10 @@ export default async function InvoicingRevenuePage() {
   // Calculate total revenue
   const { data: revenueData } = await supabase
     .from("invoices")
-    .select("amount")
+    .select("total")
     .eq("status", "paid");
 
-  const totalRevenue = revenueData?.reduce((sum: number, inv: any) => sum + (inv.amount || 0), 0) || 0;
+  const totalRevenue = revenueData?.reduce((sum: number, inv: any) => sum + (inv.total || 0), 0) || 0;
 
   return (
     <div className="space-y-6">
@@ -141,15 +141,15 @@ export default async function InvoicingRevenuePage() {
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">
                       <Link
-                        href={`/dashboard/invoices/${invoice.id}`}
-                        className="hover:underline"
-                      >
-                        {invoice.invoice_number}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      {invoice.currency} {((invoice.amount || 0) / 100).toFixed(2)}
-                    </TableCell>
+                          href={`/dashboard/admin/invoices/${invoice.id}`}
+                          className="hover:underline"
+                        >
+                          {invoice.invoice_number}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        {invoice.currency} {((invoice.total || 0) / 100).toFixed(2)}
+                      </TableCell>
                     <TableCell>
                       <Badge
                         variant={

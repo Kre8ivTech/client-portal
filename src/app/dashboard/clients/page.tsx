@@ -41,6 +41,7 @@ export default async function ClientsPage() {
   const isStaff = role === 'staff'
   const isSuperAdminOrStaff = isSuperAdmin || isStaff
   const isPartner = role === 'partner' || role === 'partner_staff'
+  const canCreateOrganizations = isSuperAdminOrStaff || role === 'partner'
 
   // Check if staff has organization assignments (account_manager or project_manager)
   let staffAssignedOrgIds: string[] = []
@@ -60,7 +61,7 @@ export default async function ClientsPage() {
     }
   }
 
-  const canViewAllOrgs = isSuperAdmin
+  const canViewAllOrgs = isSuperAdminOrStaff
   const canManageOrgs = isSuperAdminOrStaff || isPartner || isAssignedStaff
 
   let ownOrg: Organization | null = null
@@ -90,13 +91,20 @@ export default async function ClientsPage() {
       ownOrg = orgs.find((o) => o.id === organizationId) ?? null
     }
 
-    // Direct clients: type='client' with no parent_org_id (direct Kre8ivTech clients)
-    directClients = orgs.filter((o) => o.type === 'client' && !o.parent_org_id)
-    totalDirectClients = directClients.length
-
     // Tenant partners: type='partner'
     const partners = orgs.filter((o) => o.type === 'partner')
     totalTenantPartners = partners.length
+    const partnerIds = new Set(partners.map((p) => p.id))
+
+    // Direct clients: client orgs not managed under a partner
+    directClients = orgs.filter(
+      (o) =>
+        o.type === 'client' &&
+        (!o.parent_org_id ||
+          o.parent_org_id === kre8ivtechOrg?.id ||
+          !partnerIds.has(o.parent_org_id))
+    )
+    totalDirectClients = directClients.length
 
     // Map each partner to include their child clients
     tenantPartners = partners.map((partner) => {
@@ -136,13 +144,16 @@ export default async function ClientsPage() {
       childOrgs = (children ?? []) as Organization[]
     }
 
-    // Direct clients: assigned orgs that are type='client' with no parent_org_id
-    directClients = orgs.filter((o) => o.type === 'client' && !o.parent_org_id)
-    totalDirectClients = directClients.length
-
     // Tenant partners: assigned orgs that are type='partner'
     const partners = orgs.filter((o) => o.type === 'partner')
     totalTenantPartners = partners.length
+    const partnerIds = new Set(partners.map((p) => p.id))
+
+    // Direct clients: assigned client orgs not under assigned partners
+    directClients = orgs.filter(
+      (o) => o.type === 'client' && (!o.parent_org_id || !partnerIds.has(o.parent_org_id))
+    )
+    totalDirectClients = directClients.length
 
     // Map each partner to include their child clients
     tenantPartners = partners.map((partner) => {
@@ -199,7 +210,7 @@ export default async function ClientsPage() {
               : 'Your organization details.'}
           </p>
         </div>
-        {(canViewAllOrgs || isPartner || isAssignedStaff) && (
+        {canCreateOrganizations && (
           <Button className="gap-2" asChild>
             <Link href="/dashboard/clients/new">
               <Plus size={18} />

@@ -1,31 +1,26 @@
 import { requireRole } from "@/lib/require-role";
-import { Card, CardContent } from "@/components/ui/card";
-import { Scale, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getFinancialOverview } from "@/lib/financials/overview";
+import { ModuleOverview } from "@/components/financials/module-overview";
 
 export default async function TaxesPage() {
   await requireRole(["super_admin", "staff"]);
+  const supabase = await createServerSupabaseClient();
+  const overview = await getFinancialOverview(supabase as any);
+
+  const estimatedTaxBase = overview.totalCollected;
+  const estimatedTaxReserve = Math.round(estimatedTaxBase * 0.2);
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <Card className="max-w-md w-full">
-        <CardContent className="pt-6 text-center space-y-4">
-          <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-            <Scale className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h2 className="text-xl font-semibold">Taxes & Compliance</h2>
-          <p className="text-sm text-muted-foreground">
-            This feature is currently under development and will be available in a future update.
-          </p>
-          <Link
-            href="/dashboard/financials"
-            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Financials
-          </Link>
-        </CardContent>
-      </Card>
-    </div>
+    <ModuleOverview
+      title="Taxes & Compliance"
+      description="Monitor taxable revenue signals and maintain reserve visibility for filing cycles."
+      metrics={[
+        { label: "Collected Revenue Base", value: `$${(estimatedTaxBase / 100).toLocaleString()}`, hint: "Potential taxable base" },
+        { label: "Estimated Tax Reserve", value: `$${(estimatedTaxReserve / 100).toLocaleString()}`, hint: "20% planning reserve" },
+        { label: "Open Receivables", value: `$${(overview.openReceivables / 100).toLocaleString()}`, hint: "Future taxable inflow" },
+        { label: "Invoice Count", value: overview.invoiceCount.toString(), hint: "Documents impacting tax records" },
+      ]}
+    />
   );
 }

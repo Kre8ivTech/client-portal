@@ -117,6 +117,11 @@ export function InvoiceForm({ organizationId, clients }: InvoiceFormProps) {
                   ))}
                 </SelectContent>
               </Select>
+              {clients.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No billable clients found in your scope yet. Add a client user or assign a client organization first.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

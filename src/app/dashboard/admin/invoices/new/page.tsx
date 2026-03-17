@@ -27,13 +27,47 @@ export default async function NewInvoicePage() {
     return <div>Forbidden - Account manager access required</div>;
   }
 
-  // Fetch clients for the organization
-  const { data: clients } = await supabase
-    .from("users")
-    .select("id, full_name, email")
-    .eq("organization_id", p.organization_id)
-    .eq("role", "client")
-    .order("full_name");
+  // Fetch billable clients in scope (own org + child client orgs)
+  let orgIds: string[] = [];
+  if (p.role === "super_admin") {
+    const { data: allOrgs } = await supabase
+      .from("organizations")
+      .select("id")
+      .eq("status", "active");
+    orgIds = (allOrgs ?? []).map((o: { id: string }) => o.id);
+  } else {
+    const { data: childOrgs } = await supabase
+      .from("organizations")
+      .select("id")
+      .eq("parent_org_id", p.organization_id)
+      .eq("status", "active");
+    orgIds = [p.organization_id, ...(childOrgs ?? []).map((o: { id: string }) => o.id)];
+  }
+
+  let clients: { id: string; full_name: string; email: string }[] = [];
+  if (orgIds.length > 0) {
+    const { data: clientUsers } = await (supabase as any)
+      .from("users")
+      .select("id, email, role, organization_id, profiles(name)")
+      .in("organization_id", orgIds)
+      .in("role", ["client", "partner", "partner_staff"])
+      .order("email", { ascending: true });
+
+    const rows = (clientUsers ?? []) as Array<{
+      id: string;
+      email: string;
+      role: string;
+      profiles?: { name?: string | null } | null;
+    }>;
+
+    clients = rows
+      .filter((row) => row.id !== user.id)
+      .map((row) => ({
+        id: row.id,
+        full_name: row.profiles?.name?.trim() || row.email,
+        email: row.email,
+      }));
+  }
 
   // We need the InvoiceForm component here
   const { InvoiceForm } = await import("@/components/admin/invoices/invoice-form");
@@ -53,7 +87,7 @@ export default async function NewInvoicePage() {
         <p className="text-muted-foreground mt-1">Generate an invoice for client billing</p>
       </div>
 
-      <InvoiceForm organizationId={p.organization_id || ""} clients={clients || []} />
+      <InvoiceForm organizationId={p.organization_id || ""} clients={clients} />
     </div>
   );
 }

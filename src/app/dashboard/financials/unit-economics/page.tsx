@@ -1,31 +1,26 @@
 import { requireRole } from "@/lib/require-role";
-import { Card, CardContent } from "@/components/ui/card";
-import { BarChart3, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getFinancialOverview } from "@/lib/financials/overview";
+import { ModuleOverview } from "@/components/financials/module-overview";
 
 export default async function UnitEconomicsPage() {
   await requireRole(["super_admin", "staff"]);
+  const supabase = await createServerSupabaseClient();
+  const overview = await getFinancialOverview(supabase as any);
+
+  const arpu = overview.activeSubscriptions > 0 ? overview.monthlyRecurringRevenue / overview.activeSubscriptions : 0;
+  const revenuePerHour = overview.trackedHours > 0 ? overview.totalCollected / overview.trackedHours : 0;
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <Card className="max-w-md w-full">
-        <CardContent className="pt-6 text-center space-y-4">
-          <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-            <BarChart3 className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h2 className="text-xl font-semibold">Unit Economics</h2>
-          <p className="text-sm text-muted-foreground">
-            This feature is currently under development and will be available in a future update.
-          </p>
-          <Link
-            href="/dashboard/financials"
-            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Financials
-          </Link>
-        </CardContent>
-      </Card>
-    </div>
+    <ModuleOverview
+      title="Unit Economics & Margins"
+      description="Track revenue efficiency per account and per labor hour from live operational and billing data."
+      metrics={[
+        { label: "ARPU (MRR)", value: `$${(arpu / 100).toFixed(2)}`, hint: "Average recurring revenue per active subscription" },
+        { label: "Revenue per Tracked Hour", value: `$${(revenuePerHour / 100).toFixed(2)}`, hint: "Collected revenue / tracked hours" },
+        { label: "Active Subscriptions", value: overview.activeSubscriptions.toString(), hint: "Current recurring customer base" },
+        { label: "Billable Utilization", value: `${overview.trackedHours > 0 ? ((overview.billableHours / overview.trackedHours) * 100).toFixed(1) : "0.0"}%`, hint: "Billable hour share" },
+      ]}
+    />
   );
 }

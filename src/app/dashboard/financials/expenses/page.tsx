@@ -1,31 +1,25 @@
 import { requireRole } from "@/lib/require-role";
-import { Card, CardContent } from "@/components/ui/card";
-import { Receipt, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getFinancialOverview } from "@/lib/financials/overview";
+import { ModuleOverview } from "@/components/financials/module-overview";
 
 export default async function ExpensesPage() {
   await requireRole(["super_admin", "staff"]);
+  const supabase = await createServerSupabaseClient();
+  const overview = await getFinancialOverview(supabase as any);
+
+  const estimatedExpenseRunRate = Math.max(overview.totalInvoiced - overview.totalCollected, 0);
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <Card className="max-w-md w-full">
-        <CardContent className="pt-6 text-center space-y-4">
-          <div className="mx-auto h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-            <Receipt className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h2 className="text-xl font-semibold">Expenses & Reimbursements</h2>
-          <p className="text-sm text-muted-foreground">
-            This feature is currently under development and will be available in a future update.
-          </p>
-          <Link
-            href="/dashboard/financials"
-            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Financials
-          </Link>
-        </CardContent>
-      </Card>
-    </div>
+    <ModuleOverview
+      title="Expenses & Reimbursements"
+      description="Track outbound cash impact using current billing, receivables, and utilization signals."
+      metrics={[
+        { label: "Estimated Expense Pressure", value: `$${(estimatedExpenseRunRate / 100).toLocaleString()}`, hint: "Open balance not yet collected" },
+        { label: "Outstanding Receivables", value: `$${(overview.openReceivables / 100).toLocaleString()}`, hint: "Directly affects expense coverage" },
+        { label: "Tracked Hours", value: overview.trackedHours.toFixed(1), hint: "Operational work logged" },
+        { label: "Billable Utilization", value: `${overview.trackedHours > 0 ? ((overview.billableHours / overview.trackedHours) * 100).toFixed(1) : "0.0"}%`, hint: "Billable hours share" },
+      ]}
+    />
   );
 }

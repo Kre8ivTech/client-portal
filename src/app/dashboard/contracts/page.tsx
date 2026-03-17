@@ -12,15 +12,32 @@ export default async function ContractsPage() {
   
   if (!user) redirect('/login')
 
-  // Fetch client's contracts
-  const { data: contracts, error } = await (supabase as any)
+  // Fetch client's contracts (with safe fallback if relation metadata is stale)
+  let contracts: any[] | null = null
+  let error: { message?: string } | null = null
+
+  const primaryQuery = await (supabase as any)
     .from('contracts')
     .select(`
       *,
-      template:contract_templates(name)
+      template:contract_templates!contracts_template_id_fkey(name)
     `)
     .eq('client_id', user.id)
     .order('created_at', { ascending: false })
+
+  contracts = primaryQuery.data
+  error = primaryQuery.error
+
+  if (error) {
+    const fallbackQuery = await (supabase as any)
+      .from('contracts')
+      .select('*')
+      .eq('client_id', user.id)
+      .order('created_at', { ascending: false })
+
+    contracts = fallbackQuery.data
+    error = fallbackQuery.error
+  }
 
   if (error) {
     return (
@@ -49,13 +66,13 @@ export default async function ContractsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatsCard 
           title="Active" 
-          count={contracts?.filter((c: any) => c.status === 'signed' || c.status === 'completed').length || 0} 
+          count={contracts?.filter((c: any) => c.status === 'signed').length || 0} 
           icon={<CheckCircle className="h-5 w-5 text-emerald-500" />}
           color="bg-emerald-50"
         />
         <StatsCard 
           title="Pending" 
-          count={contracts?.filter((c: any) => ['pending', 'sent', 'viewed'].includes(c.status)).length || 0} 
+          count={contracts?.filter((c: any) => c.status === 'pending_signature').length || 0} 
           icon={<Clock className="h-5 w-5 text-amber-500" />}
           color="bg-amber-50"
         />
@@ -136,14 +153,10 @@ function StatsCard({ title, count, icon, color }: { title: string; count: number
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     draft: 'bg-slate-100 text-slate-600 border-slate-200',
-    pending: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-    sent: 'bg-blue-100 text-blue-700 border-blue-200',
-    viewed: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+    pending_signature: 'bg-yellow-100 text-yellow-700 border-yellow-200',
     signed: 'bg-green-100 text-green-700 border-green-200',
-    completed: 'bg-emerald-100 text-emerald-700 border-emerald-200',
     expired: 'bg-red-100 text-red-700 border-red-200',
     cancelled: 'bg-slate-200 text-slate-700 border-slate-300',
-    rejected: 'bg-red-100 text-red-700 border-red-200',
   }
 
   return (

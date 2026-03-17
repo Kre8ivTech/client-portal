@@ -25,18 +25,15 @@ export default async function TimeTrackingPage() {
   // Fetch time entries
   const { data: timeEntries } = await supabase
     .from("time_entries")
-    .select("id, hours, billable_rate, is_billable, date, user_id")
-    .order("date", { ascending: false })
+    .select("id, hours, billable, entry_date, user_id")
+    .order("entry_date", { ascending: false })
     .limit(50);
 
   // Calculate metrics
   const totalHours = timeEntries?.reduce((sum: number, entry: any) => sum + (entry.hours || 0), 0) || 0;
   const billableHours = timeEntries
-    ?.filter((e: any) => e.is_billable)
+    ?.filter((e: any) => e.billable)
     .reduce((sum: number, entry: any) => sum + (entry.hours || 0), 0) || 0;
-  const billableRevenue = timeEntries
-    ?.filter((e: any) => e.is_billable)
-    .reduce((sum: number, entry: any) => sum + (entry.hours || 0) * (entry.billable_rate || 0), 0) || 0;
 
   const utilization = totalHours > 0 ? (billableHours / totalHours) * 100 : 0;
 
@@ -89,8 +86,8 @@ export default async function TimeTrackingPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${(billableRevenue / 100).toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">From tracked time</p>
+            <div className="text-2xl font-bold">{timeEntries?.filter((entry: any) => entry.billable).length ?? 0}</div>
+            <p className="text-xs text-muted-foreground">Billable entries logged</p>
           </CardContent>
         </Card>
       </div>
@@ -119,27 +116,19 @@ export default async function TimeTrackingPage() {
               <TableBody>
                 {timeEntries.slice(0, 10).map((entry: any) => (
                   <TableRow key={entry.id}>
-                    <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(entry.entry_date).toLocaleDateString()}</TableCell>
                     <TableCell className="font-medium">{entry.hours.toFixed(2)}</TableCell>
                     <TableCell>
                       <span
                         className={
-                          entry.is_billable ? "text-green-600" : "text-muted-foreground"
+                          entry.billable ? "text-green-600" : "text-muted-foreground"
                         }
                       >
-                        {entry.is_billable ? "Billable" : "Non-billable"}
+                        {entry.billable ? "Billable" : "Non-billable"}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      {entry.is_billable && entry.billable_rate
-                        ? `$${(entry.billable_rate / 100).toFixed(2)}/hr`
-                        : "—"}
-                    </TableCell>
-                    <TableCell>
-                      {entry.is_billable && entry.billable_rate
-                        ? `$${((entry.hours * entry.billable_rate) / 100).toFixed(2)}`
-                        : "—"}
-                    </TableCell>
+                    <TableCell>—</TableCell>
+                    <TableCell>—</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

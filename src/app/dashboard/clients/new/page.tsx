@@ -7,7 +7,7 @@ export const metadata = {
 };
 
 export default async function NewClientPage() {
-  await requireRole(["super_admin", "staff"]);
+  await requireRole(["super_admin", "staff", "partner"]);
 
   return (
     <div className="container py-6">

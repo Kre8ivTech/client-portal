@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 
 interface InvoiceFormProps {
   organizationId: string
-  clients: { id: string; full_name: string; email: string }[]
+  clients: { id: string; full_name: string; email: string; organization_name: string }[]
 }
 
 type LineItem = {
@@ -112,7 +112,7 @@ export function InvoiceForm({ organizationId, clients }: InvoiceFormProps) {
                 <SelectContent>
                   {clients.map(client => (
                     <SelectItem key={client.id} value={client.id}>
-                      {client.full_name || client.email}
+                      {(client.full_name || client.email) + " - " + client.organization_name}
                     </SelectItem>
                   ))}
                 </SelectContent>

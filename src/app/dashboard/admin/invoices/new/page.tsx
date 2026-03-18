@@ -44,11 +44,11 @@ export default async function NewInvoicePage() {
     orgIds = [p.organization_id, ...(childOrgs ?? []).map((o: { id: string }) => o.id)];
   }
 
-  let clients: { id: string; full_name: string; email: string }[] = [];
+  let clients: { id: string; full_name: string; email: string; organization_name: string }[] = [];
   if (orgIds.length > 0) {
     const { data: clientUsers } = await (supabase as any)
       .from("users")
-      .select("id, email, role, organization_id, profiles(name)")
+      .select("id, email, role, organization_id, profiles(name), organizations(name)")
       .in("organization_id", orgIds)
       .in("role", ["client", "partner", "partner_staff"])
       .order("email", { ascending: true });
@@ -58,6 +58,7 @@ export default async function NewInvoicePage() {
       email: string;
       role: string;
       profiles?: { name?: string | null } | null;
+      organizations?: { name?: string | null } | null;
     }>;
 
     clients = rows
@@ -66,6 +67,7 @@ export default async function NewInvoicePage() {
         id: row.id,
         full_name: row.profiles?.name?.trim() || row.email,
         email: row.email,
+        organization_name: row.organizations?.name?.trim() || "Unknown Organization",
       }));
   }
 

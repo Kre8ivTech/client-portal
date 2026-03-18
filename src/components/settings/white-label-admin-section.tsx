@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { OrganizationBrandingForm } from "@/components/settings/organization-branding-form";
+import { SmtpConfigForm } from "@/components/settings/smtp-config-form";
 import { Building2 } from "lucide-react";
 
 type Organization = {
@@ -83,6 +84,15 @@ export function WhiteLabelAdminSection({ organizations }: WhiteLabelAdminSection
               canEdit={true}
               canManageDomainVerification={true}
             />
+            {selectedOrg.type === "partner" && (
+              <div className="mt-6">
+                <SmtpConfigForm
+                  endpoint={`/api/organizations/${selectedOrg.id}/smtp`}
+                  title="Organization SMTP (White Label)"
+                  description="Configure a custom SMTP provider for this partner's branded emails."
+                />
+              </div>
+            )}
           </div>
         )}
       </CardContent>

@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { PortalBrandingForm } from "@/components/settings/portal-branding-form";
 import { OrganizationBrandingForm } from "@/components/settings/organization-branding-form";
 import { WhiteLabelAdminSection } from "@/components/settings/white-label-admin-section";
+import { SmtpConfigForm } from "@/components/settings/smtp-config-form";
 import { getPortalBranding } from "@/lib/actions/portal-branding";
 import { redirect } from "next/navigation";
 
@@ -109,10 +110,19 @@ export default async function WhiteLabelSettingsPage() {
 
         {/* Organization branding - partners can edit their own branding */}
         {isPartnerOrPartnerStaff && organization && (
-          <OrganizationBrandingForm
-            organization={organization}
-            canEdit={true}
-          />
+          <>
+            <OrganizationBrandingForm
+              organization={organization}
+              canEdit={true}
+            />
+            {organization.type === "partner" && (
+              <SmtpConfigForm
+                endpoint={`/api/organizations/${organization.id}/smtp`}
+                title="Your Organization SMTP"
+                description="Set your own SMTP provider for white-label outbound emails to your clients."
+              />
+            )}
+          </>
         )}
       </div>
     </div>

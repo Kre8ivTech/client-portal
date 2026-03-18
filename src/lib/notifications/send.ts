@@ -66,6 +66,7 @@ export async function sendNotification(
           subject: subject || 'Notification',
           message,
           ticketId,
+          organizationId: payload.organizationId,
         })
       }
       break

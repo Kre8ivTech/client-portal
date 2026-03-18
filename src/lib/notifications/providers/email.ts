@@ -5,6 +5,7 @@
 
 import { NotificationResult } from '../index'
 import type { EmailTemplateType } from '@/lib/email-templates-shared'
+import { getEffectiveSmtpConfig, sendWithSmtp } from './smtp'
 
 interface EmailOptions {
   to: string
@@ -12,6 +13,7 @@ interface EmailOptions {
   message: string
   ticketNumber?: number
   ticketId?: string
+  organizationId?: string | null
   appUrl?: string
 }
 
@@ -32,6 +34,7 @@ export async function sendEmail({
   message,
   ticketNumber,
   ticketId,
+  organizationId,
   appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
 }: EmailOptions): Promise<NotificationResult> {
   try {
@@ -49,6 +52,31 @@ export async function sendEmail({
     const ticketLink = ticketId ? `${appUrl}/dashboard/tickets/${ticketId}` : null
     const html = formatEmailHTML(message, ticketNumber, ticketLink)
 
+    const smtpConfig = await getEffectiveSmtpConfig(organizationId)
+    if (smtpConfig) {
+      try {
+        const messageId = await sendWithSmtp(smtpConfig, {
+          to,
+          subject,
+          html,
+          text: message,
+        })
+
+        return {
+          success: true,
+          messageId,
+          provider: 'smtp',
+        }
+      } catch (smtpError) {
+        console.error('[Notifications] SMTP send failed:', smtpError)
+        return {
+          success: false,
+          error: smtpError instanceof Error ? smtpError.message : 'SMTP send failed',
+          provider: 'smtp',
+        }
+      }
+    }
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -56,7 +84,7 @@ export async function sendEmail({
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: 'KT-Portal Support <support@ktportal.app>',
+        from: process.env.EMAIL_FROM || 'KT-Portal Support <support@ktportal.app>',
         to: [to],
         subject,
         html,
@@ -122,6 +150,7 @@ export async function sendTemplatedEmail({
         to,
         subject: variables.subject || 'Notification',
         message: variables.message || 'You have a new notification.',
+        organizationId,
         appUrl,
       })
     }
@@ -150,6 +179,36 @@ export async function sendTemplatedEmail({
     // Determine from address
     const fromName = template.from_name || 'KT-Portal Support'
     const fromEmail = template.from_email || 'support@ktportal.app'
+
+    const smtpConfig = await getEffectiveSmtpConfig(organizationId)
+    if (smtpConfig) {
+      try {
+        const messageId = await sendWithSmtp(smtpConfig, {
+          to,
+          subject: renderedSubject,
+          html: renderedHtml,
+          text: renderedText || undefined,
+          fromName,
+          fromEmail,
+          replyTo: template.reply_to || undefined,
+        })
+
+        return {
+          success: true,
+          messageId,
+          provider: 'smtp',
+          templateId: template.id,
+        }
+      } catch (smtpError) {
+        console.error('[Notifications] SMTP templated send failed:', smtpError)
+        return {
+          success: false,
+          error: smtpError instanceof Error ? smtpError.message : 'SMTP send failed',
+          provider: 'smtp',
+        }
+      }
+    }
+
     const from = `${fromName} <${fromEmail}>`
 
     const response = await fetch('https://api.resend.com/emails', {
@@ -204,11 +263,13 @@ export async function sendRawEmail({
   subject,
   html,
   text,
+  organizationId,
 }: {
   to: string
   subject: string
   html: string
   text?: string
+  organizationId?: string | null
 }): Promise<NotificationResult> {
   try {
     const apiKey = process.env.RESEND_API_KEY
@@ -221,6 +282,31 @@ export async function sendRawEmail({
       }
     }
 
+    const smtpConfig = await getEffectiveSmtpConfig(organizationId)
+    if (smtpConfig) {
+      try {
+        const messageId = await sendWithSmtp(smtpConfig, {
+          to,
+          subject,
+          html,
+          text,
+        })
+
+        return {
+          success: true,
+          messageId,
+          provider: 'smtp',
+        }
+      } catch (smtpError) {
+        console.error('[Notifications] SMTP raw send failed:', smtpError)
+        return {
+          success: false,
+          error: smtpError instanceof Error ? smtpError.message : 'SMTP send failed',
+          provider: 'smtp',
+        }
+      }
+    }
+
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -228,7 +314,7 @@ export async function sendRawEmail({
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: 'KT-Portal Support <support@ktportal.app>',
+        from: process.env.EMAIL_FROM || 'KT-Portal Support <support@ktportal.app>',
         to: [to],
         subject,
         html,

@@ -19,6 +19,7 @@ import { ZapierIntegration } from "@/components/integrations/zapier-integration"
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { S3ConfigForm } from "@/components/admin/s3-config-form";
 import { getAppSettings } from "@/lib/actions/app-settings";
+import { SmtpConfigForm } from "@/components/settings/smtp-config-form";
 
 interface IntegrationsPageProps {
   searchParams: Promise<{ success?: string }>;
@@ -99,6 +100,14 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
         }
       : null;
 
+  const { data: globalSmtpConfig } = await (supabase as any)
+    .from("smtp_configurations")
+    .select("id")
+    .is("organization_id", null)
+    .maybeSingle();
+
+  const smtpConfigured = Boolean(globalSmtpConfig);
+
   return (
     <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
@@ -177,11 +186,27 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
                   <CardDescription>Transactional email for notifications and invoices</CardDescription>
                 </div>
               </div>
-              <ConnectionStatus connected={resendConfigured} />
+              <ConnectionStatus connected={smtpConfigured || resendConfigured} />
             </div>
           </CardHeader>
           <CardContent className="pt-6 space-y-4">
-            {resendConfigured ? (
+            <SmtpConfigForm
+              endpoint="/api/admin/email/smtp"
+              title="SMTP Provider"
+              description="Use any SMTP provider (SES, SendGrid SMTP, Mailgun SMTP, Postmark SMTP, etc.)."
+            />
+
+            {smtpConfigured ? (
+              <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
+                <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-green-800">Custom SMTP is configured and active</p>
+                  <p className="text-xs text-green-700">
+                    Outbound notifications now use your configured SMTP provider as the primary email channel.
+                  </p>
+                </div>
+              </div>
+            ) : resendConfigured ? (
               <div className="flex items-start gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
                 <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
                 <div className="space-y-1">
@@ -275,4 +300,3 @@ function maskKey(key: string): string {
   if (!key || key.length < 8) return "****";
   return key.slice(0, 4) + "****" + key.slice(-4);
 }
-

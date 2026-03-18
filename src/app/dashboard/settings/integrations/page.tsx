@@ -9,6 +9,7 @@ import {
 import { QuickBooksIntegration } from "@/components/settings/quickbooks-integration";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle } from "lucide-react";
+import { SmtpConfigForm } from "@/components/settings/smtp-config-form";
 
 interface PageProps {
   searchParams: Promise<{ success?: string; error?: string }>;
@@ -103,10 +104,19 @@ export default async function IntegrationsSettingsPage({
       <div className="grid gap-8">
         {/* QuickBooks Integration */}
         {isAccountManager ? (
-          <QuickBooksIntegration
-            integration={quickbooksIntegration}
-            organizationId={profile.organization_id}
-          />
+          <>
+            <QuickBooksIntegration
+              integration={quickbooksIntegration}
+              organizationId={profile.organization_id}
+            />
+            {profile.organization_id && (
+              <SmtpConfigForm
+                endpoint={`/api/organizations/${profile.organization_id}/smtp`}
+                title="Organization SMTP"
+                description="Use any SMTP provider for your organization's outbound email."
+              />
+            )}
+          </>
         ) : (
           <Card>
             <CardHeader>

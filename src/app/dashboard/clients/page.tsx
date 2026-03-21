@@ -21,9 +21,13 @@ type Organization = {
   type: string
   status: string
   parent_org_id: string | null
-  custom_domain: string | null
+  /** Present only when DB has custom_domain column (see migrations). */
+  custom_domain?: string | null
   description?: string | null
 }
+
+/** Core columns only: avoid custom_domain (removed in some DBs) and description (added in a later migration). */
+const ORG_LIST_COLUMNS = 'id, name, slug, type, status, parent_org_id' as const
 
 export default async function ClientsPage() {
   const supabase = (await createServerSupabaseClient()) as any
@@ -85,7 +89,7 @@ export default async function ClientsPage() {
     // Super admin/staff can see all organizations (RLS must allow full list; see migration organizations_select_all_for_staff_super_admin)
     const { data: allOrgs, error: orgsQueryError } = await supabase
       .from('organizations')
-      .select('id, name, slug, type, status, parent_org_id, custom_domain, description')
+      .select(ORG_LIST_COLUMNS)
       .order('name', { ascending: true })
 
     if (orgsQueryError) {
@@ -128,7 +132,7 @@ export default async function ClientsPage() {
     // Staff with organization assignments (account_manager/project_manager) can see assigned orgs
     const { data: assignedOrgs } = await supabase
       .from('organizations')
-      .select('id, name, slug, type, status, parent_org_id, custom_domain')
+      .select(ORG_LIST_COLUMNS)
       .in('id', staffAssignedOrgIds)
       .order('name', { ascending: true })
 
@@ -138,7 +142,7 @@ export default async function ClientsPage() {
     if (organizationId) {
       const { data: ownOrgData } = await supabase
         .from('organizations')
-        .select('id, name, slug, type, status, parent_org_id, custom_domain')
+        .select(ORG_LIST_COLUMNS)
         .eq('id', organizationId)
         .single()
       ownOrg = ownOrgData ?? null
@@ -150,7 +154,7 @@ export default async function ClientsPage() {
     if (partnerOrgIds.length > 0) {
       const { data: children } = await supabase
         .from('organizations')
-        .select('id, name, slug, type, status, parent_org_id, custom_domain')
+        .select(ORG_LIST_COLUMNS)
         .in('parent_org_id', partnerOrgIds)
         .order('name', { ascending: true })
       childOrgs = (children ?? []) as Organization[]
@@ -177,14 +181,14 @@ export default async function ClientsPage() {
     // Partner can see their org and their child clients
     const { data: org } = await supabase
       .from('organizations')
-      .select('id, name, slug, type, status, parent_org_id, custom_domain')
+      .select(ORG_LIST_COLUMNS)
       .eq('id', organizationId)
       .single()
     ownOrg = org ?? null
 
     const { data: children } = await supabase
       .from('organizations')
-      .select('id, name, slug, type, status, parent_org_id, custom_domain')
+      .select(ORG_LIST_COLUMNS)
       .eq('parent_org_id', organizationId)
       .order('name', { ascending: true })
 
@@ -199,7 +203,7 @@ export default async function ClientsPage() {
     // Regular client can only see their own org
     const { data: org } = await supabase
       .from('organizations')
-      .select('id, name, slug, type, status, parent_org_id, custom_domain')
+      .select(ORG_LIST_COLUMNS)
       .eq('id', organizationId)
       .single()
     ownOrg = org ?? null
@@ -259,11 +263,6 @@ export default async function ClientsPage() {
                     <Badge variant="default" className="bg-primary text-white">Main</Badge>
                   </div>
                   <p className="text-sm text-slate-600 font-medium">{kre8ivtechOrg.slug}</p>
-                  {(kre8ivtechOrg as any).description && (
-                    <p className="text-xs text-slate-500 mt-1 max-w-2xl">
-                      {(kre8ivtechOrg as any).description}
-                    </p>
-                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">

@@ -1643,6 +1643,7 @@ export type Database = {
           created_at: string | null;
           id: string;
           is_internal: boolean | null;
+          is_intel: boolean;
           ticket_id: string;
           updated_at: string | null;
         };
@@ -1653,6 +1654,7 @@ export type Database = {
           created_at?: string | null;
           id?: string;
           is_internal?: boolean | null;
+          is_intel?: boolean;
           ticket_id: string;
           updated_at?: string | null;
         };
@@ -1663,6 +1665,7 @@ export type Database = {
           created_at?: string | null;
           id?: string;
           is_internal?: boolean | null;
+          is_intel?: boolean;
           ticket_id?: string;
           updated_at?: string | null;
         };

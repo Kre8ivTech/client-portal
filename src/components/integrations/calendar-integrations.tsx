@@ -182,6 +182,12 @@ export function CalendarIntegrations({
             <div className="space-y-2">
               <p className="font-medium">OAuth environment variables required</p>
               <p className="text-xs text-amber-800">
+                <strong>End users do not enter keys.</strong> After this one-time setup, they use the{" "}
+                <strong>Connect</strong> button next to Google Calendar or Microsoft Outlook and sign in with their
+                account—that is the OAuth flow. The values below are only for whoever deploys the app (Google Cloud or
+                Azure app registration + Vercel/host env).
+              </p>
+              <p className="text-xs text-amber-800">
                 Add the following to your deployment (Vercel / host env). Use the same authorized redirect URIs as in
                 the provider console.
               </p>

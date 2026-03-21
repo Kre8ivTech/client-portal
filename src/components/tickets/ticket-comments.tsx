@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import Image from 'next/image'
 import { format } from 'date-fns'
-import { MessageSquare, Send, Loader2, User, AlertCircle } from 'lucide-react'
+import { MessageSquare, Send, Loader2, User, AlertCircle, Shield } from 'lucide-react'
 import { Database } from '@/types/database'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -32,13 +32,15 @@ interface TicketCommentsProps {
 export function TicketComments({ ticketId, userId, userRole }: TicketCommentsProps) {
   const [newComment, setNewComment] = useState('')
   const [isInternal, setIsInternal] = useState(false)
+  const [isIntel, setIsIntel] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
-  const supabase = createClient() as any
+  const supabase = createClient()
   const queryClient = useQueryClient()
   const router = useRouter()
 
-  const isStaff = userRole === 'super_admin' || userRole === 'staff'
+  const isStaff = userRole === 'super_admin' || userRole === 'staff' || userRole === 'admin'
+  const canPostIntel = userRole === 'super_admin' || userRole === 'admin'
 
   // Fetch ticket details for notification context
   const { data: ticketData } = useQuery({
@@ -95,13 +97,15 @@ export function TicketComments({ ticketId, userId, userRole }: TicketCommentsPro
     if (!newComment.trim() || isSubmitting) return
 
     setIsSubmitting(true)
+    const effectiveInternal = isIntel || isInternal
     const { error } = await supabase
       .from('ticket_comments')
       .insert({
         ticket_id: ticketId,
         author_id: userId,
         content: newComment.trim(),
-        is_internal: isInternal
+        is_internal: effectiveInternal,
+        is_intel: isIntel,
       })
 
     if (error) {
@@ -110,13 +114,14 @@ export function TicketComments({ ticketId, userId, userRole }: TicketCommentsPro
       const commentContent = newComment.trim()
       setNewComment('')
       setIsInternal(false)
+      setIsIntel(false)
       setPostError(null)
       // Refresh comments and ticket data
       queryClient.invalidateQueries({ queryKey: ['ticket-comments', ticketId] })
       router.refresh()
 
       // Fire-and-forget email notification for non-internal comments
-      if (!isInternal && ticketData) {
+      if (!effectiveInternal && ticketData) {
         notifyTicketComment(
           ticketId,
           ticketData.ticket_number,
@@ -174,13 +179,21 @@ export function TicketComments({ ticketId, userId, userRole }: TicketCommentsPro
                   </span>
                 </div>
                 <div className={`p-3 rounded-2xl text-sm ${
-                  comment.is_internal
+                  comment.is_intel
+                    ? 'bg-violet-50 border-violet-300 text-violet-950 border'
+                    : comment.is_internal
                     ? 'bg-amber-50 border-amber-200 text-amber-900 border'
                     : comment.author_id === userId 
                       ? 'bg-primary text-white rounded-tr-none' 
                       : 'bg-white border text-slate-700 rounded-tl-none shadow-sm'
                 }`}>
-                  {comment.is_internal && (
+                  {comment.is_intel && (
+                    <div className="text-[10px] font-bold uppercase mb-1 flex items-center gap-1 text-violet-700">
+                      <Shield className="h-3 w-3" />
+                      Intel
+                    </div>
+                  )}
+                  {!comment.is_intel && comment.is_internal && (
                     <div className="text-[10px] font-bold uppercase mb-1 flex items-center gap-1 text-amber-600">
                       <AlertCircle className="h-3 w-3" />
                       Internal Note
@@ -224,15 +237,37 @@ export function TicketComments({ ticketId, userId, userRole }: TicketCommentsPro
           </Button>
         </div>
         
+        {canPostIntel && (
+          <div className="flex items-center gap-2 px-1">
+            <Switch
+              id="intel-note"
+              checked={isIntel}
+              onCheckedChange={(v) => {
+                setIsIntel(v)
+                if (v) setIsInternal(false)
+              }}
+            />
+            <Label htmlFor="intel-note" className="text-sm font-medium text-slate-600 cursor-pointer">
+              Intel note (platform admins only; never shown to clients or partners)
+            </Label>
+          </div>
+        )}
         {isStaff && (
           <div className="flex items-center gap-2 px-1">
-            <Switch 
-              id="internal-note" 
-              checked={isInternal} 
-              onCheckedChange={setIsInternal} 
+            <Switch
+              id="internal-note"
+              checked={isIntel ? true : isInternal}
+              onCheckedChange={(v) => {
+                if (!isIntel) setIsInternal(v)
+              }}
+              disabled={isIntel}
             />
-            <Label htmlFor="internal-note" className="text-sm font-medium text-slate-600 cursor-pointer">
+            <Label
+              htmlFor="internal-note"
+              className={`text-sm font-medium cursor-pointer ${isIntel ? 'text-slate-400' : 'text-slate-600'}`}
+            >
               Mark as internal note (Staff only)
+              {isIntel ? ' (on for Intel)' : ''}
             </Label>
           </div>
         )}

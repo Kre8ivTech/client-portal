@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { syncStaffCalendarFromOAuth, clearStaffCalendarFromOAuth } from "@/lib/integrations/staff-calendar-sync";
 import { z } from "zod";
 
 // Apple uses CalDAV which requires app-specific password, not OAuth
@@ -92,6 +93,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { error: syncErr } = await syncStaffCalendarFromOAuth(
+      supabase,
+      user.id,
+      "apple_caldav",
+      email
+    );
+    if (syncErr) {
+      console.error("Failed to sync staff_calendar_integrations:", syncErr);
+    }
+
     return NextResponse.json({ success: true });
   } catch (err) {
     console.error("Apple CalDAV connection error:", err);
@@ -120,6 +131,8 @@ export async function DELETE(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await clearStaffCalendarFromOAuth(supabase, user.id, "apple_caldav");
 
   return NextResponse.json({ success: true });
 }

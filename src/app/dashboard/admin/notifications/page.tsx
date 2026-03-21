@@ -2,6 +2,8 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { NotificationForm } from '@/components/admin/notification-form'
 import { NotificationList } from '@/components/admin/notification-list'
+import { AdminEmailTestPanel } from '@/components/admin/admin-email-test-panel'
+import { normalizeDashboardRole } from '@/lib/require-role'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -14,7 +16,7 @@ export default async function NotificationsManagementPage() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) {
+  if (!user || !user.email) {
     redirect('/login')
   }
 
@@ -29,9 +31,11 @@ export default async function NotificationsManagementPage() {
     redirect('/dashboard')
   }
 
-  const isAdmin = profile.role === 'super_admin'
+  const normalizedRole = normalizeDashboardRole(profile.role)
+  const isAdmin = normalizedRole === 'super_admin'
   const isAccountManager = profile.is_account_manager
-  const isStaff = profile.role === 'staff' || profile.role === 'partner_staff'
+  const isStaff = normalizedRole === 'staff' || normalizedRole === 'partner_staff'
+  const canSendTestEmail = normalizedRole === 'super_admin' || normalizedRole === 'staff'
 
   // Only admins, account managers, and staff can access this page
   if (!isAdmin && !isAccountManager && !isStaff) {
@@ -54,6 +58,13 @@ export default async function NotificationsManagementPage() {
         </TabsList>
 
         <TabsContent value="create" className="space-y-6">
+          {canSendTestEmail && (
+            <AdminEmailTestPanel
+              defaultEmail={user.email}
+              organizationId={profile.organization_id}
+            />
+          )}
+
           <NotificationForm
             userRole={profile.role}
             isAccountManager={isAccountManager}

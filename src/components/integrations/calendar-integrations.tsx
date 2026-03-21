@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CheckCircle2, Loader2, ExternalLink } from "lucide-react";
+import { CheckCircle2, Loader2, ExternalLink, AlertCircle } from "lucide-react";
 
 type Integration = {
   id: string;
@@ -24,9 +24,19 @@ type Integration = {
 
 type CalendarIntegrationsProps = {
   integrations: Integration[];
+  /** Where to land after OAuth (Google/Microsoft). */
+  oauthReturnPath?: string;
+  /** Server-side: both client id and secret are set in the deployment. */
+  googleOAuthConfigured?: boolean;
+  microsoftOAuthConfigured?: boolean;
 };
 
-export function CalendarIntegrations({ integrations }: CalendarIntegrationsProps) {
+export function CalendarIntegrations({
+  integrations,
+  oauthReturnPath = "/dashboard/integrations",
+  googleOAuthConfigured = true,
+  microsoftOAuthConfigured = true,
+}: CalendarIntegrationsProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [appleModalOpen, setAppleModalOpen] = useState(false);
@@ -34,15 +44,21 @@ export function CalendarIntegrations({ integrations }: CalendarIntegrationsProps
   const [applePassword, setApplePassword] = useState("");
   const [localIntegrations, setLocalIntegrations] = useState(integrations);
 
+  useEffect(() => {
+    setLocalIntegrations(integrations);
+  }, [integrations]);
+
   const googleIntegration = localIntegrations.find(i => i.provider === "google_calendar");
   const microsoftIntegration = localIntegrations.find(i => i.provider === "microsoft_outlook");
   const appleIntegration = localIntegrations.find(i => i.provider === "apple_caldav");
+
+  const oauthQuery = `?returnTo=${encodeURIComponent(oauthReturnPath)}`;
 
   const handleGoogleConnect = async () => {
     setLoading("google");
     setError(null);
     try {
-      const response = await fetch("/api/integrations/google");
+      const response = await fetch(`/api/integrations/google${oauthQuery}`);
       const data = await response.json();
 
       if (data.error) {
@@ -64,7 +80,7 @@ export function CalendarIntegrations({ integrations }: CalendarIntegrationsProps
     setLoading("microsoft");
     setError(null);
     try {
-      const response = await fetch("/api/integrations/microsoft");
+      const response = await fetch(`/api/integrations/microsoft${oauthQuery}`);
       const data = await response.json();
 
       if (data.error) {
@@ -159,6 +175,55 @@ export function CalendarIntegrations({ integrations }: CalendarIntegrationsProps
         </div>
       )}
 
+      {(!googleOAuthConfigured || !microsoftOAuthConfigured) && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="flex gap-2">
+            <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" />
+            <div className="space-y-2">
+              <p className="font-medium">OAuth environment variables required</p>
+              <p className="text-xs text-amber-800">
+                Add the following to your deployment (Vercel / host env). Use the same authorized redirect URIs as in
+                the provider console.
+              </p>
+              <div className="bg-amber-100/80 rounded p-2 font-mono text-[11px] space-y-1">
+                {!googleOAuthConfigured && (
+                  <>
+                    <div>GOOGLE_CLIENT_ID=...</div>
+                    <div>GOOGLE_CLIENT_SECRET=...</div>
+                    <div className="text-amber-700 pt-1">
+                      Redirect:{" "}
+                      <code className="break-all">
+                        {(process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")}
+                        /api/integrations/google/callback
+                      </code>
+                    </div>
+                  </>
+                )}
+                {!microsoftOAuthConfigured && (
+                  <>
+                    <div className={!googleOAuthConfigured ? "pt-2 border-t border-amber-200 mt-2" : ""}>
+                      MICROSOFT_CLIENT_ID=...
+                    </div>
+                    <div>MICROSOFT_CLIENT_SECRET=...</div>
+                    <div className="text-amber-700 pt-1">
+                      Redirect:{" "}
+                      <code className="break-all">
+                        {(process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")}
+                        /api/integrations/microsoft/callback
+                      </code>
+                    </div>
+                  </>
+                )}
+              </div>
+              <p className="text-xs text-amber-800">
+                Also set <code className="bg-amber-100 px-1 rounded">NEXT_PUBLIC_APP_URL</code> to your site URL so
+                redirect URIs match (e.g. https://app.example.com).
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Google Calendar */}
       <div className="flex items-center justify-between p-4 border rounded-lg">
         <div className="flex items-center gap-3">
@@ -201,7 +266,7 @@ export function CalendarIntegrations({ integrations }: CalendarIntegrationsProps
               variant="outline"
               size="sm"
               onClick={handleGoogleConnect}
-              disabled={loading === "google"}
+              disabled={loading === "google" || !googleOAuthConfigured}
             >
               {loading === "google" && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
               Connect
@@ -249,7 +314,7 @@ export function CalendarIntegrations({ integrations }: CalendarIntegrationsProps
               variant="outline"
               size="sm"
               onClick={handleMicrosoftConnect}
-              disabled={loading === "microsoft"}
+              disabled={loading === "microsoft" || !microsoftOAuthConfigured}
             >
               {loading === "microsoft" && <Loader2 className="w-3 h-3 mr-1 animate-spin" />}
               Connect

@@ -67,8 +67,14 @@ export default function AIAssistantPage() {
       const data = await response.json()
 
       if (response.status === 429) {
-        setError('Daily AI request limit reached. Please try again tomorrow.')
-        setMessages(prev => [...prev, { role: 'assistant', content: 'You have reached your daily AI request limit. Please try again tomorrow.' }])
+        const limitMsg =
+          data.code === 'token_limit' && typeof data.userMessage === 'string'
+            ? data.userMessage
+            : typeof data.error === 'string'
+              ? data.error
+              : 'Daily AI request limit reached. Please try again tomorrow.'
+        setError(limitMsg)
+        setMessages((prev) => [...prev, { role: 'assistant', content: limitMsg }])
         return
       }
       if (!response.ok) {

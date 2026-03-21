@@ -22,7 +22,22 @@ import { getAppSettings } from "@/lib/actions/app-settings";
 import { SmtpConfigForm } from "@/components/settings/smtp-config-form";
 
 interface IntegrationsPageProps {
-  searchParams: Promise<{ success?: string }>;
+  searchParams: Promise<{ success?: string; error?: string }>;
+}
+
+function oauthErrorMessage(code: string | undefined) {
+  if (!code) return "Calendar connection failed.";
+  const map: Record<string, string> = {
+    missing_params: "OAuth callback missing parameters. Try connecting again.",
+    invalid_state: "Invalid or tampered OAuth state. Try connecting again.",
+    state_expired: "Connection timed out. Try connecting again.",
+    unauthorized: "Session mismatch. Sign in and try again.",
+    oauth_not_configured: "Server is missing Google or Microsoft OAuth credentials.",
+    token_exchange_failed: "Could not exchange authorization code. Check client secret and redirect URI.",
+    save_failed: "Could not save the connection. Try again or contact support.",
+    oauth_failed: "OAuth failed unexpectedly.",
+  };
+  return map[code] ?? code;
 }
 
 export default async function IntegrationsPage({ searchParams }: IntegrationsPageProps) {
@@ -108,6 +123,13 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
 
   const smtpConfigured = Boolean(globalSmtpConfig);
 
+  const googleCalendarOAuthConfigured = !!(
+    process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+  );
+  const microsoftCalendarOAuthConfigured = !!(
+    process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET
+  );
+
   return (
     <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
@@ -131,6 +153,28 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
           <AlertDescription className="text-green-800">
             AWS S3 configuration removed. Using environment variables if set.
           </AlertDescription>
+        </Alert>
+      )}
+      {params.success === "google_connected" && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            Google Calendar connected for this account.
+          </AlertDescription>
+        </Alert>
+      )}
+      {params.success === "microsoft_connected" && (
+        <Alert className="border-green-200 bg-green-50">
+          <CheckCircle2 className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-800">
+            Microsoft Outlook connected for this account.
+          </AlertDescription>
+        </Alert>
+      )}
+      {params.error && (
+        <Alert variant="destructive" className="border-red-200 bg-red-50">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-red-800">{oauthErrorMessage(params.error)}</AlertDescription>
         </Alert>
       )}
 
@@ -256,7 +300,12 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
             </div>
           </CardHeader>
           <CardContent className="pt-6">
-            <CalendarIntegrations integrations={calendarIntegrations || []} />
+            <CalendarIntegrations
+              integrations={calendarIntegrations || []}
+              oauthReturnPath="/dashboard/integrations"
+              googleOAuthConfigured={googleCalendarOAuthConfigured}
+              microsoftOAuthConfigured={microsoftCalendarOAuthConfigured}
+            />
           </CardContent>
         </Card>
 

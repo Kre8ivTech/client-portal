@@ -57,7 +57,7 @@ export default async function ProjectsTasksOverviewPage() {
         status,
         priority,
         organization_id,
-        organizations:organizations!inner (
+        organizations:organizations (
           id,
           name
         )
@@ -80,9 +80,10 @@ export default async function ProjectsTasksOverviewPage() {
       )
     `
     )
+    // Chronological: soonest deadlines first; undated tasks last; stable ties via start then created
     .order('due_date', { ascending: true, nullsFirst: false })
-    .order('priority', { ascending: false })
-    .order('created_at', { ascending: false })
+    .order('start_date', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true })
 
   if (tasksError) {
     console.error('Error fetching tasks:', tasksError)
@@ -99,7 +100,8 @@ export default async function ProjectsTasksOverviewPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Project Tasks</h1>
         <p className="text-muted-foreground mt-2">
-          Overview of all tasks across your projects
+          All tasks from every project you can access, listed chronologically by due date (then start date and
+          created date). Use column headers to re-sort.
         </p>
       </div>
 

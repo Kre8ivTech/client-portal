@@ -38,16 +38,6 @@ export async function sendEmail({
   appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
 }: EmailOptions): Promise<NotificationResult> {
   try {
-    const apiKey = process.env.RESEND_API_KEY
-
-    if (!apiKey) {
-      console.error('[Notifications] RESEND_API_KEY not configured')
-      return {
-        success: false,
-        error: 'Email service not configured',
-      }
-    }
-
     // Format HTML email
     const ticketLink = ticketId ? `${appUrl}/dashboard/tickets/${ticketId}` : null
     const html = formatEmailHTML(message, ticketNumber, ticketLink)
@@ -74,6 +64,16 @@ export async function sendEmail({
           error: smtpError instanceof Error ? smtpError.message : 'SMTP send failed',
           provider: 'smtp',
         }
+      }
+    }
+
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) {
+      console.error('[Notifications] RESEND_API_KEY not configured')
+      return {
+        success: false,
+        error:
+          'Email service not configured: set RESEND_API_KEY or configure SMTP for this organization',
       }
     }
 
@@ -130,16 +130,6 @@ export async function sendTemplatedEmail({
   appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.ktportal.app',
 }: TemplatedEmailOptions): Promise<NotificationResult> {
   try {
-    const apiKey = process.env.RESEND_API_KEY
-
-    if (!apiKey) {
-      console.error('[Notifications] RESEND_API_KEY not configured')
-      return {
-        success: false,
-        error: 'Email service not configured',
-      }
-    }
-
     // Fetch the template from the database
     const template = await getEffectiveEmailTemplate(templateType, organizationId)
 
@@ -209,6 +199,16 @@ export async function sendTemplatedEmail({
       }
     }
 
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) {
+      console.error('[Notifications] RESEND_API_KEY not configured')
+      return {
+        success: false,
+        error:
+          'Email service not configured: set RESEND_API_KEY or configure SMTP for this organization',
+      }
+    }
+
     const from = `${fromName} <${fromEmail}>`
 
     const response = await fetch('https://api.resend.com/emails', {
@@ -272,16 +272,6 @@ export async function sendRawEmail({
   organizationId?: string | null
 }): Promise<NotificationResult> {
   try {
-    const apiKey = process.env.RESEND_API_KEY
-
-    if (!apiKey) {
-      console.error('[Notifications] RESEND_API_KEY not configured')
-      return {
-        success: false,
-        error: 'Email service not configured',
-      }
-    }
-
     const smtpConfig = await getEffectiveSmtpConfig(organizationId)
     if (smtpConfig) {
       try {
@@ -304,6 +294,16 @@ export async function sendRawEmail({
           error: smtpError instanceof Error ? smtpError.message : 'SMTP send failed',
           provider: 'smtp',
         }
+      }
+    }
+
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) {
+      console.error('[Notifications] RESEND_API_KEY not configured')
+      return {
+        success: false,
+        error:
+          'Email service not configured: set RESEND_API_KEY or configure SMTP for this organization',
       }
     }
 

@@ -49,14 +49,33 @@ export default async function CapacityPage() {
     .select('id, provider, calendar_name, sync_enabled')
     .eq('user_id', user.id)
 
+  const { data: oauthCalRows } = await supabase
+    .from('oauth_integrations')
+    .select('id, provider, provider_email, status')
+    .eq('user_id', user.id)
+    .in('provider', ['google_calendar', 'microsoft_outlook', 'apple_caldav'])
+
   type OfficeHourRow = { id: string; start_time: string; end_time: string; day_of_week: number; label: string | null }
   type IntegrationRow = { id: string; provider: string; calendar_name: string | null; sync_enabled: boolean }
+  type OauthCalRow = { id: string; provider: string; provider_email: string | null; status: string }
   const officeHours = (officeHoursRows ?? []) as OfficeHourRow[]
   const integrations = (integrationsRows ?? []) as IntegrationRow[]
+  const oauthCal = (oauthCalRows ?? []) as OauthCalRow[]
 
   const totalHoursPerWeek =
     officeHours.reduce((sum, oh) => sum + hoursBetween(oh.start_time, oh.end_time), 0)
-  const calendarConnected = integrations.length > 0
+  const calendarConnected = integrations.length > 0 || oauthCal.length > 0
+
+  const calendarDisplayLines: { key: string; label: string }[] =
+    oauthCal.length > 0
+      ? oauthCal.map((o) => ({
+          key: `oauth-${o.id}`,
+          label: `${o.provider.replace(/_/g, ' ')}${o.provider_email ? ` — ${o.provider_email}` : ''}`,
+        }))
+      : integrations.map((int) => ({
+          key: `staff-${int.id}`,
+          label: `${int.provider}${int.calendar_name ? ` — ${int.calendar_name}` : ''}${int.sync_enabled ? ' (sync on)' : ''}`,
+        }))
 
   return (
     <div className="space-y-6">
@@ -109,11 +128,9 @@ export default async function CapacityPage() {
               <div className="space-y-2">
                 <p className="text-sm font-medium text-green-700">Connected</p>
                 <ul className="text-sm text-slate-600">
-                  {integrations.map((int) => (
-                    <li key={int.id} className="capitalize">
-                      {int.provider}
-                      {int.calendar_name ? ` — ${int.calendar_name}` : ''}
-                      {int.sync_enabled && ' (sync on)'}
+                  {calendarDisplayLines.map((line) => (
+                    <li key={line.key} className="capitalize">
+                      {line.label}
                     </li>
                   ))}
                 </ul>
@@ -123,7 +140,7 @@ export default async function CapacityPage() {
               </div>
             ) : (
               <p className="text-sm text-slate-500">
-                Connect a calendar in Settings so capacity analysis can exclude busy times.
+                Connect a calendar under Settings (Calendar integration) so capacity analysis can exclude busy times.
               </p>
             )}
           </CardContent>

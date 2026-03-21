@@ -15,9 +15,16 @@ import {
 } from '@/components/ui/select'
 import { Calendar, Clock, Plus, Trash2, Loader2 } from 'lucide-react'
 import { Database } from '@/types/database'
+import { CalendarIntegrations } from '@/components/integrations/calendar-integrations'
 
-type CalendarIntegration = Database['public']['Tables']['staff_calendar_integrations']['Row']
 type OfficeHour = Database['public']['Tables']['office_hours']['Row']
+
+type OauthIntegrationRow = {
+  id: string
+  provider: string
+  provider_email: string | null
+  status: string
+}
 
 const DAYS = [
   { value: 0, label: 'Sunday' },
@@ -29,70 +36,38 @@ const DAYS = [
   { value: 6, label: 'Saturday' },
 ] as const
 
-const PROVIDERS = [
-  { value: 'google', label: 'Google Calendar' },
-  { value: 'microsoft', label: 'Microsoft 365 / Outlook' },
-  { value: 'outlook', label: 'Outlook.com' },
-  { value: 'ical', label: 'iCal / URL' },
-] as const
-
 interface CalendarOfficeHoursProps {
   profileId: string
+  oauthIntegrations: OauthIntegrationRow[]
+  googleOAuthConfigured: boolean
+  microsoftOAuthConfigured: boolean
 }
 
-export function CalendarOfficeHours({ profileId }: CalendarOfficeHoursProps) {
+export function CalendarOfficeHours({
+  profileId,
+  oauthIntegrations,
+  googleOAuthConfigured,
+  microsoftOAuthConfigured,
+}: CalendarOfficeHoursProps) {
   const supabase = createClient()
-  const [integrations, setIntegrations] = useState<CalendarIntegration[]>([])
   const [officeHours, setOfficeHours] = useState<OfficeHour[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [connectProvider, setConnectProvider] = useState<string | null>(null)
   const [newSlot, setNewSlot] = useState({ day_of_week: 1, start_time: '09:00', end_time: '17:00' })
 
   useEffect(() => {
     async function load() {
-      const [intRes, ohRes] = await Promise.all([
-        supabase
-          .from('staff_calendar_integrations')
-          .select('*')
-          .eq('user_id', profileId)
-          .order('provider'),
-        supabase
-          .from('office_hours')
-          .select('*')
-          .eq('user_id', profileId)
-          .order('day_of_week')
-          .order('start_time'),
-      ])
-      if (intRes.data) setIntegrations(intRes.data as CalendarIntegration[])
-      if (ohRes.data) setOfficeHours(ohRes.data as OfficeHour[])
+      const { data } = await supabase
+        .from('office_hours')
+        .select('*')
+        .eq('user_id', profileId)
+        .order('day_of_week')
+        .order('start_time')
+      if (data) setOfficeHours(data as OfficeHour[])
       setLoading(false)
     }
     load()
   }, [profileId, supabase])
-
-  const handleConnectCalendar = async () => {
-    if (!connectProvider) return
-    setSaving(true)
-    const { error } = await (supabase as any)
-      .from('staff_calendar_integrations')
-      .insert({ user_id: profileId, provider: connectProvider as 'google' | 'microsoft' | 'outlook' | 'ical', sync_enabled: true, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC' })
-    setSaving(false)
-    if (!error) {
-      setConnectProvider(null)
-      const { data } = await supabase
-        .from('staff_calendar_integrations')
-        .select('*')
-        .eq('user_id', profileId)
-        .order('provider')
-      if (data) setIntegrations(data as CalendarIntegration[])
-    }
-  }
-
-  const handleDisconnect = async (id: string) => {
-    await supabase.from('staff_calendar_integrations').delete().eq('id', id)
-    setIntegrations((prev) => prev.filter((i) => i.id !== id))
-  }
 
   const handleAddOfficeHour = async () => {
     const { day_of_week, start_time, end_time } = newSlot
@@ -105,7 +80,11 @@ export function CalendarOfficeHours({ profileId }: CalendarOfficeHoursProps) {
       .single()
     setSaving(false)
     if (data) {
-      setOfficeHours((prev) => [...prev, data as OfficeHour].sort((a, b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time)))
+      setOfficeHours((prev) =>
+        [...prev, data as OfficeHour].sort(
+          (a, b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time)
+        )
+      )
       setNewSlot({ day_of_week: 1, start_time: '09:00', end_time: '17:00' })
     }
   }
@@ -135,64 +114,17 @@ export function CalendarOfficeHours({ profileId }: CalendarOfficeHoursProps) {
             Calendar integration
           </CardTitle>
           <CardDescription>
-            Connect your calendar so capacity analysis can account for busy times.
+            Connect Google, Microsoft, or Apple Calendar (OAuth credentials are configured by your administrator in
+            Integrations). Connected calendars sync to capacity planning.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6 space-y-4">
-          {integrations.length > 0 && (
-            <ul className="space-y-2">
-              {integrations.map((int) => (
-                <li
-                  key={int.id}
-                  className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium capitalize">{int.provider}</span>
-                    {int.calendar_name && (
-                      <span className="text-sm text-slate-500">{int.calendar_name}</span>
-                    )}
-                    {int.sync_enabled && (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-100">
-                        Synced
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => handleDisconnect(int.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <div className="flex flex-wrap gap-2 items-center">
-            <Select value={connectProvider ?? ''} onValueChange={setConnectProvider}>
-              <SelectTrigger className="w-[200px] bg-white border-slate-200">
-                <SelectValue placeholder="Add calendar" />
-              </SelectTrigger>
-              <SelectContent>
-                {PROVIDERS.map((p) => (
-                  <SelectItem key={p.value} value={p.value}>
-                    {p.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              onClick={handleConnectCalendar}
-              disabled={!connectProvider || saving}
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              <span className="ml-2">Connect</span>
-            </Button>
-          </div>
-          <p className="text-xs text-slate-500">
-            OAuth and full sync will be configured in a future release. This records your preferred calendar for capacity planning.
-          </p>
+          <CalendarIntegrations
+            integrations={oauthIntegrations}
+            oauthReturnPath="/dashboard/settings"
+            googleOAuthConfigured={googleOAuthConfigured}
+            microsoftOAuthConfigured={microsoftOAuthConfigured}
+          />
         </CardContent>
       </Card>
 

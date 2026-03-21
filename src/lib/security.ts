@@ -36,6 +36,19 @@ export function verifySignedOAuthState(state: string): Record<string, unknown> |
   }
 }
 
+/** Allowed OAuth callback landing paths (open redirect prevention). */
+export function sanitizeOAuthReturnPath(path: string | null | undefined): string {
+  if (!path || typeof path !== "string") return "/dashboard/integrations";
+  const p = path.split("?")[0];
+  if (p === "/dashboard/settings" || p.startsWith("/dashboard/settings/")) {
+    return "/dashboard/settings";
+  }
+  if (p === "/dashboard/integrations" || p.startsWith("/dashboard/integrations/")) {
+    return "/dashboard/integrations";
+  }
+  return "/dashboard/integrations";
+}
+
 /**
  * Sanitize HTML content to prevent XSS attacks
  * Uses DOMPurify to remove potentially dangerous elements and attributes

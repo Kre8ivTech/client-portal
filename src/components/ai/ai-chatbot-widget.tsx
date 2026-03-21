@@ -146,6 +146,23 @@ export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 429) {
+          const limitText =
+            typeof data.userMessage === "string"
+              ? data.userMessage
+              : typeof data.error === "string"
+                ? data.error
+                : "Too many requests today. Please try again later.";
+          const limitMessage: Message = {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: limitText,
+            created_at: new Date().toISOString(),
+            isError: true,
+          };
+          setMessages((prev) => [...prev, limitMessage]);
+          return;
+        }
         throw new Error(data.error || "Failed to get AI response");
       }
 

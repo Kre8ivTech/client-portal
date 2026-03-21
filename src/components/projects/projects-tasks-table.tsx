@@ -209,7 +209,7 @@ export function ProjectsTasksTable({
             status,
             priority,
             organization_id,
-            organizations:organizations!inner (
+            organizations:organizations (
               id,
               name
             )
@@ -232,7 +232,9 @@ export function ProjectsTasksTable({
           )
         `
         )
-        .order('created_at', { ascending: false })
+        .order('due_date', { ascending: true, nullsFirst: false })
+        .order('start_date', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: true })
 
       if (error) throw error
       return data as Task[]
@@ -322,10 +324,43 @@ export function ProjectsTasksTable({
           aValue = getPriorityValue(a.priority)
           bValue = getPriorityValue(b.priority)
           break
-        case 'due_date':
-          aValue = a.due_date ? new Date(a.due_date).getTime() : Infinity
-          bValue = b.due_date ? new Date(b.due_date).getTime() : Infinity
-          break
+        case 'due_date': {
+          const ad = a.due_date ? new Date(a.due_date).getTime() : Number.POSITIVE_INFINITY
+          const bd = b.due_date ? new Date(b.due_date).getTime() : Number.POSITIVE_INFINITY
+          if (ad !== bd) {
+            return sortDirection === 'asc'
+              ? ad < bd
+                ? -1
+                : 1
+              : ad > bd
+                ? -1
+                : 1
+          }
+          const as = a.start_date ? new Date(a.start_date).getTime() : Number.POSITIVE_INFINITY
+          const bs = b.start_date ? new Date(b.start_date).getTime() : Number.POSITIVE_INFINITY
+          if (as !== bs) {
+            return sortDirection === 'asc'
+              ? as < bs
+                ? -1
+                : 1
+              : as > bs
+                ? -1
+                : 1
+          }
+          const ac = new Date(a.created_at).getTime()
+          const bc = new Date(b.created_at).getTime()
+          return sortDirection === 'asc'
+            ? ac < bc
+              ? -1
+              : ac > bc
+                ? 1
+                : 0
+            : ac > bc
+              ? -1
+              : ac < bc
+                ? 1
+                : 0
+        }
         case 'project':
           aValue = a.project.name
           bValue = b.project.name

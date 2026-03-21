@@ -71,6 +71,94 @@ export async function logAIUsage(entry: UsageLogEntry): Promise<void> {
   }
 }
 
+/** Rough token estimate (~4 chars per token for English). */
+export function roughTokenEstimate(text: string): number {
+  if (!text) return 0
+  return Math.max(1, Math.ceil(text.length / 4))
+}
+
+/**
+ * Sum input+output tokens for successful chat requests today (UTC day) for a user.
+ */
+export async function getDailyChatTokenTotal(userId: string): Promise<number> {
+  try {
+    const supabaseAdmin = getSupabaseAdmin()
+    const start = new Date()
+    start.setUTCHours(0, 0, 0, 0)
+    const end = new Date(start)
+    end.setUTCDate(end.getUTCDate() + 1)
+
+    const { data, error } = await (supabaseAdmin as any)
+      .from('ai_usage_logs')
+      .select('input_tokens, output_tokens')
+      .eq('user_id', userId)
+      .eq('request_type', 'chat')
+      .eq('status', 'success')
+      .gte('created_at', start.toISOString())
+      .lt('created_at', end.toISOString())
+
+    if (error || !data?.length) return 0
+
+    return data.reduce(
+      (sum: number, row: { input_tokens: number; output_tokens: number }) =>
+        sum + (row.input_tokens || 0) + (row.output_tokens || 0),
+      0
+    )
+  } catch {
+    return 0
+  }
+}
+
+export type ChatbotTokenCheck = {
+  allowed: boolean
+  usedToday: number
+  limit: number | null
+  estimatedThisRequest: number
+}
+
+/**
+ * Daily token budget for the portal chatbot (guides users; not a general-purpose AI).
+ * super_admin, staff, and admin: unlimited (null).
+ * Others: AI_CHATBOT_DAILY_TOKEN_LIMIT (default 60000).
+ */
+export async function checkChatbotTokenBudget(params: {
+  userId: string
+  role: string
+  systemPrompt: string
+  messages: { role: string; content: string }[]
+}): Promise<ChatbotTokenCheck> {
+  const unlimitedRoles = new Set(['super_admin', 'staff', 'admin'])
+  if (unlimitedRoles.has(params.role)) {
+    return {
+      allowed: true,
+      usedToday: 0,
+      limit: null,
+      estimatedThisRequest: 0,
+    }
+  }
+
+  const rawLimit = process.env.AI_CHATBOT_DAILY_TOKEN_LIMIT
+  const limit =
+    rawLimit === undefined || rawLimit === ''
+      ? 60_000
+      : Math.max(1000, parseInt(rawLimit, 10) || 60_000)
+
+  const usedToday = await getDailyChatTokenTotal(params.userId)
+
+  const historyText = params.messages.map((m) => m.content).join('\n')
+  // Cap per-request estimate so one huge KB blob does not block only on paper forever
+  const estimatedThisRequest = Math.min(roughTokenEstimate(params.systemPrompt + historyText), 80_000) + 2_000
+
+  const allowed = usedToday + estimatedThisRequest <= limit
+
+  return {
+    allowed,
+    usedToday,
+    limit,
+    estimatedThisRequest,
+  }
+}
+
 /**
  * Check if a user has exceeded their daily rate limit.
  * Returns { allowed: boolean, remaining: number, limit: number }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { createSignedOAuthState } from "@/lib/security";
+import { createSignedOAuthState, sanitizeOAuthReturnPath } from "@/lib/security";
+import { clearStaffCalendarFromOAuth } from "@/lib/integrations/staff-calendar-sync";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
@@ -22,15 +23,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!GOOGLE_CLIENT_ID) {
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
       return NextResponse.json(
-        { error: "Google OAuth not configured. Set GOOGLE_CLIENT_ID in environment." },
+        {
+          error:
+            "Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in environment.",
+        },
         { status: 500 }
       );
     }
 
+    const returnTo = sanitizeOAuthReturnPath(request.nextUrl.searchParams.get("returnTo"));
+
     // Generate signed state token for CSRF protection
-    const state = createSignedOAuthState({ userId: user.id, ts: Date.now() });
+    const state = createSignedOAuthState({ userId: user.id, ts: Date.now(), returnTo });
 
     const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     authUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
@@ -70,6 +76,8 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    await clearStaffCalendarFromOAuth(supabase, user.id, "google_calendar");
 
     return NextResponse.json({ success: true });
   } catch (error) {

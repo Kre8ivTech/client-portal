@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { sendRawEmail } from '@/lib/notifications/providers/email'
-import { requireRole } from '@/lib/require-role'
+import { normalizeDashboardRole } from '@/lib/require-role'
 import { z } from 'zod'
 
 const testEmailSchema = z.object({
   email: z.string().email('Invalid email address'),
   template: z.string().max(50000).optional(),
   subject: z.string().max(500).optional(),
+  organization_id: z.string().uuid().nullable().optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -22,7 +23,7 @@ export async function POST(request: NextRequest) {
     // Check permissions
     const { data: profile, error: profileError } = await supabase
       .from('users')
-      .select('role')
+      .select('role, organization_id')
       .eq('id', user.id)
       .single()
 
@@ -30,9 +31,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const userProfile = profile as { role: string }
-
-    if (userProfile.role !== 'super_admin' && userProfile.role !== 'staff') {
+    const userProfile = profile as { role: string; organization_id: string | null }
+    const effectiveRole = normalizeDashboardRole(userProfile.role)
+    if (effectiveRole !== 'super_admin' && effectiveRole !== 'staff') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
@@ -46,7 +47,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { email, template, subject } = validation.data
+    const { email, template, subject, organization_id } = validation.data
+
+    const orgId =
+      organization_id ?? userProfile.organization_id ?? null
 
     const result = await sendRawEmail({
       to: email,
@@ -61,14 +65,19 @@ export async function POST(request: NextRequest) {
           <p>Time: ${new Date().toLocaleString()}</p>
         </div>
       `,
-      text: 'This is a test email from Client Portal. Please view in an HTML-compatible email client.'
+      text: 'This is a test email from Client Portal. Please view in an HTML-compatible email client.',
+      organizationId: orgId,
     })
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      provider: result.provider,
+      messageId: result.messageId,
+    })
   } catch (error: any) {
     console.error('Test email error:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })

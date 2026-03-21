@@ -82,6 +82,13 @@ export default function LoginPage() {
       });
       window.history.replaceState({}, "", window.location.pathname);
     }
+    if (params.get("security_error") === "1") {
+      setMessage({
+        type: "error",
+        text: "We could not verify your session security settings. Please sign in again. If this keeps happening, contact support.",
+      });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
   }, []);
 
   // Execute reCAPTCHA when ready

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { authorizeCronOrSuperAdmin } from "@/lib/api/cron-auth";
 import { uploadObject, sanitizeS3KeyPart } from "@/lib/storage/s3";
 import { buildOrgFileS3Prefix } from "@/lib/file-sync/s3-prefix";
 import { listGoogleDriveFiles, downloadGoogleDriveFile, refreshGoogleAccessToken } from "@/lib/file-sync/providers/google-drive";
@@ -27,21 +27,8 @@ function setFileSyncState(metadata: unknown, provider: string, state: Record<str
 }
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  const cronSecret = process.env.CRON_SECRET;
-
-  if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
-    // ok
-  } else {
-    const supabase = await createServerSupabaseClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const { data: profile } = await (supabase as any).from("users").select("role").eq("id", user.id).single();
-    const role = (profile as { role?: string } | null)?.role;
-    if (role !== "super_admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const denied = await authorizeCronOrSuperAdmin(request);
+  if (denied) return denied;
 
   const supabaseAdmin = getSupabaseAdmin();
 

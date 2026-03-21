@@ -32,7 +32,7 @@ async function requireSuperAdmin() {
     .single()
 
   const role = (profile as { role?: string } | null)?.role
-  if (role !== 'super_admin') return null
+  if (role !== 'super_admin' && role !== 'admin') return null
 
   return user
 }

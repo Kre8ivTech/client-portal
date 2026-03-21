@@ -1,5 +1,7 @@
 # Production Deployment Checklist
 
+For a **readiness matrix** (features, config vs gaps) and **white-label / agency domains**, see [production-readiness.md](production-readiness.md).
+
 ## Pre-Deployment Checklist
 
 ### ✅ Code Quality

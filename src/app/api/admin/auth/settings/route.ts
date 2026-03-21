@@ -17,6 +17,11 @@ const updateAuthSettingsSchema = z.object({
   mfa_required_for_clients: z.boolean(),
 })
 
+/** Matches DB `is_super_admin()` (super_admin + admin). */
+function isElevatedAdminRole(role: string | null | undefined): boolean {
+  return role === "super_admin" || role === "admin"
+}
+
 async function requireSuperAdmin() {
   const supabase = await createServerSupabaseClient()
   const {
@@ -34,7 +39,7 @@ async function requireSuperAdmin() {
     .eq("id", user.id)
     .single()
 
-  if (roleError || roleRow?.role !== "super_admin") {
+  if (roleError || !isElevatedAdminRole(roleRow?.role)) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) }
   }
 
@@ -46,7 +51,7 @@ export async function GET() {
     const gate = await requireSuperAdmin()
     if (gate.error) return gate.error
 
-    const { data, error } = await (gate.supabase as any)
+    let { data, error } = await (gate.supabase as any)
       .from("app_settings")
       .select(
         `
@@ -63,10 +68,55 @@ export async function GET() {
       `
       )
       .eq("id", APP_SETTINGS_ID)
-      .single()
+      .maybeSingle()
 
     if (error) {
-      return NextResponse.json({ error: "Failed to load auth settings" }, { status: 500 })
+      return NextResponse.json(
+        { error: "Failed to load auth settings", details: error.message },
+        { status: 500 }
+      )
+    }
+
+    if (!data) {
+      const { error: seedError } = await (gate.supabase as any).from("app_settings").insert({
+        id: APP_SETTINGS_ID,
+        stripe_mode: "test",
+      })
+      if (seedError) {
+        return NextResponse.json(
+          { error: "Failed to load auth settings", details: seedError.message },
+          { status: 500 }
+        )
+      }
+      const refetch = await (gate.supabase as any)
+        .from("app_settings")
+        .select(
+          `
+          sso_google_enabled,
+          sso_microsoft_enabled,
+          sso_github_enabled,
+          sso_apple_enabled,
+          recaptcha_enabled,
+          recaptcha_site_key,
+          recaptcha_secret_key,
+          mfa_enabled,
+          mfa_required_for_staff,
+          mfa_required_for_clients
+        `
+        )
+        .eq("id", APP_SETTINGS_ID)
+        .maybeSingle()
+      data = refetch.data
+      error = refetch.error
+      if (error || !data) {
+        return NextResponse.json(
+          {
+            error: "Failed to load auth settings",
+            details: error?.message ?? "Missing app_settings row after insert",
+          },
+          { status: 500 }
+        )
+      }
     }
 
     return NextResponse.json({

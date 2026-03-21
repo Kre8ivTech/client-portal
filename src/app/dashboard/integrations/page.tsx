@@ -59,7 +59,7 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
     .single();
 
   const userRole = userData as { role: string } | null;
-  if (userRole?.role !== "super_admin") {
+  if (userRole?.role !== "super_admin" && userRole?.role !== "admin") {
     redirect("/dashboard");
   }
 
@@ -235,6 +235,7 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
           </CardHeader>
           <CardContent className="pt-6 space-y-4">
             <SmtpConfigForm
+              embedded
               endpoint="/api/admin/email/smtp"
               title="SMTP Provider"
               description="Use any SMTP provider (SES, SendGrid SMTP, Mailgun SMTP, Postmark SMTP, etc.)."

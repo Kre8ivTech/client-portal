@@ -13,7 +13,7 @@
 4. [API Specification](#4-api-specification)
 5. [Real-Time Infrastructure](#5-real-time-infrastructure)
 6. [Storage Architecture](#6-storage-architecture)
-7. [Security Implementation](#7-security-implementation)
+7. [Security Implementation](#7-security-implementation) ([operations / hardening checklist](security-hardening.md))
 8. [Infrastructure & DevOps](#8-infrastructure--devops)
 9. [Third-Party Integrations](#9-third-party-integrations)
 10. [Mobile-First Design](#10-mobile-first-design)
@@ -1347,6 +1347,10 @@ def generate_api_key(prefix: str = "kt_live_") -> tuple[str, str]:
     key_hash = hashlib.sha256(full_key.encode()).hexdigest()
     return full_key, key_hash
 ```
+
+### 7.4 Deployment and ongoing hardening
+
+Production steps (environment variables, `npm audit`, TypeScript strict builds, optional CSP/Zod/rate limits) are maintained in **[security-hardening.md](security-hardening.md)** so they stay current without duplicating long checklists in this file.
 
 ---
 

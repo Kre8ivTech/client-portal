@@ -20,7 +20,7 @@ export default async function AuthSettingsPage() {
   // Check if user is super_admin
   const { data: userData } = await supabase.from("users").select("role").eq("id", user.id).single();
 
-  if (userData?.role !== "super_admin") {
+  if (userData?.role !== "super_admin" && userData?.role !== "admin") {
     redirect("/dashboard");
   }
 

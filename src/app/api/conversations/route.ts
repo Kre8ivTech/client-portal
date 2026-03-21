@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createConversationSchema, sendMessageSchema } from "@/lib/validators/conversation";
 import { z } from "zod";
 
@@ -239,12 +240,17 @@ export async function POST(request: NextRequest) {
       user_id: userId,
     }));
 
-    const { error: participantsError } = await supabase.from("conversation_participants").insert(participantInserts);
+    // Service role: RLS previously only allowed inserting your own user_id (or staff adding anyone),
+    // so the recipient row failed. Inserts are safe here — messaging rules were checked above and
+    // rows match conversations.participant_ids. Migration 20260321000000 aligns RLS for client inserts.
+    const supabaseAdmin = getSupabaseAdmin();
+    const { error: participantsError } = await supabaseAdmin
+      .from("conversation_participants")
+      .insert(participantInserts);
 
     if (participantsError) {
       console.error("Error adding participants:", participantsError);
-      // Clean up the conversation
-      await supabase.from("conversations").delete().eq("id", conversation.id);
+      await supabaseAdmin.from("conversations").delete().eq("id", conversation.id);
       return NextResponse.json({ error: "Failed to add participants" }, { status: 500 });
     }
 

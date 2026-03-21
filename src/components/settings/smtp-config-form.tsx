@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,8 @@ type SmtpConfigFormProps = {
   title?: string;
   description?: string;
   disabled?: boolean;
+  /** When true, omit the outer Card (use inside another Card or panel). */
+  embedded?: boolean;
 };
 
 export function SmtpConfigForm({
@@ -34,7 +37,9 @@ export function SmtpConfigForm({
   title = "SMTP Email Provider",
   description = "Configure custom SMTP settings.",
   disabled = false,
+  embedded = false,
 }: SmtpConfigFormProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -57,7 +62,7 @@ export function SmtpConfigForm({
       setLoading(true);
       setMessage(null);
       try {
-        const response = await fetch(endpoint, { method: "GET" });
+        const response = await fetch(endpoint, { method: "GET", credentials: "same-origin" });
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.error || "Failed to load SMTP configuration");
@@ -100,6 +105,7 @@ export function SmtpConfigForm({
     try {
       const response = await fetch(endpoint, {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           host,
@@ -119,6 +125,7 @@ export function SmtpConfigForm({
       }
 
       setMessage({ type: "success", text: "SMTP configuration saved." });
+      router.refresh();
       setConfig((prev) =>
         prev
           ? { ...prev, host, port, secure, username, from_name: fromName || null, from_email: fromEmail || null, reply_to: replyTo || null }
@@ -150,7 +157,7 @@ export function SmtpConfigForm({
     setDeleting(true);
     setMessage(null);
     try {
-      const response = await fetch(endpoint, { method: "DELETE" });
+      const response = await fetch(endpoint, { method: "DELETE", credentials: "same-origin" });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Failed to delete SMTP configuration");
@@ -166,6 +173,7 @@ export function SmtpConfigForm({
       setFromEmail("");
       setReplyTo("");
       setMessage({ type: "success", text: "SMTP configuration removed." });
+      router.refresh();
     } catch (error) {
       setMessage({
         type: "error",
@@ -176,23 +184,14 @@ export function SmtpConfigForm({
     }
   }
 
-  return (
-    <Card className="border-border shadow-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-          <Mail className="h-5 w-5 text-primary" />
-          {title}
-        </CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading SMTP configuration...
-          </div>
-        ) : (
-          <form onSubmit={handleSave} className="space-y-4">
+  const formBody =
+    loading ? (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        Loading SMTP configuration...
+      </div>
+    ) : (
+      <form onSubmit={handleSave} className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="smtp-host">SMTP Host</Label>
@@ -268,8 +267,35 @@ export function SmtpConfigForm({
               )}
             </div>
           </form>
-        )}
-      </CardContent>
+    );
+
+  if (embedded) {
+    return (
+      <div className="space-y-4 border-t border-border pt-4">
+        <div className="flex gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+            <Mail className="h-4 w-4 text-primary" />
+          </div>
+          <div className="min-w-0 space-y-1">
+            <h3 className="text-sm font-semibold leading-none">{title}</h3>
+            <p className="text-xs text-muted-foreground">{description}</p>
+          </div>
+        </div>
+        {formBody}
+      </div>
+    );
+  }
+
+  return (
+    <Card className="border-border shadow-sm">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+          <Mail className="h-5 w-5 text-primary" />
+          {title}
+        </CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>{formBody}</CardContent>
     </Card>
   );
 }

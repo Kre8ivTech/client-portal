@@ -44,10 +44,17 @@ export function AuthSettings() {
 
   const loadSettings = useCallback(async () => {
     try {
-      const response = await fetch("/api/admin/auth/settings", { method: "GET" });
+      const response = await fetch("/api/admin/auth/settings", {
+        method: "GET",
+        credentials: "same-origin",
+      });
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(payload?.error || "Failed to load auth settings");
+        const msg =
+          (typeof payload?.error === "string" && payload.error) ||
+          (typeof payload?.details === "string" && payload.details) ||
+          "Failed to load auth settings";
+        throw new Error(msg);
       }
 
       setSettings(payload.settings as AuthSettingsData);
@@ -55,7 +62,7 @@ export function AuthSettings() {
       console.error("Failed to load auth settings:", err);
       toast({
         title: "Error",
-        description: "Failed to load authentication settings",
+        description: err instanceof Error ? err.message : "Failed to load authentication settings",
         variant: "destructive",
       });
     } finally {
@@ -94,6 +101,7 @@ export function AuthSettings() {
     try {
       const response = await fetch("/api/admin/auth/settings", {
         method: "PATCH",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sso_google_enabled: settings.sso_google_enabled,

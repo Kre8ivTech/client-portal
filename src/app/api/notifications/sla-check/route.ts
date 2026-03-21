@@ -10,42 +10,12 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { checkAndNotifySLA } from '@/lib/notifications/sla-monitor'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { authorizeCronOrStaffLike } from '@/lib/api/cron-auth'
 
 export async function GET(request: NextRequest) {
   try {
-    // Check authorization - either cron secret or authenticated user
-    const authHeader = request.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
-    
-    let isAuthorized = false
-
-    // Check if called from cron with secret
-    if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
-      isAuthorized = true
-    } else {
-      // Check if called by authenticated staff/admin user
-      const supabase = await createServerSupabaseClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (user) {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', user.id)
-          .single()
-
-        if (profile && (profile.role === 'admin' || profile.role === 'staff')) {
-          isAuthorized = true
-        }
-      }
-    }
-
-    if (!isAuthorized) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const denied = await authorizeCronOrStaffLike(request)
+    if (denied) return denied
 
     // Run SLA check
     const result = await checkAndNotifySLA()

@@ -8,7 +8,8 @@ const nextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   serverExternalPackages: ['docusign-esign'],
 
-  // Temporary: Skip type checking during build until database types are fixed
+  // Next build typecheck: keep true until `tsc` passes with `.next/types` (Next/TS alignment).
+  // Run `npm run type-check` in CI with `exclude` for generated types if you tighten this.
   typescript: {
     ignoreBuildErrors: true,
   },

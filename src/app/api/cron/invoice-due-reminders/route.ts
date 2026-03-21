@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { sendTemplatedEmail } from '@/lib/notifications/providers/email'
+import { authorizeCronOrSuperAdmin } from '@/lib/api/cron-auth'
 
 export async function GET(request: NextRequest) {
-  try {
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  const denied = await authorizeCronOrSuperAdmin(request)
+  if (denied) return denied
 
+  try {
     const supabaseAdmin = getSupabaseAdmin() as any
     const now = new Date()
     const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000)

@@ -10,18 +10,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { sendTemplatedEmail } from '@/lib/notifications/providers/email'
+import { authorizeCronOrSuperAdmin } from '@/lib/api/cron-auth'
 
 export async function GET(request: NextRequest) {
+  const denied = await authorizeCronOrSuperAdmin(request)
+  if (denied) return denied
+
   try {
-    // Verify this is a Vercel Cron request (basic security)
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const supabaseAdmin = getSupabaseAdmin() as any
-
-    console.log('[Cron] Starting task acknowledgement check...')
 
     // Calculate 24 hours ago
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
@@ -52,15 +48,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (!unacknowledgedRecords || unacknowledgedRecords.length === 0) {
-      console.log('[Cron] No unacknowledged tasks found')
       return NextResponse.json({
         success: true,
         message: 'No unacknowledged tasks to remind',
         count: 0,
       })
     }
-
-    console.log(`[Cron] Found ${unacknowledgedRecords.length} unacknowledged tasks`)
 
     const remindersSent: string[] = []
     const remindersFailed: string[] = []
@@ -165,15 +158,12 @@ export async function GET(request: NextRequest) {
 
         if (result.success) {
           remindersSent.push(record.id)
-          console.log(`[Cron] Sent reminder to ${record.recipient.email} for ${taskKey}`)
         } else {
           remindersFailed.push(record.id)
           console.error(`[Cron] Failed to send reminder to ${record.recipient.email}:`, result.error)
         }
       }
     }
-
-    console.log(`[Cron] Task acknowledgement check complete. Sent: ${remindersSent.length}, Failed: ${remindersFailed.length}`)
 
     return NextResponse.json({
       success: true,

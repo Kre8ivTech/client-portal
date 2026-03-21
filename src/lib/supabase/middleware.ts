@@ -182,17 +182,12 @@ export async function updateSession(request: NextRequest) {
         }
       }
     } catch (err) {
-      // Log the error for investigation
       console.error('[Middleware] Security check failed:', err instanceof Error ? err.message : 'Unknown error')
-      
-      // IP allowlist and session timeout are security-critical: fail closed
-      // MFA enrollment redirect is less critical: fail open is acceptable
-      // Since we cannot distinguish which check failed, redirect to a safe state
-      // if the error occurred on a dashboard route
       if (path.startsWith('/dashboard')) {
-        // Allow the request through but without security enhancements
-        // The RLS policies at database level still protect data
-        // This is a balance between security and availability
+        const url = request.nextUrl.clone()
+        url.pathname = '/login'
+        url.searchParams.set('security_error', '1')
+        return NextResponse.redirect(url)
       }
     }
   }

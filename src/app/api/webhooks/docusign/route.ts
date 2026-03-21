@@ -51,12 +51,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('[DocuSign Webhook] Error processing webhook:', error);
-    // Always return 200 to prevent DocuSign from retrying
-    // Log the error for manual investigation
-    return NextResponse.json({ 
-      received: true, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    });
+    return NextResponse.json({ received: true });
   }
 }
 

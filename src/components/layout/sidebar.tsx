@@ -357,21 +357,6 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
   }
 }
 
-// Helper function to load collapsed sections from localStorage
-function getInitialCollapsedSections(): Set<string> {
-  if (typeof window !== "undefined") {
-    const stored = localStorage.getItem("sidebar-collapsed-sections");
-    if (stored) {
-      try {
-        return new Set(JSON.parse(stored));
-      } catch {
-        return new Set();
-      }
-    }
-  }
-  return new Set();
-}
-
 export type SidebarBranding = {
   app_name: string;
   tagline: string | null;
@@ -413,15 +398,19 @@ export function DashboardSidebar({
     visibleNavGroups.flatMap((g) => g.items.map((i) => i.href)),
   );
 
-  // State to track which sections are collapsed
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(getInitialCollapsedSections);
+  // Same initial state on server and client (avoids hydration #418). Apply saved prefs after mount.
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => new Set());
 
-  // Persist collapsed state to localStorage
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("sidebar-collapsed-sections", JSON.stringify(Array.from(collapsedSections)));
+    try {
+      const stored = localStorage.getItem("sidebar-collapsed-sections");
+      if (stored) {
+        setCollapsedSections(new Set(JSON.parse(stored) as string[]));
+      }
+    } catch {
+      /* ignore corrupt storage */
     }
-  }, [collapsedSections]);
+  }, []);
 
   const toggleSection = (label: string) => {
     setCollapsedSections((prev) => {
@@ -430,6 +419,9 @@ export function DashboardSidebar({
         next.delete(label);
       } else {
         next.add(label);
+      }
+      if (typeof window !== "undefined") {
+        localStorage.setItem("sidebar-collapsed-sections", JSON.stringify(Array.from(next)));
       }
       return next;
     });

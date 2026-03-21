@@ -3,6 +3,21 @@ import { redirect } from "next/navigation";
 
 export type DashboardRole = "super_admin" | "staff" | "partner" | "partner_staff" | "client";
 
+/** Maps legacy/alias DB roles to the canonical dashboard role (e.g. admin -> super_admin). */
+export function normalizeDashboardRole(raw: string | null | undefined): DashboardRole {
+  if (raw === "admin") return "super_admin";
+  if (
+    raw === "super_admin" ||
+    raw === "staff" ||
+    raw === "partner" ||
+    raw === "partner_staff" ||
+    raw === "client"
+  ) {
+    return raw;
+  }
+  return "client";
+}
+
 export type UserProfile = {
   id: string;
   organization_id: string | null;
@@ -37,7 +52,7 @@ export async function requireRole(allowedRoles: DashboardRole[]) {
     .single();
 
   const userRow = data as UserRow | null;
-  const role = (userRow?.role ?? "client") as DashboardRole;
+  const role = normalizeDashboardRole(userRow?.role);
   const isAccountManager = userRow?.is_account_manager ?? false;
 
   if (!allowedRoles.includes(role)) {

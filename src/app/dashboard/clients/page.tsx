@@ -9,8 +9,10 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Users, Building2, Globe, ChevronRight } from 'lucide-react'
+import { Plus, Users, Building2, Globe, ChevronRight, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+import { normalizeDashboardRole } from '@/lib/require-role'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 type Organization = {
   id: string
@@ -28,14 +30,14 @@ export default async function ClientsPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('users')
     .select('organization_id, role')
     .eq('id', user.id)
     .single()
 
   const organizationId = profile?.organization_id ?? null
-  const role = profile?.role ?? 'client'
+  const role = normalizeDashboardRole(profile?.role)
 
   const isSuperAdmin = role === 'super_admin'
   const isStaff = role === 'staff'
@@ -73,15 +75,25 @@ export default async function ClientsPage() {
   let totalDirectClients = 0
   let totalTenantPartners = 0
   let totalTenantClients = 0
+  let allOrganizationsForAdmin: Organization[] = []
+
+  let orgsLoadError: string | null = null
+  let profileLoadError: string | null =
+    profileError && profileError.code !== 'PGRST116' ? profileError.message : null
 
   if (canViewAllOrgs) {
-    // Super admin/staff can see all organizations
-    const { data: allOrgs } = await supabase
+    // Super admin/staff can see all organizations (RLS must allow full list; see migration organizations_select_all_for_staff_super_admin)
+    const { data: allOrgs, error: orgsQueryError } = await supabase
       .from('organizations')
       .select('id, name, slug, type, status, parent_org_id, custom_domain, description')
       .order('name', { ascending: true })
 
+    if (orgsQueryError) {
+      orgsLoadError = orgsQueryError.message
+    }
+
     const orgs = (allOrgs ?? []) as (Organization & { description?: string })[]
+    allOrganizationsForAdmin = orgs
 
     // Get Kre8ivTech main organization
     kre8ivtechOrg = orgs.find((o) => o.type === 'kre8ivtech') ?? null
@@ -292,8 +304,8 @@ export default async function ClientsPage() {
             />
             <StatsCard
               title="Total Organizations"
-              value={String(totalDirectClients + totalTenantPartners + totalTenantClients)}
-              description={canViewAllOrgs ? "All organizations" : "Assigned organizations"}
+              value={String(allOrganizationsForAdmin.length)}
+              description={canViewAllOrgs ? "Rows visible to your account (RLS)" : "Assigned organizations"}
               icon={<Building2 className="text-slate-400" size={20} />}
             />
           </>
@@ -323,6 +335,89 @@ export default async function ClientsPage() {
           />
         )}
       </div>
+
+      {profileLoadError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Could not load your user role</AlertTitle>
+          <AlertDescription>{profileLoadError}</AlertDescription>
+        </Alert>
+      )}
+
+      {!profile && !profileLoadError && (
+        <Alert variant="warning">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Missing profile row</AlertTitle>
+          <AlertDescription>
+            No row in public.users for your account. The app may treat you as a client. Sign out and back in, or ask an administrator to fix your user record.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {orgsLoadError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Could not load organizations</AlertTitle>
+          <AlertDescription>{orgsLoadError}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* Full list: what RLS actually returned (super_admin / staff) */}
+      {canViewAllOrgs && allOrganizationsForAdmin.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5" />
+              All organizations
+            </CardTitle>
+            <CardDescription>
+              Every organization row your account can read ({allOrganizationsForAdmin.length} total). Use this to verify access; sections below group by type and hierarchy.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {allOrganizationsForAdmin.map((org) => (
+                <li key={org.id}>
+                  <Link
+                    href={`/dashboard/clients/${org.id}`}
+                    className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-lg border hover:bg-slate-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                        <Building2 className="h-4 w-4 text-slate-600" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-slate-900 truncate">{org.name}</p>
+                        <p className="text-xs text-slate-500 truncate">{org.slug}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Badge variant="outline">{org.type}</Badge>
+                      <Badge
+                        variant={org.status === 'active' ? 'default' : 'secondary'}
+                        className={org.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-100' : ''}
+                      >
+                        {org.status}
+                      </Badge>
+                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
+      {canViewAllOrgs && !orgsLoadError && allOrganizationsForAdmin.length === 0 && (
+        <Alert variant="warning">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>No organizations returned</AlertTitle>
+          <AlertDescription>
+            Your account loaded zero rows from organizations. If you are super_admin, apply the latest database migrations (policy &quot;Staff and super admin read all organizations&quot;) or ask a DBA to confirm RLS allows your role to SELECT organizations.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Direct Clients Section - For super_admin, staff, and assigned staff */}
       {(canViewAllOrgs || isAssignedStaff) && (
@@ -378,8 +473,8 @@ export default async function ClientsPage() {
         </Card>
       )}
 
-      {/* Tenant Partners Section */}
-      {canManageOrgs && tenantPartners.length > 0 && (
+      {/* Tenant Partners Section — show for internal roles even when there are zero partner rows */}
+      {canManageOrgs && (tenantPartners.length > 0 || canViewAllOrgs || isAssignedStaff) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

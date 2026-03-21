@@ -253,7 +253,7 @@ export async function getPortalBranding(): Promise<PortalBrandingResult> {
 
   const hdrs = await headers();
   const requestHost = normalizeHost(hdrs.get("x-forwarded-host") ?? hdrs.get("host"));
-  if (!requestHost || requestHost === "localhost" || requestHost.endsWith(".localhost")) {
+  if (!requestHost || requestHost === "localhost" || requestHost === "127.0.0.1") {
     return baseBranding;
   }
 

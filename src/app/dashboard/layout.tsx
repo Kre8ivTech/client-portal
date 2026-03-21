@@ -7,6 +7,7 @@ import { LiveChatWidget } from "@/components/messaging/live-chat-widget";
 import { SLAMonitorWrapper } from "@/components/tickets/sla-monitor-wrapper";
 import { AIChatbotWidget } from "@/components/ai/ai-chatbot-widget";
 import { getPortalBranding } from "@/lib/actions/portal-branding";
+import { normalizeDashboardRole } from "@/lib/require-role";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,9 @@ export default async function DashboardLayout({
   let userRow = userData as UserRow | null;
   let profileRow = profileData as ProfileRow | null;
   
-  const isStaffOrAdmin = userRow?.role === "staff" || userRow?.role === "super_admin";
+  const normalizedRole = normalizeDashboardRole(userRow?.role);
+  const isStaffOrAdmin =
+    normalizedRole === "staff" || normalizedRole === "super_admin";
   const orgId = userRow?.organization_id;
   
   const [{ data: recentTickets }, { data: planAssignmentsRaw }] = isStaffOrAdmin && orgId
@@ -110,7 +113,7 @@ export default async function DashboardLayout({
           id: userRow.id,
           organization_id: userRow.organization_id ?? null,
           email: userRow.email,
-          role: (userRow.role as DashboardProfile["role"]) ?? "client",
+          role: normalizeDashboardRole(userRow.role),
           is_account_manager: userRow.is_account_manager ?? false,
           name: profileRow.name ?? null,
           avatar_url: profileRow.avatar_url ?? null,

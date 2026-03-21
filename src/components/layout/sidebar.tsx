@@ -298,6 +298,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         ...settingsBase,
         emailTemplates,
         capacity,
+        "/dashboard/clients",
         ...adminStaff,
         "/dashboard/admin/staff-management",
         "/dashboard/admin/services",
@@ -386,7 +387,7 @@ export function DashboardSidebar({
 }) {
   const pathname = usePathname();
 
-  // Admin links (e.g. Clients) require profile.role === "super_admin". Ensure profile is loaded (RLS: "Users can read their own profile").
+  // Admin links (e.g. Clients) require super-admin (including normalized legacy `admin`). Ensure profile is loaded.
   const role = profile?.role ?? "client";
   const isAccountManager = profile?.is_account_manager ?? false;
   const allowedHrefs = getHrefsForRole(role, isAccountManager);

@@ -78,6 +78,7 @@ export const updateOrganizationSchema = z.object({
   parent_org_id: z.string().uuid().optional().nullable(),
   custom_domain: z.string().max(255).optional().nullable(),
   custom_domain_verified: z.boolean().optional(),
+  custom_domain_verified_at: z.string().datetime().optional().nullable(),
   branding_config: brandingConfigSchema,
   settings: organizationSettingsSchema,
 })

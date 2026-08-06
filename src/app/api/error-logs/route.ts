@@ -63,7 +63,20 @@ export async function POST(request: NextRequest) {
     });
 
     if (insertError) {
-      return NextResponse.json({ error: "Failed to record error" }, { status: 500 });
+      console.error("[ErrorLog] Failed to record error", {
+        code: insertError.code,
+        details: insertError.details,
+      });
+
+      const isMissingTable = insertError.code === "42P01" || insertError.code === "PGRST205";
+      return NextResponse.json(
+        {
+          error: isMissingTable
+            ? "Error logging is not configured"
+            : "Failed to record error",
+        },
+        { status: isMissingTable ? 503 : 500 },
+      );
     }
 
     return NextResponse.json(

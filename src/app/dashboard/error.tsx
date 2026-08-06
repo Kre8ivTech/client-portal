@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
-import { Button } from '@/components/ui/button'
 import { AlertTriangle } from 'lucide-react'
+import { reportClientError } from '@/components/errors/error-reporter'
+import { Button } from '@/components/ui/button'
 
 export default function DashboardError({
   error,
@@ -12,7 +13,7 @@ export default function DashboardError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error('Dashboard error:', error)
+    reportClientError(error, 'react_error_boundary', { digest: error.digest })
   }, [error])
 
   return (

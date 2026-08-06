@@ -41,6 +41,7 @@ import {
   CalendarClock,
   MessagesSquare,
   ChevronDown,
+  Bug,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -166,6 +167,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/admin/settings/auth", icon: Shield, label: "Auth Settings" },
       { href: "/dashboard/admin/ai-usage", icon: BarChart3, label: "AI Usage" },
       { href: "/dashboard/audit", icon: History, label: "Audit Log" },
+      { href: "/dashboard/admin/error-logs", icon: Bug, label: "Error Log" },
       { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
     ],
   },
@@ -280,6 +282,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "/dashboard/admin/ai-usage",
         "/dashboard/tenants",
         "/dashboard/audit",
+        "/dashboard/admin/error-logs",
       ];
     case "staff":
       // Staff with account manager flag sees invoices, otherwise they don't

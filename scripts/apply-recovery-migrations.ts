@@ -3,6 +3,7 @@
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { Client } from 'pg'
+import { normalizeSupabaseSslConnection } from './lib/postgres-connection'
 
 const RECOVERY_MIGRATIONS = [
   '20260806000000_create_error_logs.sql',
@@ -15,7 +16,7 @@ function getConnectionString(): string {
     process.env.POSTGRES_PRISMA_URL ||
     process.env.POSTGRES_URL
 
-  if (configuredUrl) return configuredUrl
+  if (configuredUrl) return normalizeSupabaseSslConnection(configuredUrl)
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
   const projectRef =
@@ -29,7 +30,9 @@ function getConnectionString(): string {
     )
   }
 
-  return `postgresql://postgres:${encodeURIComponent(password)}@db.${projectRef}.supabase.co:5432/postgres?sslmode=require`
+  return normalizeSupabaseSslConnection(
+    `postgresql://postgres:${encodeURIComponent(password)}@db.${projectRef}.supabase.co:5432/postgres`,
+  )
 }
 
 async function applyRecoveryMigrations() {

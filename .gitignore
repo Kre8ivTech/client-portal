@@ -23,6 +23,9 @@ node_modules/
 .npm
 package-lock.json
 
+# Database migrations must remain reviewable even when a global ignore excludes SQL.
+!supabase/migrations/*.sql
+
 # Next.js
 .next/
 out/

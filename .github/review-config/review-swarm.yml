@@ -2,15 +2,15 @@ version: 1
 
 review:
   # Automatically trigger review on PR open/sync
-  auto-trigger: true
+  autoTrigger: true
 
   # Required agents that must pass for PR to be approved
-  required-agents:
+  requiredAgents:
     - security      # OWASP, secrets, auth checks
     - style         # ESLint, TypeScript, code conventions
 
   # Optional agents that provide suggestions
-  optional-agents:
+  optionalAgents:
     - performance   # Query optimization, bundle size
     - architecture  # SOLID, coupling, cohesion
 

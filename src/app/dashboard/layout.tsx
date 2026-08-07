@@ -8,6 +8,7 @@ import { SLAMonitorWrapper } from "@/components/tickets/sla-monitor-wrapper";
 import { AIChatbotWidget } from "@/components/ai/ai-chatbot-widget";
 import { getPortalBranding } from "@/lib/actions/portal-branding";
 import { normalizeDashboardRole } from "@/lib/require-role";
+import { ErrorReporter } from "@/components/errors/error-reporter";
 
 export const dynamic = "force-dynamic";
 
@@ -154,6 +155,7 @@ export default async function DashboardLayout({
       </div>
 
       <BottomNav />
+      <ErrorReporter />
       <LiveChatWidget />
       <SLAMonitorWrapper />
       <AIChatbotWidget

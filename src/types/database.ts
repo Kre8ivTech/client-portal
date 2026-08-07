@@ -402,6 +402,72 @@ export type Database = {
           },
         ];
       };
+      error_logs: {
+        Row: {
+          context: Json;
+          created_at: string;
+          digest: string | null;
+          environment: string | null;
+          id: string;
+          message: string;
+          organization_id: string | null;
+          release: string | null;
+          route: string | null;
+          severity: string;
+          source: string;
+          stack_trace: string | null;
+          user_agent: string | null;
+          user_id: string | null;
+        };
+        Insert: {
+          context?: Json;
+          created_at?: string;
+          digest?: string | null;
+          environment?: string | null;
+          id?: string;
+          message: string;
+          organization_id?: string | null;
+          release?: string | null;
+          route?: string | null;
+          severity?: string;
+          source: string;
+          stack_trace?: string | null;
+          user_agent?: string | null;
+          user_id?: string | null;
+        };
+        Update: {
+          context?: Json;
+          created_at?: string;
+          digest?: string | null;
+          environment?: string | null;
+          id?: string;
+          message?: string;
+          organization_id?: string | null;
+          release?: string | null;
+          route?: string | null;
+          severity?: string;
+          source?: string;
+          stack_trace?: string | null;
+          user_agent?: string | null;
+          user_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "error_logs_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "organizations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "error_logs_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       form_submissions: {
         Row: {
           attachments: Json | null;

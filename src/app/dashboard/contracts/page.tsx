@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { FileText, Clock, CheckCircle, XCircle, AlertCircle, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 export default async function ContractsPage() {
   const supabase = await createServerSupabaseClient()
@@ -12,9 +13,10 @@ export default async function ContractsPage() {
   
   if (!user) redirect('/login')
 
-  // Fetch client's contracts (with safe fallback if relation metadata is stale)
+  // Fetch the authenticated client's contracts. The service-role fallback remains
+  // scoped to the authenticated user while the legacy recursive RLS policy is repaired.
   let contracts: any[] | null = null
-  let error: { message?: string } | null = null
+  let error: { code?: string; message?: string } | null = null
 
   const primaryQuery = await (supabase as any)
     .from('contracts')
@@ -29,14 +31,24 @@ export default async function ContractsPage() {
   error = primaryQuery.error
 
   if (error) {
-    const fallbackQuery = await (supabase as any)
-      .from('contracts')
-      .select('*')
-      .eq('client_id', user.id)
-      .order('created_at', { ascending: false })
+    const primaryErrorCode = error.code
 
-    contracts = fallbackQuery.data
-    error = fallbackQuery.error
+    try {
+      const admin = getSupabaseAdmin()
+      const fallbackQuery = await admin
+        .from('contracts')
+        .select('id, title, status, created_at')
+        .eq('client_id', user.id)
+        .order('created_at', { ascending: false })
+
+      contracts = fallbackQuery.data
+      error = fallbackQuery.error
+    } catch (fallbackError) {
+      console.error('[Contracts] Secure fallback unavailable', {
+        code: primaryErrorCode,
+        reason: fallbackError instanceof Error ? fallbackError.name : 'UnknownError',
+      })
+    }
   }
 
   if (error) {

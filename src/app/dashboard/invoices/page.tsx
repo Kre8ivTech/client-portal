@@ -165,15 +165,16 @@ export default async function InvoicesPage() {
                   {(invoices as InvoiceWithOrg[]).map((invoice) => (
                     <tr
                       key={invoice.id}
-                      className="hover:bg-slate-50 cursor-pointer"
-                      onClick={() => window.location.href = `/dashboard/invoices/${invoice.id}`}
-                      role="link"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') window.location.href = `/dashboard/invoices/${invoice.id}`
-                      }}
+                      className="hover:bg-slate-50"
                     >
-                      <td className="py-4 font-medium">{invoice.invoice_number}</td>
+                      <td className="py-4 font-medium">
+                        <Link
+                          href={`/dashboard/invoices/${invoice.id}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          {invoice.invoice_number}
+                        </Link>
+                      </td>
                       {(role === "super_admin" || role === "staff") && (
                         <td className="py-4 text-slate-600">{invoice.organization?.name ?? "-"}</td>
                       )}
@@ -194,7 +195,6 @@ export default async function InvoicesPage() {
                         <Link
                           href={`/dashboard/invoices/${invoice.id}`}
                           className="text-sm text-blue-600 hover:underline"
-                          onClick={(e) => e.stopPropagation()}
                         >
                           View
                         </Link>

@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { DeleteInvoiceButton } from '@/components/admin/invoices/delete-invoice-button'
+import { DeleteInvoiceButton } from '@/components/invoices/DeleteInvoiceButton'
 
 const { refresh, toast } = vi.hoisted(() => ({
   refresh: vi.fn(),

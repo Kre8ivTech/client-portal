@@ -1,6 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { normalizeDashboardRole } from '@/lib/require-role'
-import { DeleteInvoiceButton } from '@/components/admin/invoices/delete-invoice-button'
+import { DeleteInvoiceButton } from '@/components/invoices/DeleteInvoiceButton'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import Link from 'next/link'

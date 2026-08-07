@@ -39,7 +39,8 @@ export function DeleteInvoiceButton({
     setError(null)
 
     try {
-      const response = await fetch(`/api/admin/invoices/${invoiceId}`, {
+      const endpoint = '/api/admin/invoices/' + encodeURIComponent(invoiceId)
+      const response = await fetch(endpoint, {
         method: 'DELETE',
         credentials: 'same-origin',
       })

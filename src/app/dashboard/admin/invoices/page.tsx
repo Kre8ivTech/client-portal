@@ -1,7 +1,18 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { normalizeDashboardRole } from '@/lib/require-role'
+import { DeleteInvoiceButton } from '@/components/admin/invoices/delete-invoice-button'
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react'
 import Link from 'next/link'
+
+type AdminInvoiceRow = {
+  id: string
+  invoice_number: string
+  status: string
+  due_date: string
+  total: number
+  balance_due: number
+}
 
 export default async function AdminInvoicesPage() {
   const supabase = await createServerSupabaseClient()
@@ -22,11 +33,12 @@ export default async function AdminInvoicesPage() {
     .single()
 
   const p = profile as { organization_id: string | null; role: string; is_account_manager: boolean } | null
+  const role = normalizeDashboardRole(p?.role)
   const isAuthorized =
     p &&
-    (p.role === 'super_admin' ||
-      (p.role === 'staff' && p.is_account_manager) ||
-      p.role === 'partner')
+    (role === 'super_admin' ||
+      (role === 'staff' && p.is_account_manager) ||
+      role === 'partner')
 
   if (!isAuthorized) {
     return <div>Forbidden - Account manager access required</div>
@@ -35,7 +47,7 @@ export default async function AdminInvoicesPage() {
   // Fetch invoices with line items
   const invoicesQuery = (supabase as any)
     .from('invoices')
-    .select('*, created_by_user:users!created_by(id, email, profiles(name))')
+    .select('id, invoice_number, status, due_date, total, balance_due')
   
   if (p?.organization_id) {
     invoicesQuery.eq('organization_id', p.organization_id)
@@ -65,7 +77,7 @@ export default async function AdminInvoicesPage() {
       {/* Invoices Grid */}
       {invoices && invoices.length > 0 ? (
         <div className="grid grid-cols-1 gap-4">
-          {invoices.map((invoice: any) => (
+          {(invoices as AdminInvoiceRow[]).map((invoice) => (
             <div
               key={invoice.id}
               className="border rounded-lg p-6 hover:shadow-md transition-shadow"
@@ -92,14 +104,23 @@ export default async function AdminInvoicesPage() {
                     Due: {new Date(invoice.due_date).toLocaleDateString()}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold">
-                    ${(invoice.total / 100).toFixed(2)}
-                  </p>
-                  {invoice.balance_due > 0 && (
-                    <p className="text-sm text-muted-foreground">
-                      Balance: ${(invoice.balance_due / 100).toFixed(2)}
+                <div className="flex items-start gap-4">
+                  <div className="text-right">
+                    <p className="text-2xl font-bold">
+                      ${(invoice.total / 100).toFixed(2)}
                     </p>
+                    {invoice.balance_due > 0 && (
+                      <p className="text-sm text-muted-foreground">
+                        Balance: ${(invoice.balance_due / 100).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                  {role === 'super_admin' && (
+                    <DeleteInvoiceButton
+                      invoiceId={invoice.id}
+                      invoiceNumber={invoice.invoice_number}
+                      status={invoice.status}
+                    />
                   )}
                 </div>
               </div>

@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import { writeAuditLog } from '@/lib/audit'
+import { normalizeDashboardRole } from '@/lib/require-role'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { invoiceSchema, invoiceStatusUpdateSchema, calculateInvoiceTotals } from '@/lib/validators/invoice'
 
@@ -160,11 +163,17 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params
+    const invoiceId = z.string().uuid().safeParse(id)
+
+    if (!invoiceId.success) {
+      return NextResponse.json({ error: 'Invalid invoice ID' }, { status: 400 })
+    }
+
     const supabase = await createServerSupabaseClient()
 
     // Check auth
@@ -189,25 +198,21 @@ export async function DELETE(
     }
 
     const p = profile as UserAuthRow
-    const isAuthorized =
-      p.role === 'super_admin' ||
-      (p.role === 'staff' && p.is_account_manager)
-
-    if (!isAuthorized) {
+    if (normalizeDashboardRole(p.role) !== 'super_admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     // Fetch invoice to check status
-    const invoiceQuery = (supabase as any)
+    const { data: invoice, error: invoiceError } = await (supabase as any)
       .from('invoices')
-      .select('status')
-      .eq('id', id)
-    
-    if (p.organization_id) {
-      invoiceQuery.eq('organization_id', p.organization_id)
+      .select('id, invoice_number, status')
+      .eq('id', invoiceId.data)
+      .maybeSingle()
+
+    if (invoiceError) {
+      console.error('Failed to load invoice for deletion:', invoiceError)
+      return NextResponse.json({ error: 'Failed to load invoice' }, { status: 500 })
     }
-    
-    const { data: invoice } = await invoiceQuery.single()
 
     if (!invoice) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 })
@@ -221,24 +226,34 @@ export async function DELETE(
       )
     }
 
-    // Delete invoice (cascades to line items)
-    const deleteQuery = (supabase as any)
+    // Related line items, payments, and payment audit entries cascade in Postgres.
+    const { data: deletedInvoice, error } = await (supabase as any)
       .from('invoices')
       .delete()
-      .eq('id', id)
-    
-    if (p.organization_id) {
-      deleteQuery.eq('organization_id', p.organization_id)
-    }
-    
-    const { error } = await deleteQuery
+      .eq('id', invoiceId.data)
+      .select('id')
+      .maybeSingle()
 
     if (error) {
       console.error('Failed to delete invoice:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to delete invoice' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    if (!deletedInvoice) {
+      return NextResponse.json({ error: 'Invoice could not be deleted' }, { status: 409 })
+    }
+
+    await writeAuditLog({
+      action: 'invoice_deleted',
+      entity_type: 'invoice',
+      entity_id: deletedInvoice.id,
+      old_values: {
+        invoice_number: invoice.invoice_number,
+        status: invoice.status,
+      },
+    })
+
+    return NextResponse.json({ success: true, deletedId: deletedInvoice.id })
   } catch (err) {
     console.error('Invoice DELETE error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

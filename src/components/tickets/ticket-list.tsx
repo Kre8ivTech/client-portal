@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useRealtimeTickets } from '@/hooks/use-realtime-tickets'
 import {
@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button'
 import { Database } from '@/types/database'
 import { cn } from '@/lib/utils'
 import { getCombinedSLAStatus, getSLARowColor } from '@/lib/sla-status'
+import { DeleteTicketButton } from '@/components/tickets/DeleteTicketButton'
 import {
   Tooltip,
   TooltipContent,
@@ -50,6 +51,7 @@ type Ticket = Database['public']['Tables']['tickets']['Row'] & {
 interface TicketListProps {
   initialTickets: Ticket[]
   organizations?: Array<{ id: string; name: string }>
+  canDeleteTickets?: boolean
 }
 
 const STATUS_OPTIONS = [
@@ -78,8 +80,13 @@ const SLA_FILTER_OPTIONS = [
   { value: 'on-track', label: 'On Track' },
 ]
 
-export function TicketList({ initialTickets, organizations }: TicketListProps) {
+export function TicketList({
+  initialTickets,
+  organizations,
+  canDeleteTickets = false,
+}: TicketListProps) {
   const supabase = createClient()
+  const queryClient = useQueryClient()
   useRealtimeTickets()
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -117,7 +124,10 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
     initialData: { tickets: initialTickets, totalCount: initialTickets.length },
   })
 
-  const tickets = ticketsResponse?.tickets ?? []
+  const tickets = useMemo(
+    () => ticketsResponse?.tickets ?? [],
+    [ticketsResponse?.tickets]
+  )
   const totalCount = ticketsResponse?.totalCount ?? 0
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
@@ -302,6 +312,10 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
             tickets={priorityTickets} 
             showOrgColumn={true} 
             hasActiveFilters={hasActiveFilters}
+            canDeleteTickets={canDeleteTickets}
+            onTicketDeleted={async () => {
+              await queryClient.invalidateQueries({ queryKey: ['tickets'] })
+            }}
           />
         </div>
       )}
@@ -315,6 +329,10 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
           tickets={otherTickets} 
           showOrgColumn={true}
           hasActiveFilters={hasActiveFilters}
+          canDeleteTickets={canDeleteTickets}
+          onTicketDeleted={async () => {
+            await queryClient.invalidateQueries({ queryKey: ['tickets'] })
+          }}
         />
       </div>
 
@@ -355,11 +373,15 @@ export function TicketList({ initialTickets, organizations }: TicketListProps) {
 function TicketTable({ 
   tickets, 
   showOrgColumn,
-  hasActiveFilters 
+  hasActiveFilters,
+  canDeleteTickets,
+  onTicketDeleted,
 }: { 
   tickets: Ticket[]
   showOrgColumn: boolean
   hasActiveFilters: boolean
+  canDeleteTickets: boolean
+  onTicketDeleted: () => Promise<void>
 }) {
   const router = useRouter()
 
@@ -377,12 +399,16 @@ function TicketTable({
             <TableHead className="font-semibold">Priority</TableHead>
             <TableHead className="font-semibold">SLA Status</TableHead>
             <TableHead className="font-semibold text-right">Created</TableHead>
+            {canDeleteTickets && <TableHead className="font-semibold text-right">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
           {tickets.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={showOrgColumn ? 7 : 6} className="h-32 text-center text-slate-500 italic">
+              <TableCell
+                colSpan={(showOrgColumn ? 7 : 6) + (canDeleteTickets ? 1 : 0)}
+                className="h-32 text-center text-slate-500 italic"
+              >
                 {hasActiveFilters ? 'No tickets match your filters.' : 'No tickets found.'}
               </TableCell>
             </TableRow>
@@ -450,6 +476,20 @@ function TicketTable({
                   <TableCell className="text-right text-slate-500 text-sm whitespace-nowrap">
                     {ticket.created_at ? formatDate(ticket.created_at) : '—'}
                   </TableCell>
+                  {canDeleteTickets && (
+                    <TableCell
+                      className="text-right"
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => event.stopPropagation()}
+                    >
+                      <DeleteTicketButton
+                        ticketId={ticket.id}
+                        ticketNumber={ticket.ticket_number}
+                        subject={ticket.subject}
+                        onDeleted={onTicketDeleted}
+                      />
+                    </TableCell>
+                  )}
                 </TableRow>
               )
             })

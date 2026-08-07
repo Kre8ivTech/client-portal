@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { TicketList } from "@/components/tickets/ticket-list";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { normalizeDashboardRole } from "@/lib/require-role";
 import { PlusCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -21,6 +22,7 @@ export default async function TicketsPage() {
 
   // Fetch organizations for filter (only for staff/admins)
   let organizations: Array<{ id: string; name: string }> = [];
+  let canDeleteTickets = false;
   if (user) {
     const { data: userProfile } = await (supabase as any)
       .from("users")
@@ -28,7 +30,10 @@ export default async function TicketsPage() {
       .eq("id", user.id)
       .single();
 
-    if ((userProfile as any)?.role === "staff" || (userProfile as any)?.role === "super_admin") {
+    const role = normalizeDashboardRole((userProfile as { role?: string } | null)?.role);
+    canDeleteTickets = role === "super_admin";
+
+    if (role === "staff" || role === "super_admin") {
       const { data: orgs } = await (supabase as any)
         .from("organizations")
         .select("id, name")
@@ -94,7 +99,11 @@ export default async function TicketsPage() {
         </div>
       </div>
 
-      <TicketList initialTickets={tickets || []} organizations={organizations} />
+      <TicketList
+        initialTickets={tickets || []}
+        organizations={organizations}
+        canDeleteTickets={canDeleteTickets}
+      />
     </div>
   );
 }

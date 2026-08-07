@@ -168,7 +168,6 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/admin/ai-usage", icon: BarChart3, label: "AI Usage" },
       { href: "/dashboard/audit", icon: History, label: "Audit Log" },
       { href: "/dashboard/admin/error-logs", icon: Bug, label: "Error Log" },
-      { href: "/dashboard/capacity", icon: BarChart3, label: "Capacity" },
     ],
   },
 ];

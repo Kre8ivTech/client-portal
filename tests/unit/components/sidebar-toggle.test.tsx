@@ -129,6 +129,24 @@ describe("Sidebar Toggle Functionality", () => {
     rerender(<DashboardSidebar profile={profile} />);
   });
 
+  it("shows Capacity only once for super admins", () => {
+    const profile = {
+      id: "test-id",
+      organization_id: "org-id",
+      email: "admin@example.com",
+      role: "super_admin" as const,
+      is_account_manager: true,
+      name: "Admin User",
+      avatar_url: null,
+      organization_name: "Test Org",
+      organization_slug: "test-org",
+    };
+
+    render(<DashboardSidebar profile={profile} />);
+
+    expect(screen.getAllByRole("link", { name: "Capacity" })).toHaveLength(1);
+  });
+
   it("initializes from localStorage when available", () => {
     // Pre-populate localStorage
     localStorage.setItem("sidebar-collapsed-sections", JSON.stringify(["Admin"]));

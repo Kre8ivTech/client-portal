@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useRealtimeTickets } from '@/hooks/use-realtime-tickets'
 import {
@@ -38,6 +38,7 @@ import {
   type TicketPriority,
 } from '@/lib/ticket-priority'
 import { Database } from '@/types/database'
+import { DeleteTicketButton } from '@/components/tickets/DeleteTicketButton'
 
 type Ticket = Database['public']['Tables']['tickets']['Row']
 
@@ -54,6 +55,7 @@ interface TicketWithRelations extends Ticket {
 
 interface StaffTicketListProps {
   initialTickets: TicketWithRelations[]
+  canDeleteTickets?: boolean
 }
 
 const STATUS_OPTIONS = [
@@ -89,9 +91,13 @@ const STATUS_STYLES: Record<string, string> = {
   closed: 'bg-slate-100 text-slate-600 border-slate-200',
 }
 
-export function StaffTicketList({ initialTickets }: StaffTicketListProps) {
+export function StaffTicketList({
+  initialTickets,
+  canDeleteTickets = false,
+}: StaffTicketListProps) {
   const supabase = createClient()
   const router = useRouter()
+  const queryClient = useQueryClient()
   useRealtimeTickets()
 
   const [searchTerm, setSearchTerm] = useState('')
@@ -382,12 +388,16 @@ export function StaffTicketList({ initialTickets }: StaffTicketListProps) {
               <TableHead className="font-semibold">Assigned To</TableHead>
               <TableHead className="font-semibold">Due Date</TableHead>
               <TableHead className="font-semibold text-right">Created</TableHead>
+              {canDeleteTickets && <TableHead className="font-semibold text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredTickets.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="h-32 text-center text-slate-500 italic">
+                <TableCell
+                  colSpan={8 + (canDeleteTickets ? 1 : 0)}
+                  className="h-32 text-center text-slate-500 italic"
+                >
                   {hasActiveFilters ? 'No tickets match your filters.' : 'No tickets found.'}
                 </TableCell>
               </TableRow>
@@ -445,6 +455,22 @@ export function StaffTicketList({ initialTickets }: StaffTicketListProps) {
                     <TableCell className="text-right text-slate-500 text-sm whitespace-nowrap">
                       {ticket.created_at ? formatDate(ticket.created_at) : '-'}
                     </TableCell>
+                    {canDeleteTickets && (
+                      <TableCell
+                        className="text-right"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
+                        <DeleteTicketButton
+                          ticketId={ticket.id}
+                          ticketNumber={ticket.ticket_number}
+                          subject={ticket.subject}
+                          onDeleted={() =>
+                            queryClient.invalidateQueries({ queryKey: ['staff-tickets'] })
+                          }
+                        />
+                      </TableCell>
+                    )}
                   </TableRow>
                 )
               })

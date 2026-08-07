@@ -1,6 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { StaffTicketList } from '@/components/tickets/staff-ticket-list'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { normalizeDashboardRole } from '@/lib/require-role'
 import { AlertCircle } from 'lucide-react'
 import { redirect } from 'next/navigation'
 
@@ -32,7 +33,8 @@ export default async function AdminTicketsPage() {
   }
 
   const p = profile as { organization_id: string | null; role: string }
-  if (!['super_admin', 'staff', 'partner'].includes(p.role)) {
+  const role = normalizeDashboardRole(p.role)
+  if (!['super_admin', 'staff', 'partner'].includes(role)) {
     redirect('/dashboard')
   }
 
@@ -45,7 +47,7 @@ export default async function AdminTicketsPage() {
       assigned_to_user:users!assigned_to(id, profiles(name))
     `)
 
-  if (p.organization_id && p.role !== 'super_admin') {
+  if (p.organization_id && role !== 'super_admin') {
     ticketsQuery.eq('organization_id', p.organization_id)
   }
 
@@ -82,7 +84,10 @@ export default async function AdminTicketsPage() {
       </div>
 
       {/* Staff Ticket List */}
-      <StaffTicketList initialTickets={tickets || []} />
+      <StaffTicketList
+        initialTickets={tickets || []}
+        canDeleteTickets={role === 'super_admin'}
+      />
     </div>
   )
 }

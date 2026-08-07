@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { verifySignedOAuthState, sanitizeOAuthReturnPath } from "@/lib/security";
+import { verifySignedOAuthState, sanitizeOAuthReturnPath } from "@/lib/oauth-state";
 import { syncStaffCalendarFromOAuth } from "@/lib/integrations/staff-calendar-sync";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;

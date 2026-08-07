@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { verifySignedOAuthState } from "@/lib/oauth-state";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID;
@@ -23,14 +24,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard/settings/file-storage?error=missing_params", request.url));
   }
 
-  let stateData: { userId: string; ts: number };
-  try {
-    stateData = JSON.parse(Buffer.from(state, "base64").toString());
-  } catch {
+  const stateData = verifySignedOAuthState(state) as { userId?: unknown; ts?: unknown } | null;
+  if (
+    !stateData ||
+    typeof stateData.userId !== "string" ||
+    typeof stateData.ts !== "number" ||
+    !Number.isFinite(stateData.ts)
+  ) {
     return NextResponse.redirect(new URL("/dashboard/settings/file-storage?error=invalid_state", request.url));
   }
 
-  if (Date.now() - stateData.ts > 10 * 60 * 1000) {
+  if (stateData.ts > Date.now() + 60_000 || Date.now() - stateData.ts > 10 * 60 * 1000) {
     return NextResponse.redirect(new URL("/dashboard/settings/file-storage?error=state_expired", request.url));
   }
 
@@ -115,4 +119,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard/settings/file-storage?error=oauth_failed", request.url));
   }
 }
-

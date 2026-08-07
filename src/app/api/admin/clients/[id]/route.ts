@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { writeAuditLog } from '@/lib/audit'
 import { normalizeDashboardRole } from '@/lib/require-role'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 const updateClientTypeSchema = z.object({
@@ -285,6 +286,43 @@ export async function DELETE(
       return NextResponse.json({ error: 'Client could not be deleted' }, { status: 409 })
     }
 
+    const admin = getSupabaseAdmin()
+    const { data: clientUsers, error: usersError } = await admin
+      .from('users')
+      .select('id')
+      .eq('organization_id', client.id)
+
+    if (usersError) {
+      console.error('Failed to load client users during deactivation:', usersError)
+      return NextResponse.json({ error: 'Client was deactivated, but its users could not be disabled' }, { status: 500 })
+    }
+
+    const userIds = (clientUsers ?? []).map((clientUser: { id: string }) => clientUser.id)
+    if (userIds.length > 0) {
+      const { error: userStatusError } = await admin
+        .from('users')
+        .update({ status: 'inactive', updated_at: new Date().toISOString() })
+        .in('id', userIds)
+
+      if (userStatusError) {
+        console.error('Failed to deactivate client users:', userStatusError)
+        return NextResponse.json({ error: 'Client was deactivated, but its users could not be disabled' }, { status: 500 })
+      }
+
+      const banResults = await Promise.allSettled(
+        userIds.map((userId: string) =>
+          admin.auth.admin.updateUserById(userId, { ban_duration: '876000h' }),
+        ),
+      )
+      const failedBans = banResults.filter(
+        (result) => result.status === 'rejected' || result.value.error,
+      ).length
+
+      if (failedBans > 0) {
+        console.error(`Failed to ban ${failedBans} auth user(s) for deactivated client ${client.id}`)
+      }
+    }
+
     await writeAuditLog({
       action: 'client_deleted',
       entity_type: 'organization',
@@ -296,7 +334,10 @@ export async function DELETE(
         status: client.status,
       },
       new_values: { status: 'inactive' },
-      details: { deletion_mode: 'deactivated_to_preserve_history' },
+      details: {
+        deletion_mode: 'deactivated_to_preserve_history',
+        disabled_user_count: userIds.length,
+      },
     })
 
     return NextResponse.json({ success: true, deletedId: client.id })

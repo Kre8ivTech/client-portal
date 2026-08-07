@@ -36,6 +36,7 @@ export function encrypt(text: string): {
     ALGORITHM,
     derivedKey,
     iv,
+    { authTagLength: AUTH_TAG_LENGTH },
   );
 
   let encrypted = cipher.update(text, "utf8", "base64");
@@ -78,14 +79,21 @@ export function decrypt(
 
   // Use the provided salt instead of static salt (SECURITY FIX)
   const salt = Buffer.from(saltBase64, "base64");
+  if (salt.length !== SALT_LENGTH) {
+    throw new Error("Invalid encryption salt length");
+  }
   const derivedKey = crypto.pbkdf2Sync(secretKey, salt, 100000, 32, "sha512");
 
   const iv = Buffer.from(ivBase64, "base64");
   const authTag = Buffer.from(authTagBase64, "base64");
+  if (iv.length !== IV_LENGTH || authTag.length !== AUTH_TAG_LENGTH) {
+    throw new Error("Invalid AES-GCM parameters");
+  }
   const decipher = crypto.createDecipheriv(
     ALGORITHM,
     derivedKey,
     iv,
+    { authTagLength: AUTH_TAG_LENGTH },
   );
 
   decipher.setAuthTag(authTag);
@@ -120,10 +128,14 @@ export function decryptLegacy(
 
   const iv = Buffer.from(ivBase64, "base64");
   const authTag = Buffer.from(authTagBase64, "base64");
+  if (iv.length !== IV_LENGTH || authTag.length !== AUTH_TAG_LENGTH) {
+    throw new Error("Invalid AES-GCM parameters");
+  }
   const decipher = crypto.createDecipheriv(
     ALGORITHM,
     derivedKey,
     iv,
+    { authTagLength: AUTH_TAG_LENGTH },
   );
 
   decipher.setAuthTag(authTag);

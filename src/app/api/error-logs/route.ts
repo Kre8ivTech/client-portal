@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { errorLogSchema } from "@/lib/validators/error-log";
 
 const MAX_REQUEST_BYTES = 32_768;
+const MAX_LOGS_PER_MINUTE = 30;
 
 export async function POST(request: NextRequest) {
   const contentLength = Number(request.headers.get("content-length") ?? 0);
@@ -52,6 +53,23 @@ export async function POST(request: NextRequest) {
 
     const { context } = parsed.data;
     const admin = getSupabaseAdmin();
+    const oneMinuteAgo = new Date(Date.now() - 60_000).toISOString();
+    const { count: recentLogCount, error: rateLimitError } = await admin
+      .from("error_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("created_at", oneMinuteAgo);
+
+    if (rateLimitError) {
+      return NextResponse.json({ error: "Failed to validate error-log rate limit" }, { status: 503 });
+    }
+    if ((recentLogCount ?? 0) >= MAX_LOGS_PER_MINUTE) {
+      return NextResponse.json(
+        { error: "Too many error logs" },
+        { status: 429, headers: { "Retry-After": "60" } },
+      );
+    }
+
     const { error: insertError } = await admin.from("error_logs").insert({
       organization_id: (userRow as { organization_id: string | null }).organization_id,
       user_id: user.id,

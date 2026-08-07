@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createSignedOAuthState } from "@/lib/oauth-state";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const DROPBOX_CLIENT_ID = process.env.DROPBOX_CLIENT_ID;
@@ -20,7 +21,7 @@ export async function GET(_request: NextRequest) {
     );
   }
 
-  const state = Buffer.from(JSON.stringify({ userId: user.id, ts: Date.now() })).toString("base64");
+  const state = createSignedOAuthState({ userId: user.id, ts: Date.now() });
 
   const authUrl = new URL("https://www.dropbox.com/oauth2/authorize");
   authUrl.searchParams.set("client_id", DROPBOX_CLIENT_ID);
@@ -50,4 +51,3 @@ export async function DELETE(_request: NextRequest) {
 
   return NextResponse.json({ success: true });
 }
-

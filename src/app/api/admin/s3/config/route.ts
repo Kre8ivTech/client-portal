@@ -121,11 +121,11 @@ export async function POST(request: NextRequest) {
     }
 
     const secret = process.env.ENCRYPTION_SECRET;
-    if (!secret || secret.length < 8) {
+    if (!secret || secret.length < 32) {
       return NextResponse.json(
         {
           error:
-            "ENCRYPTION_SECRET must be set in the environment (at least 8 characters) to store S3 credentials encrypted.",
+            "ENCRYPTION_SECRET must be set in the environment (at least 32 characters) to store S3 credentials encrypted.",
         },
         { status: 400 }
       );
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
       bucket_name: validation.data.bucket_name,
       kms_key_id: validation.data.kms_key_id ?? null,
     };
-    const { encryptedData, iv, authTag } = encrypt(JSON.stringify(payload));
+    const { encryptedData, iv, authTag, salt } = encrypt(JSON.stringify(payload));
 
     const admin = getSupabaseAdmin();
     const { error: updateError } = await (admin as any)
@@ -165,6 +165,7 @@ export async function POST(request: NextRequest) {
         aws_s3_config_encrypted: encryptedData,
         aws_s3_config_iv: iv,
         aws_s3_config_auth_tag: authTag,
+        aws_s3_config_salt: salt,
       })
       .eq("id", APP_SETTINGS_ID);
 
@@ -202,6 +203,7 @@ export async function DELETE() {
         aws_s3_config_encrypted: null,
         aws_s3_config_iv: null,
         aws_s3_config_auth_tag: null,
+        aws_s3_config_salt: null,
       })
       .eq("id", APP_SETTINGS_ID);
 

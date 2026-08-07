@@ -188,6 +188,11 @@ async function processDocuSignEvent(event: DocuSignWebhookEvent): Promise<void> 
     return;
   }
 
+  if (!contract.docusign_envelope_id || contract.docusign_envelope_id !== event.envelopeId) {
+    console.error('[DocuSign Webhook] Envelope ID does not match the stored contract envelope');
+    return;
+  }
+
   switch (event.eventType) {
     case 'envelope-completed':
       await handleEnvelopeCompleted(contract, event);

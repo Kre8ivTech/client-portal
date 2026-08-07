@@ -2,10 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 import { DELETE, PATCH } from '@/app/api/admin/clients/[id]/route'
 import { writeAuditLog } from '@/lib/audit'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 vi.mock('@/lib/supabase/server', () => ({
   createServerSupabaseClient: vi.fn(),
+}))
+
+vi.mock('@/lib/supabase/admin', () => ({
+  getSupabaseAdmin: vi.fn(),
 }))
 
 vi.mock('@/lib/audit', () => ({
@@ -15,6 +20,7 @@ vi.mock('@/lib/audit', () => ({
 const clientId = '31784cdf-469c-4936-9219-34be1fe7fbc5'
 const mainOrgId = 'd12abe39-5448-4563-9ac6-2dd53da9fcfc'
 const createServerSupabaseClientMock = vi.mocked(createServerSupabaseClient)
+const getSupabaseAdminMock = vi.mocked(getSupabaseAdmin)
 const writeAuditLogMock = vi.mocked(writeAuditLog)
 
 const defaultClient = {
@@ -139,6 +145,24 @@ async function deleteClient(id = clientId) {
 describe('admin client management API', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getSupabaseAdminMock.mockReturnValue({
+      auth: {
+        admin: {
+          updateUserById: vi.fn().mockResolvedValue({ data: {}, error: null }),
+        },
+      },
+      from: vi.fn(() => ({
+        select: vi.fn(() => ({
+          eq: vi.fn().mockResolvedValue({
+            data: [{ id: 'client-user-1' }, { id: 'client-user-2' }],
+            error: null,
+          }),
+        })),
+        update: vi.fn(() => ({
+          in: vi.fn().mockResolvedValue({ error: null }),
+        })),
+      })),
+    } as never)
   })
 
   it('rejects invalid client IDs before accessing the database', async () => {
@@ -241,8 +265,15 @@ describe('admin client management API', () => {
         action: 'client_deleted',
         entity_id: clientId,
         new_values: { status: 'inactive' },
-        details: { deletion_mode: 'deactivated_to_preserve_history' },
+        details: {
+          deletion_mode: 'deactivated_to_preserve_history',
+          disabled_user_count: 2,
+        },
       }),
     )
+    const admin = getSupabaseAdminMock.mock.results[0]?.value as {
+      auth: { admin: { updateUserById: ReturnType<typeof vi.fn> } }
+    }
+    expect(admin.auth.admin.updateUserById).toHaveBeenCalledTimes(2)
   })
 })

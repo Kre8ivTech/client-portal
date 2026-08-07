@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createSignedOAuthState } from "@/lib/oauth-state";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
@@ -25,7 +26,7 @@ export async function GET(_request: NextRequest) {
     );
   }
 
-  const state = Buffer.from(JSON.stringify({ userId: user.id, ts: Date.now() })).toString("base64");
+  const state = createSignedOAuthState({ userId: user.id, ts: Date.now() });
 
   const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   authUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
@@ -57,4 +58,3 @@ export async function DELETE(_request: NextRequest) {
 
   return NextResponse.json({ success: true });
 }
-

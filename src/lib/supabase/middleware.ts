@@ -1,7 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-const APP_SETTINGS_ID = '00000000-0000-0000-0000-000000000001'
 const SECURITY_SETTINGS_PATH = '/dashboard/settings/security'
 
 function getClientIp(request: NextRequest): string | null {
@@ -54,6 +53,8 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const path = request.nextUrl.pathname
+  const isApiPath = path.startsWith('/api')
+  const isDashboardPath = path.startsWith('/dashboard')
   const isAuthPage =
     path === '/' ||
     path.startsWith('/login') ||
@@ -61,16 +62,9 @@ export async function updateSession(request: NextRequest) {
     path.startsWith('/forgot-password') ||
     path.startsWith('/reset-password')
 
-  if (user && isAuthPage && !path.startsWith('/reset-password')) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
-  }
-
   if (
     !user &&
-    !isAuthPage &&
-    !path.startsWith('/auth')
+    isDashboardPath
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
@@ -79,15 +73,38 @@ export async function updateSession(request: NextRequest) {
 
   if (user) {
     try {
-      const { data: userRow } = await (supabase as any)
+      const { data: userRow, error: userRowError } = await (supabase as any)
         .from('users')
-        .select('role, organization_id, mfa_enabled')
+        .select('role, organization_id, status, mfa_enabled')
         .eq('id', user.id)
         .single()
 
+      if (userRowError || !userRow) {
+        throw new Error('Unable to verify account security state')
+      }
+
       const role = (userRow as { role?: string } | null)?.role ?? 'client'
       const organizationId = (userRow as { organization_id?: string | null } | null)?.organization_id ?? null
+      const userStatus = (userRow as { status?: string | null } | null)?.status ?? 'active'
       const userMfaEnabled = Boolean((userRow as { mfa_enabled?: boolean } | null)?.mfa_enabled)
+
+      if (userStatus === 'inactive' || userStatus === 'suspended') {
+        await supabase.auth.signOut()
+        if (isApiPath) {
+          const response = NextResponse.json({ error: 'Account is inactive' }, { status: 403 })
+          supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+          return response
+        }
+        if (isDashboardPath) {
+          const url = request.nextUrl.clone()
+          url.pathname = '/login'
+          url.searchParams.set('account_inactive', '1')
+          const response = NextResponse.redirect(url)
+          supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+          return response
+        }
+        return supabaseResponse
+      }
 
       let mfaSettings: {
         mfa_enabled?: boolean
@@ -95,21 +112,46 @@ export async function updateSession(request: NextRequest) {
         mfa_required_for_clients?: boolean
       } | null = null
 
-      const { data: appSettings } = await (supabase as any)
-        .from('app_settings')
-        .select('mfa_enabled, mfa_required_for_staff, mfa_required_for_clients')
-        .eq('id', APP_SETTINGS_ID)
+      const { data: appSettings, error: appSettingsError } = await (supabase as any)
+        .rpc('get_current_mfa_policy')
         .single()
+
+      if (appSettingsError || !appSettings) {
+        throw new Error('Unable to verify MFA policy')
+      }
 
       mfaSettings = appSettings ?? null
 
       // Organization-level security (IP allowlist + session timeout)
       if (organizationId) {
-        const { data: orgRow } = await (supabase as any)
+        const { data: orgRow, error: orgRowError } = await (supabase as any)
           .from('organizations')
-          .select('settings')
+          .select('status, settings')
           .eq('id', organizationId)
           .single()
+
+        if (orgRowError || !orgRow) {
+          throw new Error('Unable to verify organization security state')
+        }
+
+        const organizationStatus = (orgRow as { status?: string | null } | null)?.status ?? 'active'
+        if (organizationStatus === 'inactive' || organizationStatus === 'suspended') {
+          await supabase.auth.signOut()
+          if (isApiPath) {
+            const response = NextResponse.json({ error: 'Organization is inactive' }, { status: 403 })
+            supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+            return response
+          }
+          if (isDashboardPath) {
+            const url = request.nextUrl.clone()
+            url.pathname = '/login'
+            url.searchParams.set('organization_inactive', '1')
+            const response = NextResponse.redirect(url)
+            supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+            return response
+          }
+          return supabaseResponse
+        }
 
         const securitySettings = (orgRow as { settings?: any } | null)?.settings?.security ?? {}
         const ipWhitelist = Array.isArray(securitySettings.ip_whitelist)
@@ -152,16 +194,20 @@ export async function updateSession(request: NextRequest) {
       }
 
       // MFA policy enforcement on protected routes.
-      if (path.startsWith('/dashboard') && mfaSettings?.mfa_enabled !== false) {
+      if ((isDashboardPath || isApiPath) && mfaSettings?.mfa_enabled !== false) {
         const isStaffLike = ['super_admin', 'staff', 'partner', 'partner_staff'].includes(role)
         const isClient = role === 'client'
         const mfaRequired =
+          userMfaEnabled ||
           (Boolean(mfaSettings?.mfa_required_for_staff) && isStaffLike) ||
           (Boolean(mfaSettings?.mfa_required_for_clients) && isClient)
 
         if (mfaRequired) {
           // Enrollment required: user can only proceed to personal security settings.
           if (!userMfaEnabled && !path.startsWith(SECURITY_SETTINGS_PATH)) {
+            if (isApiPath) {
+              return NextResponse.json({ error: 'MFA enrollment required' }, { status: 403 })
+            }
             const url = request.nextUrl.clone()
             url.pathname = SECURITY_SETTINGS_PATH
             url.searchParams.set('required_mfa', '1')
@@ -173,6 +219,9 @@ export async function updateSession(request: NextRequest) {
             const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
             const isAal2 = aalData?.currentLevel === 'aal2'
             if (!isAal2) {
+              if (isApiPath) {
+                return NextResponse.json({ error: 'MFA verification required' }, { status: 403 })
+              }
               const url = request.nextUrl.clone()
               url.pathname = '/login'
               url.searchParams.set('mfa_required', '1')
@@ -181,9 +230,18 @@ export async function updateSession(request: NextRequest) {
           }
         }
       }
+
+      if (isAuthPage && !path.startsWith('/reset-password')) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      }
     } catch (err) {
       console.error('[Middleware] Security check failed:', err instanceof Error ? err.message : 'Unknown error')
-      if (path.startsWith('/dashboard')) {
+      if (isApiPath) {
+        return NextResponse.json({ error: 'Security policy verification failed' }, { status: 503 })
+      }
+      if (isDashboardPath) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
         url.searchParams.set('security_error', '1')

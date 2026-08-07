@@ -2,76 +2,13 @@
  * Security utilities for input sanitization and validation
  */
 
-import crypto from 'crypto';
 import DOMPurify from 'isomorphic-dompurify';
 
-/**
- * OAuth state signing secret. In production, `OAUTH_STATE_SECRET` is required.
- * In development, falls back to `SUPABASE_SERVICE_ROLE_KEY` or a local-only placeholder.
- */
-function getOAuthStateSecret(): string {
-  const explicit = process.env.OAUTH_STATE_SECRET?.trim();
-  if (explicit) {
-    return explicit;
-  }
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(
-      'OAUTH_STATE_SECRET must be set in production for OAuth state signing (do not use SUPABASE_SERVICE_ROLE_KEY).'
-    );
-  }
-  return process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || 'local-dev-oauth-state-only';
-}
-
-/**
- * Create a signed OAuth state parameter.
- * Format: base64url(json) + '.' + hmac_signature
- */
-export function createSignedOAuthState(data: Record<string, unknown>): string {
-  const secret = getOAuthStateSecret();
-  const payload = Buffer.from(JSON.stringify(data)).toString('base64url');
-  const signature = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
-  return `${payload}.${signature}`;
-}
-
-/**
- * Verify and decode a signed OAuth state parameter.
- * Returns null if signature is invalid.
- */
-export function verifySignedOAuthState(state: string): Record<string, unknown> | null {
-  let secret: string;
-  try {
-    secret = getOAuthStateSecret();
-  } catch {
-    return null;
-  }
-  try {
-    const parts = state.split('.');
-    if (parts.length !== 2) return null;
-    const [payload, signature] = parts;
-    const expectedSignature = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
-    const sigBuf = Buffer.from(signature, 'utf8');
-    const expBuf = Buffer.from(expectedSignature, 'utf8');
-    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
-      return null;
-    }
-    return JSON.parse(Buffer.from(payload, 'base64url').toString());
-  } catch {
-    return null;
-  }
-}
-
-/** Allowed OAuth callback landing paths (open redirect prevention). */
-export function sanitizeOAuthReturnPath(path: string | null | undefined): string {
-  if (!path || typeof path !== "string") return "/dashboard/integrations";
-  const p = path.split("?")[0];
-  if (p === "/dashboard/settings" || p.startsWith("/dashboard/settings/")) {
-    return "/dashboard/settings";
-  }
-  if (p === "/dashboard/integrations" || p.startsWith("/dashboard/integrations/")) {
-    return "/dashboard/integrations";
-  }
-  return "/dashboard/integrations";
-}
+export {
+  createSignedOAuthState,
+  sanitizeOAuthReturnPath,
+  verifySignedOAuthState,
+} from '@/lib/oauth-state';
 
 /**
  * Sanitize HTML content to prevent XSS attacks

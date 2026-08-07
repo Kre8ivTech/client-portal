@@ -159,6 +159,17 @@ function linkSupabaseProject() {
   }
 }
 
+function applyRecoveryMigrations() {
+  log('\nApplying required recovery migrations directly...', 'yellow')
+
+  execSync('npx tsx scripts/apply-recovery-migrations.ts', {
+    stdio: 'inherit',
+    env: process.env,
+  })
+
+  log('Required recovery migrations applied successfully', 'green')
+}
+
 function runMigrations() {
   log('\n🚀 Running migrations...', 'blue')
   const supabaseCmd = ((globalThis as any).__SUPABASE_CMD__ as string | undefined) || 'supabase'
@@ -203,7 +214,8 @@ function runMigrations() {
 
       // Check if error is about duplicate keys (migrations already applied)
       if (errorOutput.includes('duplicate key') && errorOutput.includes('schema_migrations')) {
-        log('✅ Migrations already applied (duplicate key detected), skipping', 'green')
+        log('Legacy duplicate migration versions detected', 'yellow')
+        applyRecoveryMigrations()
         return true
       }
 
@@ -257,7 +269,8 @@ function runMigrations() {
 
         // Check again for duplicate keys (migrations already applied via --include-all)
         if (errorOutput.includes('duplicate key') && errorOutput.includes('schema_migrations')) {
-          log('✅ Migrations already applied (duplicate key with --include-all), continuing', 'green')
+          log('Legacy duplicate migration versions detected with --include-all', 'yellow')
+          applyRecoveryMigrations()
           return true
         }
 

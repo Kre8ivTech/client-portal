@@ -42,11 +42,11 @@ export function OrganizationBrandingForm({ organization, canEdit, canManageDomai
 
   const cnameTarget = useMemo(() => {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    if (!appUrl) return "app.ktportal.app";
+    if (!appUrl) return "clients.kre8ivtech.com";
     try {
       return new URL(appUrl).hostname;
     } catch {
-      return appUrl.replace(/^https?:\/\//, "").split("/")[0] || "app.ktportal.app";
+      return appUrl.replace(/^https?:\/\//, "").split("/")[0] || "clients.kre8ivtech.com";
     }
   }, []);
 
@@ -269,7 +269,7 @@ export function OrganizationBrandingForm({ organization, canEdit, canManageDomai
           </div>
 
           {organization.type === "partner" && (
-            <div className="space-y-4 rounded-lg border border-border p-4">
+            <div id="white-label-domain" className="scroll-mt-6 space-y-4 rounded-lg border border-border p-4">
               <div className="rounded-md border border-info/30 bg-info/10 p-3">
                 <div className="flex items-start gap-2">
                   <Globe2 className="mt-0.5 h-4 w-4 text-info" />

@@ -124,7 +124,10 @@ export function TicketList({
     initialData: { tickets: initialTickets, totalCount: initialTickets.length },
   })
 
-  const tickets = ticketsResponse?.tickets ?? []
+  const tickets = useMemo(
+    () => ticketsResponse?.tickets ?? [],
+    [ticketsResponse?.tickets]
+  )
   const totalCount = ticketsResponse?.totalCount ?? 0
   const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 

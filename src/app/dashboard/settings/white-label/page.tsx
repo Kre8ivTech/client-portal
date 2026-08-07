@@ -3,7 +3,9 @@ import { PortalBrandingForm } from "@/components/settings/portal-branding-form";
 import { OrganizationBrandingForm } from "@/components/settings/organization-branding-form";
 import { WhiteLabelAdminSection } from "@/components/settings/white-label-admin-section";
 import { SmtpConfigForm } from "@/components/settings/smtp-config-form";
+import { WhiteLabelSetupGuide } from "@/components/settings/WhiteLabelSetupGuide";
 import { getPortalBranding } from "@/lib/actions/portal-branding";
+import { getExpectedCnameTargets } from "@/lib/white-label/domain-verification";
 import { redirect } from "next/navigation";
 
 export default async function WhiteLabelSettingsPage() {
@@ -89,6 +91,7 @@ export default async function WhiteLabelSettingsPage() {
   }
 
   const portalBranding = isSuperAdmin ? await getPortalBranding() : null;
+  const cnameTarget = getExpectedCnameTargets()[0] ?? "clients.kre8ivtech.com";
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -111,16 +114,23 @@ export default async function WhiteLabelSettingsPage() {
         {/* Organization branding - partners can edit their own branding */}
         {isPartnerOrPartnerStaff && organization && (
           <>
-            <OrganizationBrandingForm
-              organization={organization}
-              canEdit={true}
-            />
             {organization.type === "partner" && (
-              <SmtpConfigForm
-                endpoint={`/api/organizations/${organization.id}/smtp`}
-                title="Your Organization SMTP"
-                description="Set your own SMTP provider for white-label outbound emails to your clients."
+              <WhiteLabelSetupGuide organization={organization} cnameTarget={cnameTarget} />
+            )}
+            <div id="white-label-branding" className="scroll-mt-6">
+              <OrganizationBrandingForm
+                organization={organization}
+                canEdit={true}
               />
+            </div>
+            {organization.type === "partner" && (
+              <div id="white-label-email" className="scroll-mt-6">
+                <SmtpConfigForm
+                  endpoint={`/api/organizations/${organization.id}/smtp`}
+                  title="Your Organization SMTP"
+                  description="Set your own SMTP provider for white-label outbound emails to your clients."
+                />
+              </div>
             )}
           </>
         )}

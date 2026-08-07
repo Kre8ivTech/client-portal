@@ -30,14 +30,18 @@ function createSupabaseFixture({
   deletedInvoice = { id: invoiceId },
 }: SupabaseFixture = {}) {
   const deleteMaybeSingle = vi.fn().mockResolvedValue({ data: deletedInvoice, error: null })
+  const deleteQuery = {
+    neq: vi.fn(),
+    select: vi.fn(() => ({ maybeSingle: deleteMaybeSingle })),
+  }
+  deleteQuery.neq.mockImplementation(() => deleteQuery)
   const deleteInvoice = vi.fn(() => ({
-    eq: vi.fn(() => ({
-      select: vi.fn(() => ({ maybeSingle: deleteMaybeSingle })),
-    })),
+    eq: vi.fn(() => deleteQuery),
   }))
 
   return {
     deleteInvoice,
+    deleteQuery,
     client: {
       auth: {
         getUser: vi.fn().mockResolvedValue({
@@ -133,11 +137,23 @@ describe('DELETE /api/admin/invoices/[id]', () => {
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ success: true, deletedId: invoiceId })
     expect(fixture.deleteInvoice).toHaveBeenCalledOnce()
+    expect(fixture.deleteQuery.neq).toHaveBeenNthCalledWith(1, 'status', 'paid')
+    expect(fixture.deleteQuery.neq).toHaveBeenNthCalledWith(2, 'status', 'partial')
     expect(writeAuditLogMock).toHaveBeenCalledWith({
       action: 'invoice_deleted',
       entity_type: 'invoice',
       entity_id: invoiceId,
       old_values: { invoice_number: 'INV-100', status: 'draft' },
     })
+  })
+
+  it('does not delete or audit an invoice that becomes paid during deletion', async () => {
+    const fixture = createSupabaseFixture({ deletedInvoice: null })
+    createServerSupabaseClientMock.mockResolvedValue(fixture.client as never)
+
+    const response = await deleteInvoice()
+
+    expect(response.status).toBe(409)
+    expect(writeAuditLogMock).not.toHaveBeenCalled()
   })
 })

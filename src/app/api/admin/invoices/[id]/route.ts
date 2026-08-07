@@ -231,6 +231,8 @@ export async function DELETE(
       .from('invoices')
       .delete()
       .eq('id', invoiceId.data)
+      .neq('status', 'paid')
+      .neq('status', 'partial')
       .select('id')
       .maybeSingle()
 

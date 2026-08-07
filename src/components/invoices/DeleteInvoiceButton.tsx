@@ -51,7 +51,7 @@ export function DeleteInvoiceButton({
       }
 
       setOpen(false)
-      toast({ title: `Invoice ${invoiceNumber} deleted` })
+      toast({ title: ['Invoice', invoiceNumber, 'deleted'].join(' ') })
       router.refresh()
     } catch (deleteError) {
       const message =

@@ -4,7 +4,7 @@ import { z } from 'zod'
 // ORGANIZATION TYPE ENUMS
 // =============================================================================
 
-export const organizationTypeSchema = z.enum(['direct', 'partner', 'client'])
+export const organizationTypeSchema = z.enum(['kre8ivtech', 'partner', 'client'])
 export const organizationStatusSchema = z.enum(['active', 'inactive', 'suspended'])
 
 // =============================================================================

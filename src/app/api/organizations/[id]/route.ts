@@ -156,6 +156,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const input = result.data;
 
+    // Organization type controls tenant-level access and must only be changed
+    // through the audited super-admin client-management endpoint.
+    if (input.type !== undefined) {
+      return NextResponse.json(
+        { error: "Use the admin client controls to change an organization role" },
+        { status: 403 }
+      );
+    }
+
     // If slug is being changed, check uniqueness
     if (input.slug) {
       const { data: existingOrg } = await supabase
@@ -173,14 +182,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Partners cannot change organization type to partner
-    if (access.role === "partner" && input.type === "partner") {
-      return NextResponse.json(
-        { error: "Partners cannot create partner organizations" },
-        { status: 403 }
-      );
-    }
-
     // Build update object
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
@@ -188,7 +189,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     if (input.name !== undefined) updateData.name = input.name;
     if (input.slug !== undefined) updateData.slug = input.slug;
-    if (input.type !== undefined) updateData.type = input.type;
     if (input.status !== undefined) updateData.status = input.status;
     
     // Only admin/staff/partners can update branding (not clients)

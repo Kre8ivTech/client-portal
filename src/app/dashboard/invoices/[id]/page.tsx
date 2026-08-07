@@ -10,6 +10,7 @@ import { Download, ArrowLeft, DollarSign, Calendar, CreditCard } from 'lucide-re
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { generatePageMetadata } from '@/lib/seo'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -54,37 +55,7 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
     redirect('/login')
   }
 
-  // Fetch invoice with line items and payment history
-  const { data: invoice, error } = await (supabase as any)
-    .from('invoices')
-    .select(`
-      *,
-      organization:organizations(id, name),
-      line_items:invoice_line_items(*),
-      payments:invoice_payments(
-        id,
-        amount,
-        payment_method,
-        payment_date,
-        payment_reference,
-        payment_source,
-        notes,
-        created_at,
-        recorded_by_profile:users!invoice_payments_recorded_by_fkey(
-          id,
-          email,
-          profiles:profiles(name)
-        )
-      )
-    `)
-    .eq('id', id)
-    .single()
-
-  if (error || !invoice) {
-    notFound()
-  }
-
-  // Verify user can access this invoice and get their role
+  // Verify user access before using the service-role recovery query.
   const { data: profile } = await supabase
     .from('users')
     .select('organization_id, role, is_account_manager')
@@ -113,8 +84,98 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
   }
 
   const p = profile as { organization_id: string | null; role: string; is_account_manager: boolean }
-  const isSuperAdmin = p.role === 'super_admin'
+  const isSuperAdmin = p.role === 'super_admin' || p.role === 'admin'
   const isStaff = p.role === 'staff'
+
+  // Fetch invoice with line items and payment history
+  const primaryQuery = await (supabase as any)
+    .from('invoices')
+    .select(`
+      *,
+      organization:organizations(id, name),
+      line_items:invoice_line_items(*),
+      payments:invoice_payments(
+        id,
+        amount,
+        payment_method,
+        payment_date,
+        payment_reference,
+        payment_source,
+        notes,
+        created_at,
+        recorded_by_profile:users!invoice_payments_recorded_by_fkey(
+          id,
+          email,
+          profiles:profiles(name)
+        )
+      )
+    `)
+    .eq('id', id)
+    .single()
+
+  let invoice = primaryQuery.data
+
+  if (primaryQuery.error || !invoice) {
+    try {
+      const admin = getSupabaseAdmin()
+      let fallbackInvoiceQuery = admin
+        .from('invoices')
+        .select(`
+          id, organization_id, plan_assignment_id, invoice_number, status,
+          issue_date, due_date, sent_at, paid_at, period_start, period_end,
+          subtotal, tax_rate, tax_amount, discount_amount, discount_description,
+          total, amount_paid, balance_due, currency, payment_terms_days,
+          payment_method, payment_reference, template_id, notes, internal_notes,
+          metadata, created_by, updated_by, created_at, updated_at
+        `)
+        .eq('id', id)
+
+      if (!isSuperAdmin && !isStaff) {
+        if (!p.organization_id) notFound()
+        fallbackInvoiceQuery = fallbackInvoiceQuery.eq('organization_id', p.organization_id)
+      }
+
+      const fallbackInvoice = await fallbackInvoiceQuery.maybeSingle()
+      if (fallbackInvoice.error || !fallbackInvoice.data) notFound()
+
+      const [organizationQuery, lineItemsQuery, paymentsQuery] = await Promise.all([
+        admin
+          .from('organizations')
+          .select('id, name')
+          .eq('id', fallbackInvoice.data.organization_id)
+          .maybeSingle(),
+        admin
+          .from('invoice_line_items')
+          .select('id, invoice_id, description, quantity, unit_price, amount, item_type, time_entry_id, sort_order, created_at, updated_at')
+          .eq('invoice_id', id)
+          .order('sort_order'),
+        admin
+          .from('invoice_payments')
+          .select('id, invoice_id, amount, payment_method, payment_reference, payment_date, notes, recorded_by, created_at')
+          .eq('invoice_id', id)
+          .order('payment_date', { ascending: false }),
+      ])
+
+      invoice = {
+        ...fallbackInvoice.data,
+        organization: organizationQuery.data,
+        line_items: lineItemsQuery.data ?? [],
+        payments: (paymentsQuery.data ?? []).map((payment: any) => ({
+          ...payment,
+          payment_source: 'stripe',
+        })),
+      }
+    } catch (fallbackError) {
+      console.error('[Invoices] Detail recovery query failed', {
+        code: primaryQuery.error?.code,
+        reason: fallbackError instanceof Error ? fallbackError.name : 'UnknownError',
+      })
+      notFound()
+    }
+  }
+
+  if (!invoice) notFound()
+
   if (!isSuperAdmin && !isStaff && p.organization_id !== invoice.organization_id) {
     return (
       <div className="max-w-md mx-auto mt-16">
@@ -364,7 +425,7 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
                         <div className="flex items-center gap-1">
                           <CreditCard className="h-3 w-3" />
                           <span className="capitalize">
-                            {payment.payment_method.replace('_', ' ')}
+                            {payment.payment_method?.replace('_', ' ') ?? 'Unknown'}
                           </span>
                         </div>
                       </div>

@@ -15,6 +15,8 @@ import { Building2, ChevronLeft, Ticket, Settings, Users, CreditCard } from 'luc
 import { OrganizationSettingsForm } from '@/components/organizations/organization-settings-form'
 import { OrganizationUsersList } from '@/components/organizations/organization-users-list'
 import { OrganizationPlanInfo } from '@/components/organizations/organization-plan-info'
+import { ClientAdminControls } from '@/components/clients/ClientAdminControls'
+import { normalizeDashboardRole } from '@/lib/require-role'
 
 export default async function ClientOrgPage({
   params,
@@ -44,9 +46,10 @@ export default async function ClientOrgPage({
   const prof = profile as ProfileRow | null
   const isOwnOrg = prof?.organization_id === org.id
   const isChildOrg = org.parent_org_id === prof?.organization_id
-  const isSuperAdmin = prof?.role === "super_admin"
-  const isStaff = prof?.role === "staff"
-  const isPartner = prof?.role === "partner" || prof?.role === "partner_staff"
+  const role = normalizeDashboardRole(prof?.role)
+  const isSuperAdmin = role === 'super_admin'
+  const isStaff = role === 'staff'
+  const isPartner = role === 'partner' || role === 'partner_staff'
   const canView = isOwnOrg || isChildOrg || isSuperAdmin || isStaff
 
   if (!canView) notFound()
@@ -154,6 +157,15 @@ export default async function ClientOrgPage({
           </Badge>
         </div>
       </div>
+
+      {isSuperAdmin && org.type !== 'kre8ivtech' && (
+        <ClientAdminControls
+          clientId={org.id}
+          clientName={org.name}
+          initialType={org.type === 'partner' ? 'partner' : 'client'}
+          status={org.status}
+        />
+      )}
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-4">

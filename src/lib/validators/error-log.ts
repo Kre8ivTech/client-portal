@@ -6,7 +6,7 @@ export const errorLogSchema = z
     message: z.string().trim().min(1).max(2_000),
     stack: z.string().max(12_000).optional(),
     digest: z.string().trim().max(255).optional(),
-    route: z.string().max(1_000).optional(),
+    route: z.string().max(500).optional(),
     source: z.enum(ERROR_LOG_SOURCES),
     context: z
       .object({

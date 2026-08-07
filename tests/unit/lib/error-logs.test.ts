@@ -96,5 +96,13 @@ describe("error log diagnostics", () => {
         source: "window_error",
       }).success,
     ).toBe(false);
+
+    expect(
+      errorLogSchema.safeParse({
+        message: "Runtime failure",
+        source: "window_error",
+        route: `/dashboard/${"x".repeat(500)}`,
+      }).success,
+    ).toBe(false);
   });
 });

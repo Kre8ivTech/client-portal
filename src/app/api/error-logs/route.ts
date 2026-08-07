@@ -23,7 +23,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body: unknown = await request.json().catch(() => null);
+    const rawBody = await request.arrayBuffer();
+    if (rawBody.byteLength > MAX_REQUEST_BYTES) {
+      return NextResponse.json({ error: "Payload too large" }, { status: 413 });
+    }
+
+    const body: unknown = (() => {
+      try {
+        return JSON.parse(new TextDecoder().decode(rawBody));
+      } catch {
+        return null;
+      }
+    })();
     const parsed = errorLogSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid error log payload" }, { status: 400 });

@@ -37,7 +37,7 @@ export default async function ContractsPage() {
       const admin = getSupabaseAdmin()
       const fallbackQuery = await admin
         .from('contracts')
-        .select('*')
+        .select('id, title, status, created_at')
         .eq('client_id', user.id)
         .order('created_at', { ascending: false })
 

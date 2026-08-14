@@ -70,7 +70,10 @@ type NavItem = { href: string; icon: LucideIcon; label: string };
 const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Main",
-    items: [{ href: "/dashboard", icon: Home, label: "Dashboard" }],
+    items: [
+      { href: "/dashboard", icon: Home, label: "Dashboard" },
+      { href: "/dashboard/google-ads", icon: BarChart3, label: "Google Ads" },
+    ],
   },
   {
     label: "Services",
@@ -311,6 +314,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     case "partner":
       return [
         "/dashboard",
+        "/dashboard/google-ads",
         ...servicesClient,
         services,
         ...projectsClient,
@@ -329,6 +333,7 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     case "partner_staff":
       return [
         "/dashboard",
+        "/dashboard/google-ads",
         ...servicesClient,
         ...projectsClient,
         ...filesClient,

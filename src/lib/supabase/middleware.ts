@@ -55,9 +55,9 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname
   const isApiPath = path.startsWith('/api')
   const isDashboardPath = path.startsWith('/dashboard')
+  const isLoginPage = path === '/' || path === '/login'
   const isAuthPage =
-    path === '/' ||
-    path.startsWith('/login') ||
+    isLoginPage ||
     path.startsWith('/signup') ||
     path.startsWith('/forgot-password') ||
     path.startsWith('/reset-password')
@@ -194,7 +194,7 @@ export async function updateSession(request: NextRequest) {
       }
 
       // MFA policy enforcement on protected routes.
-      if ((isDashboardPath || isApiPath) && mfaSettings?.mfa_enabled !== false) {
+      if ((isDashboardPath || isApiPath || isLoginPage) && mfaSettings?.mfa_enabled !== false) {
         const isStaffLike = ['super_admin', 'staff', 'partner', 'partner_staff'].includes(role)
         const isClient = role === 'client'
         const mfaRequired =
@@ -221,6 +221,18 @@ export async function updateSession(request: NextRequest) {
             if (!isAal2) {
               if (isApiPath) {
                 return NextResponse.json({ error: 'MFA verification required' }, { status: 403 })
+              }
+              // Magic-link callbacks establish an AAL1 session before the user
+              // can enter their TOTP code. Let the login page render that
+              // challenge instead of redirecting back to itself indefinitely.
+              if (isLoginPage) {
+                if (request.nextUrl.searchParams.get('mfa_required') !== '1') {
+                  const url = request.nextUrl.clone()
+                  url.pathname = '/login'
+                  url.searchParams.set('mfa_required', '1')
+                  return NextResponse.redirect(url)
+                }
+                return supabaseResponse
               }
               const url = request.nextUrl.clone()
               url.pathname = '/login'

@@ -62,5 +62,8 @@ export function sanitizeOAuthReturnPath(path: string | null | undefined): string
   ) {
     return '/dashboard/integrations'
   }
+  if (pathname === '/dashboard/google-ads') {
+    return '/dashboard/google-ads'
+  }
   return '/dashboard/integrations'
 }

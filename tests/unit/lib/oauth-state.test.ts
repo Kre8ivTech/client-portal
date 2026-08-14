@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createSignedOAuthState, verifySignedOAuthState } from '@/lib/oauth-state'
+import { createSignedOAuthState, sanitizeOAuthReturnPath, verifySignedOAuthState } from '@/lib/oauth-state'
 
 describe('OAuth state signing', () => {
   afterEach(() => {
@@ -22,5 +22,10 @@ describe('OAuth state signing', () => {
     ).toString('base64url')
 
     expect(verifySignedOAuthState(`${forgedPayload}.${signature}`)).toBeNull()
+  })
+
+  it('allows the Google Ads dashboard but rejects external return URLs', () => {
+    expect(sanitizeOAuthReturnPath('/dashboard/google-ads')).toBe('/dashboard/google-ads')
+    expect(sanitizeOAuthReturnPath('https://attacker.example/dashboard/google-ads')).toBe('/dashboard/integrations')
   })
 })

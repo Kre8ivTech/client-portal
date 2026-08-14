@@ -70,10 +70,27 @@ export default function LoginPage() {
     }
     if (params.get("mfa_required") === "1") {
       setMessage({
-        type: "error",
-        text: "This account requires MFA verification before access is granted.",
+        type: "success",
+        text: "Complete two-factor authentication to continue.",
       });
       window.history.replaceState({}, "", window.location.pathname);
+      const loadMfaChallenge = async () => {
+        const authClient = createClient();
+        const { data, error } = await authClient.auth.mfa.listFactors();
+        const verifiedFactor = data?.totp?.find(
+          (factor: { status?: string }) => factor.status === "verified",
+        );
+        if (error || !verifiedFactor) {
+          setMessage({
+            type: "error",
+            text: "Your MFA factor could not be loaded. Please sign in again or contact support.",
+          });
+          return;
+        }
+        setMessage(null);
+        setShowMFA(true);
+      };
+      void loadMfaChallenge();
     }
     if (params.get("session_expired") === "1") {
       setMessage({

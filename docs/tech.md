@@ -1559,6 +1559,29 @@ xl: 1280px  /* Desktops */
 
 ---
 
+## 11. Google Ads Partner Reporting
+
+White-label partner organizations can connect one Google Ads OAuth identity, select a directly accessible or manager-linked advertising account, and view daily reporting at `/dashboard/google-ads`. Partner administrators manage the connection; partner staff have reporting and manual-refresh access only.
+
+Required environment variables:
+
+```bash
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_ADS_DEVELOPER_TOKEN=
+GOOGLE_ADS_API_VERSION=v25
+ENCRYPTION_SECRET=
+OAUTH_STATE_SECRET=
+```
+
+The OAuth client's authorized redirect URI is `{NEXT_PUBLIC_APP_URL}/api/integrations/google-ads/callback`, and its consent screen must include `https://www.googleapis.com/auth/adwords`. Enable the Google Ads API and obtain a developer token from a Google Ads manager account's API Center.
+
+Refresh tokens are AES-256-GCM encrypted in `google_ads_connections`, which is inaccessible to browser roles. Tenant-scoped reporting is stored in `google_ads_daily_metrics`. `/api/cron/google-ads-sync` refreshes the most recent 30 days at 06:00 UTC daily. The integration is reporting-only and does not mutate campaigns or ads.
+
+References: [authorization and headers](https://developers.google.com/google-ads/api/rest/auth), [developer-token access levels](https://developers.google.com/google-ads/api/docs/access-levels).
+
+---
+
 ## Appendix: API Endpoint Reference
 
 ### Tickets

@@ -42,6 +42,7 @@ import {
   MessagesSquare,
   ChevronDown,
   Bug,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,12 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: "Main",
     items: [
       { href: "/dashboard", icon: Home, label: "Dashboard" },
+      { href: "/dashboard/partner-overview", icon: LineChart, label: "Partner Overview" },
+      { href: "/dashboard/partner-overview/clients", icon: Users, label: "Client Portfolio" },
+      { href: "/dashboard/partner-overview/ads", icon: BarChart3, label: "Ads Overview" },
+      { href: "/dashboard/partner-overview/sites", icon: Globe, label: "Site Monitoring" },
+      { href: "/dashboard/partner-overview/financials", icon: DollarSign, label: "Client Financials" },
+      { href: "/dashboard/partner-overview/projects", icon: FolderKanban, label: "Project Board" },
       { href: "/dashboard/google-ads", icon: BarChart3, label: "Google Ads" },
     ],
   },
@@ -314,6 +321,12 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     case "partner":
       return [
         "/dashboard",
+        "/dashboard/partner-overview",
+        "/dashboard/partner-overview/clients",
+        "/dashboard/partner-overview/ads",
+        "/dashboard/partner-overview/sites",
+        "/dashboard/partner-overview/financials",
+        "/dashboard/partner-overview/projects",
         "/dashboard/google-ads",
         ...servicesClient,
         services,
@@ -333,6 +346,12 @@ function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
     case "partner_staff":
       return [
         "/dashboard",
+        "/dashboard/partner-overview",
+        "/dashboard/partner-overview/clients",
+        "/dashboard/partner-overview/ads",
+        "/dashboard/partner-overview/sites",
+        "/dashboard/partner-overview/financials",
+        "/dashboard/partner-overview/projects",
         "/dashboard/google-ads",
         ...servicesClient,
         ...projectsClient,

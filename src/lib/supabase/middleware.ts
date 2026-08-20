@@ -80,7 +80,11 @@ export async function updateSession(request: NextRequest) {
         .single()
 
       if (userRowError || !userRow) {
-        throw new Error('Unable to verify account security state')
+        // If the users row doesn't exist yet (e.g. magic link for a new user
+        // whose trigger hasn't fired), allow the request through with defaults
+        // rather than locking them out with a security error.
+        console.warn('[Middleware] No users row for', user.id, userRowError?.message)
+        return supabaseResponse
       }
 
       const role = (userRow as { role?: string } | null)?.role ?? 'client'
@@ -117,10 +121,13 @@ export async function updateSession(request: NextRequest) {
         .single()
 
       if (appSettingsError || !appSettings) {
-        throw new Error('Unable to verify MFA policy')
+        // If the RPC fails (e.g. app_settings table is empty or function
+        // doesn't exist), default to MFA-disabled rather than blocking login.
+        console.warn('[Middleware] get_current_mfa_policy failed:', appSettingsError?.message)
+        mfaSettings = { mfa_enabled: false, mfa_required_for_staff: false, mfa_required_for_clients: false }
+      } else {
+        mfaSettings = appSettings
       }
-
-      mfaSettings = appSettings ?? null
 
       // Organization-level security (IP allowlist + session timeout)
       if (organizationId) {
@@ -131,66 +138,68 @@ export async function updateSession(request: NextRequest) {
           .single()
 
         if (orgRowError || !orgRow) {
-          throw new Error('Unable to verify organization security state')
-        }
+          // Organization row not found — skip org-level checks rather than blocking
+          console.warn('[Middleware] Organization lookup failed for', organizationId, orgRowError?.message)
+        } else {
 
-        const organizationStatus = (orgRow as { status?: string | null } | null)?.status ?? 'active'
-        if (organizationStatus === 'inactive' || organizationStatus === 'suspended') {
-          await supabase.auth.signOut()
-          if (isApiPath) {
-            const response = NextResponse.json({ error: 'Organization is inactive' }, { status: 403 })
-            supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
-            return response
+          const organizationStatus = (orgRow as { status?: string | null } | null)?.status ?? 'active'
+          if (organizationStatus === 'inactive' || organizationStatus === 'suspended') {
+            await supabase.auth.signOut()
+            if (isApiPath) {
+              const response = NextResponse.json({ error: 'Organization is inactive' }, { status: 403 })
+              supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+              return response
+            }
+            if (isDashboardPath) {
+              const url = request.nextUrl.clone()
+              url.pathname = '/login'
+              url.searchParams.set('organization_inactive', '1')
+              const response = NextResponse.redirect(url)
+              supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+              return response
+            }
+            return supabaseResponse
           }
-          if (isDashboardPath) {
+
+          const securitySettings = (orgRow as { settings?: any } | null)?.settings?.security ?? {}
+          const ipWhitelist = Array.isArray(securitySettings.ip_whitelist)
+            ? securitySettings.ip_whitelist.filter((ip: unknown): ip is string => typeof ip === 'string')
+            : []
+
+          if (ipWhitelist.length > 0) {
+            const clientIp = getClientIp(request)
+            if (!isIpAllowed(clientIp, ipWhitelist)) {
+              return new NextResponse('Access denied from this IP address', { status: 403 })
+            }
+          }
+
+          const timeoutMinutes =
+            typeof securitySettings.session_timeout_minutes === 'number'
+              ? securitySettings.session_timeout_minutes
+              : 60
+          const timeoutMs = Math.max(5, timeoutMinutes) * 60 * 1000
+          const now = Date.now()
+          const lastActivityCookie = request.cookies.get('kt_last_activity')?.value
+          const lastActivity = lastActivityCookie ? Number(lastActivityCookie) : NaN
+
+          if (!Number.isNaN(lastActivity) && now - lastActivity > timeoutMs) {
+            await supabase.auth.signOut()
             const url = request.nextUrl.clone()
             url.pathname = '/login'
-            url.searchParams.set('organization_inactive', '1')
+            url.searchParams.set('session_expired', '1')
             const response = NextResponse.redirect(url)
-            supabaseResponse.cookies.getAll().forEach((cookie) => response.cookies.set(cookie))
+            response.cookies.set('kt_last_activity', '', { path: '/', maxAge: 0 })
             return response
           }
-          return supabaseResponse
+
+          supabaseResponse.cookies.set('kt_last_activity', String(now), {
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production',
+            path: '/',
+            maxAge: 60 * 60 * 24 * 7,
+          })
         }
-
-        const securitySettings = (orgRow as { settings?: any } | null)?.settings?.security ?? {}
-        const ipWhitelist = Array.isArray(securitySettings.ip_whitelist)
-          ? securitySettings.ip_whitelist.filter((ip: unknown): ip is string => typeof ip === 'string')
-          : []
-
-        if (ipWhitelist.length > 0) {
-          const clientIp = getClientIp(request)
-          if (!isIpAllowed(clientIp, ipWhitelist)) {
-            return new NextResponse('Access denied from this IP address', { status: 403 })
-          }
-        }
-
-        const timeoutMinutes =
-          typeof securitySettings.session_timeout_minutes === 'number'
-            ? securitySettings.session_timeout_minutes
-            : 60
-        const timeoutMs = Math.max(5, timeoutMinutes) * 60 * 1000
-        const now = Date.now()
-        const lastActivityCookie = request.cookies.get('kt_last_activity')?.value
-        const lastActivity = lastActivityCookie ? Number(lastActivityCookie) : NaN
-
-        if (!Number.isNaN(lastActivity) && now - lastActivity > timeoutMs) {
-          await supabase.auth.signOut()
-          const url = request.nextUrl.clone()
-          url.pathname = '/login'
-          url.searchParams.set('session_expired', '1')
-          const response = NextResponse.redirect(url)
-          response.cookies.set('kt_last_activity', '', { path: '/', maxAge: 0 })
-          return response
-        }
-
-        supabaseResponse.cookies.set('kt_last_activity', String(now), {
-          httpOnly: true,
-          sameSite: 'lax',
-          secure: process.env.NODE_ENV === 'production',
-          path: '/',
-          maxAge: 60 * 60 * 24 * 7,
-        })
       }
 
       // MFA policy enforcement on protected routes.

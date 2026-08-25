@@ -1,6 +1,7 @@
 "use server";
 
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { writeAuditLog } from "@/lib/audit";
 import { updateOrganizationSchema, createOrganizationSchema } from "@/lib/validators/organization";
@@ -58,9 +59,10 @@ async function canEditOrganization(
     return { canEdit: true, role, userOrgId };
   }
 
-  // Check if this is a child organization of user's org (for partners)
+  // Check if this is a child organization of user's org (for partners).
+  // Use admin client so RLS doesn't silently block the lookup.
   if (role === "partner" || role === "partner_staff") {
-    const { data: org } = await supabase
+    const { data: org } = await getSupabaseAdmin()
       .from("organizations")
       .select("parent_org_id")
       .eq("id", orgId)
@@ -96,7 +98,14 @@ export async function updateOrganization(
 
     const access = await canEditOrganization(supabase, user.id, orgId);
 
-    const { data: orgData } = await (supabase as any)
+    if (!access.canEdit) {
+      return { success: false, error: "You do not have permission to edit this organization" };
+    }
+
+    // Use admin client for org data lookup — permissions already verified above.
+    // The anon client with RLS can return null for certain role/org combinations
+    // (e.g. partner_staff on child orgs) even when access is legitimately granted.
+    const { data: orgData } = await getSupabaseAdmin()
       .from("organizations")
       .select("id, type, custom_domain")
       .eq("id", orgId)
@@ -105,10 +114,6 @@ export async function updateOrganization(
     const orgRow = orgData as { id: string; type: string; custom_domain?: string | null } | null;
     if (!orgRow) {
       return { success: false, error: "Organization not found" };
-    }
-
-    if (!access.canEdit) {
-      return { success: false, error: "You do not have permission to edit this organization" };
     }
 
     // Parse form data

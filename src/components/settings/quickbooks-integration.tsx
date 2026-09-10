@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -23,21 +23,45 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle2, XCircle, Loader2, AlertCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+
+type PublicQuickBooksIntegration = {
+  id: string;
+  organization_id: string;
+  realm_id: string;
+  is_sandbox: boolean;
+  auto_sync_enabled: boolean;
+  last_sync_at: string | null;
+  sync_status: string | null;
+  sync_error: string | null;
+  company_name: string | null;
+  connected_at: string;
+};
+
+type MappedCustomer = {
+  qb_customer_id: string;
+  display_name: string;
+  email: string | null;
+  portal_user_id: string | null;
+};
 
 interface QuickBooksIntegrationProps {
-  integration: any | null;
+  integration: PublicQuickBooksIntegration | null;
   organizationId: string;
 }
 
 export function QuickBooksIntegration({
   integration,
-  organizationId,
 }: QuickBooksIntegrationProps) {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
+  const [isSyncingCustomers, setIsSyncingCustomers] = useState(false);
+  const [isSavingAutoSync, setIsSavingAutoSync] = useState(false);
+  const [customers, setCustomers] = useState<MappedCustomer[]>([]);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const autoSyncEnabled = Boolean(integration?.auto_sync_enabled);
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -82,6 +106,72 @@ export function QuickBooksIntegration({
       setIsDisconnecting(false);
     }
   };
+
+
+  const loadCustomers = async () => {
+    const response = await fetch("/api/quickbooks/customers");
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to load QuickBooks customers");
+    }
+    setCustomers(data.data ?? []);
+  };
+
+  const handleSyncCustomers = async () => {
+    setIsSyncingCustomers(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/quickbooks/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to sync customers");
+      }
+      await loadCustomers();
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsSyncingCustomers(false);
+    }
+  };
+
+  const handleAutoSyncToggle = async (enabled: boolean) => {
+    setIsSavingAutoSync(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/quickbooks/integration", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_sync_enabled: enabled }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update auto-sync");
+      }
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsSavingAutoSync(false);
+    }
+  };
+
+
+  useEffect(() => {
+    if (!integration) {
+      setCustomers([]);
+      return;
+    }
+    loadCustomers().catch(() => {
+      // listing is best-effort; connect/disconnect errors are shown separately
+    });
+    // loadCustomers is stable for this connected session
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [integration?.id]);
 
   const isConnected = !!integration;
   const isSandbox = integration?.is_sandbox;
@@ -167,6 +257,56 @@ export function QuickBooksIntegration({
                   {isSandbox ? "Sandbox" : "Production"}
                 </span>
               </div>
+              {integration?.company_name && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Company</span>
+                  <span className="text-sm text-muted-foreground">
+                    {integration.company_name}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Auto-sync new invoices</span>
+                <Switch
+                  checked={autoSyncEnabled}
+                  disabled={isSavingAutoSync}
+                  onCheckedChange={handleAutoSyncToggle}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="text-sm font-medium">QuickBooks customers</h4>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSyncCustomers}
+                  disabled={isSyncingCustomers}
+                >
+                  {isSyncingCustomers ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  Sync customers
+                </Button>
+              </div>
+              {customers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Sync customers from QuickBooks to map them to portal clients. New invoices use this mapping when possible.
+                </p>
+              ) : (
+                <ul className="space-y-1 text-sm text-muted-foreground max-h-40 overflow-y-auto">
+                  {customers.slice(0, 12).map((customer) => (
+                    <li key={customer.qb_customer_id} className="flex justify-between gap-2">
+                      <span>{customer.display_name}</span>
+                      <span>{customer.portal_user_id ? "Mapped" : "Unmapped"}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             <div className="space-y-2">

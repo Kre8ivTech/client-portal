@@ -1,75 +1,46 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getQuickBooksConfig, QuickBooksClient } from "@/lib/quickbooks/client";
+import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
+import { requireQuickBooksManager } from "@/lib/quickbooks/access";
+import { getQuickBooksConfig, QuickBooksClient } from "@/lib/quickbooks/client";
 
 /**
  * Initiate QuickBooks OAuth flow
  * GET /api/quickbooks/connect
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const supabase = await createServerSupabaseClient();
+    const access = await requireQuickBooksManager();
+    if (!access.ok) return access.response;
 
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Get user role and org
-    const { data: profile, error: profileError } = await supabase
-      .from("users")
-      .select("role, is_account_manager, organization_id")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json(
-        { error: "User profile not found" },
-        { status: 404 }
-      );
-    }
-
-    // Check authorization
-    if (
-      profile.role !== "super_admin" &&
-      !(profile.role === "staff" && profile.is_account_manager)
-    ) {
-      return NextResponse.json(
-        { error: "Only account managers can connect QuickBooks" },
-        { status: 403 }
-      );
-    }
-
-    // Generate state parameter for CSRF protection
+    const { supabase, actor } = access;
     const state = randomBytes(32).toString("hex");
 
-    // Store state in database with user and org info
-    await supabase.from("oauth_states").insert({
+    const { error: stateError } = await supabase.from("oauth_states").insert({
       state,
       provider: "quickbooks",
-      user_id: user.id,
-      organization_id: profile.organization_id,
-      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(), // 10 minutes
+      user_id: actor.userId,
+      organization_id: actor.organizationId,
+      expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
     });
 
-    // Get QuickBooks config (from database or env)
-    const config = await getQuickBooksConfig(supabase, profile.organization_id);
+    if (stateError) {
+      console.error("Error storing QuickBooks OAuth state:", stateError);
+      return NextResponse.json({ error: "Failed to initiate QuickBooks connection" }, { status: 500 });
+    }
 
-    // Generate authorization URL
+    const config = await getQuickBooksConfig(supabase, actor.organizationId);
     const authUrl = QuickBooksClient.getAuthorizationUrl(config, state);
-
     return NextResponse.json({ authorization_url: authUrl });
   } catch (error) {
     console.error("Error initiating QuickBooks OAuth:", error);
     return NextResponse.json(
-      { error: "Failed to initiate QuickBooks connection" },
-      { status: 500 }
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to initiate QuickBooks connection",
+      },
+      { status: 500 },
     );
   }
 }

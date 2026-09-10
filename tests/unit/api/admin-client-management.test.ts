@@ -39,6 +39,7 @@ type ClientFixtureOptions = {
   role?: string
   client?: typeof defaultClient | null
   clientError?: { message: string } | null
+  customDomainColumnsUnavailable?: boolean
   childClient?: { id: string } | null
   mainOrganization?: { id: string } | null
   updatedClient?: Record<string, unknown> | null
@@ -50,6 +51,7 @@ function createSupabaseFixture({
   role = 'super_admin',
   client = defaultClient,
   clientError = null,
+  customDomainColumnsUnavailable = false,
   childClient = null,
   mainOrganization = { id: mainOrgId },
   updatedClient,
@@ -87,8 +89,16 @@ function createSupabaseFixture({
           }
         }
 
+        const schemaError =
+          customDomainColumnsUnavailable && columns.includes('custom_domain')
+            ? { message: 'column organizations.custom_domain does not exist' }
+            : clientError
+
         return {
-          maybeSingle: vi.fn().mockResolvedValue({ data: client, error: clientError }),
+          maybeSingle: vi.fn().mockResolvedValue({
+            data: schemaError ? null : client,
+            error: schemaError,
+          }),
         }
       }),
     })),
@@ -275,5 +285,21 @@ describe('admin client management API', () => {
       auth: { admin: { updateUserById: ReturnType<typeof vi.fn> } }
     }
     expect(admin.auth.admin.updateUserById).toHaveBeenCalledTimes(2)
+  })
+
+  it('deactivates a client when optional custom-domain columns are unavailable', async () => {
+    const fixture = createSupabaseFixture({
+      client: { ...defaultClient, type: 'partner' },
+      customDomainColumnsUnavailable: true,
+      updatedClient: { id: clientId, status: 'inactive' },
+    })
+    createServerSupabaseClientMock.mockResolvedValue(fixture.client as never)
+
+    const response = await deleteClient()
+
+    expect(response.status).toBe(200)
+    expect(fixture.updateOrganization).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'inactive' }),
+    )
   })
 })

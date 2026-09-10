@@ -10,6 +10,9 @@ import { QuickBooksIntegration } from "@/components/settings/quickbooks-integrat
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import { SmtpConfigForm } from "@/components/settings/smtp-config-form";
+import { canManageQuickBooks } from "@/lib/quickbooks/access";
+import { QUICKBOOKS_SAFE_SELECT } from "@/lib/quickbooks/connection";
+import { toPublicQuickBooksIntegration } from "@/lib/quickbooks/tokens";
 
 interface PageProps {
   searchParams: Promise<{ success?: string; error?: string }>;
@@ -41,19 +44,20 @@ export default async function IntegrationsSettingsPage({
     return <div>Profile not found</div>;
   }
 
-  const isAccountManager =
-    profile.role === "super_admin" ||
-    (profile.role === "staff" && profile.is_account_manager);
+  const isAccountManager = canManageQuickBooks(
+    profile.role,
+    Boolean(profile.is_account_manager),
+  );
 
   // Fetch QuickBooks integration if exists
   let quickbooksIntegration = null;
   if (isAccountManager) {
     const { data } = await supabase
       .from("quickbooks_integrations")
-      .select("*")
+      .select(QUICKBOOKS_SAFE_SELECT)
       .eq("organization_id", profile.organization_id)
-      .single();
-    quickbooksIntegration = data;
+      .maybeSingle();
+    quickbooksIntegration = data ? toPublicQuickBooksIntegration(data as never) : null;
   }
 
   return (

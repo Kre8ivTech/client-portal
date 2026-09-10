@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 
 interface InvoiceFormProps {
   organizationId: string
-  clients: { id: string; full_name: string; email: string; organization_name: string }[]
+  clients: { id: string; full_name: string; email: string; organization_name: string; organization_id?: string }[]
 }
 
 type LineItem = {
@@ -31,6 +31,7 @@ export function InvoiceForm({ organizationId, clients }: InvoiceFormProps) {
   
   // Form State
   const [clientId, setClientId] = useState('')
+  const [clientQuery, setClientQuery] = useState('')
   const [invoiceNumber, setInvoiceNumber] = useState(`INV-${format(new Date(), 'yyyyMMdd')}-${Math.floor(Math.random() * 1000)}`)
   const [issueDate, setIssueDate] = useState<Date | undefined>(new Date())
   const [dueDate, setDueDate] = useState<Date | undefined>(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)) // +30 days
@@ -39,6 +40,15 @@ export function InvoiceForm({ organizationId, clients }: InvoiceFormProps) {
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { id: '1', description: '', quantity: 1, unit_price: 0 }
   ])
+
+  const filteredClients = useMemo(() => {
+    const query = clientQuery.trim().toLowerCase()
+    if (!query) return clients
+    return clients.filter((client) => {
+      const haystack = `${client.full_name} ${client.email} ${client.organization_name}`.toLowerCase()
+      return haystack.includes(query)
+    })
+  }, [clients, clientQuery])
 
   const addLineItem = () => {
     setLineItems([...lineItems, { id: Math.random().toString(), description: '', quantity: 1, unit_price: 0 }])
@@ -105,12 +115,19 @@ export function InvoiceForm({ organizationId, clients }: InvoiceFormProps) {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Client</Label>
+              {clients.length > 8 && (
+                <Input
+                  value={clientQuery}
+                  onChange={(e) => setClientQuery(e.target.value)}
+                  placeholder="Search clients by name, email, or organization"
+                />
+              )}
               <Select value={clientId} onValueChange={setClientId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
                 <SelectContent>
-                  {clients.map(client => (
+                  {filteredClients.map(client => (
                     <SelectItem key={client.id} value={client.id}>
                       {(client.full_name || client.email) + " - " + client.organization_name}
                     </SelectItem>
@@ -120,6 +137,11 @@ export function InvoiceForm({ organizationId, clients }: InvoiceFormProps) {
               {clients.length === 0 && (
                 <p className="text-xs text-muted-foreground">
                   No billable clients found in your scope yet. Add a client user or assign a client organization first.
+                </p>
+              )}
+              {clients.length > 0 && filteredClients.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No clients match that search.
                 </p>
               )}
             </div>

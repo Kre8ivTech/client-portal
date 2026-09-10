@@ -47,6 +47,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getActiveNavHref } from "@/lib/navigation/get-active-nav-href";
+import { getHrefsForRole } from "@/lib/navigation/get-hrefs-for-role";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState, useEffect } from "react";
 
@@ -142,7 +143,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/settings/file-storage", icon: HardDrive, label: "Storage" },
       { href: "/dashboard/settings/white-label", icon: Palette, label: "White Label" },
       { href: "/dashboard/settings/email-templates", icon: Mail, label: "Email Templates" },
-      { href: "/dashboard/integrations", icon: Plug, label: "Integrations" },
+      { href: "/dashboard/settings/integrations", icon: Plug, label: "Integrations" },
     ],
   },
   {
@@ -175,213 +176,14 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/admin/notifications", icon: Bell, label: "Notifications" },
       { href: "/dashboard/admin/settings/sla", icon: Clock, label: "SLA Settings" },
       { href: "/dashboard/admin/settings/auth", icon: Shield, label: "Auth Settings" },
+      { href: "/dashboard/admin/settings/integrations", icon: Plug, label: "Integration Settings" },
+      { href: "/dashboard/integrations", icon: Plug, label: "Platform Integrations" },
       { href: "/dashboard/admin/ai-usage", icon: BarChart3, label: "AI Usage" },
       { href: "/dashboard/audit", icon: History, label: "Audit Log" },
       { href: "/dashboard/admin/error-logs", icon: Bug, label: "Error Log" },
     ],
   },
 ];
-
-// Role visibility: client = Services + Projects + Files + Communications + Support + Account + Settings (basic); 
-// partner = + White Label + Clients + Reports; staff = + Capacity + User Mgmt + Financials + Reports + Time + Forms; 
-// super_admin = full + Tenants + Audit.
-// Note: Staff without is_account_manager flag cannot see invoices.
-function getHrefsForRole(role: NonNullable<Profile>["role"], isAccountManager: boolean): string[] {
-  const projectPages = [
-    "/dashboard/projects/tasks",
-    "/dashboard/projects/timeline",
-    "/dashboard/projects/communication",
-  ];
-
-  // Base client navigation
-  const servicesClient = [
-    "/dashboard/service",
-    "/dashboard/tickets",
-    "/dashboard/services/current",
-  ];
-  const projectsClient = [
-    "/dashboard/projects",
-    "/dashboard/projects/tasks",
-    "/dashboard/projects/timeline",
-    "/dashboard/projects/communication",
-  ];
-  const filesClient = [
-    "/dashboard/contracts",
-    "/dashboard/files",
-  ];
-  const communicationsClient = [
-    "/dashboard/messages",
-  ];
-  const supportClient = [
-    "/dashboard/tickets",
-    "/dashboard/kb",
-  ];
-  const supportAdminStaff = [
-    ...supportClient,
-    "/dashboard/user-guide",
-  ];
-  const accountBase = [
-    "/dashboard/profile",
-    "/dashboard/billing",
-    "/dashboard/invoices",
-    "/dashboard/invoices#proposals",
-    "/dashboard/vault",
-  ];
-  // Account items without invoices (for non-account-manager staff)
-  const accountBaseNoInvoices = [
-    "/dashboard/profile",
-    "/dashboard/billing",
-    "/dashboard/vault",
-  ];
-  const settingsBase = [
-    "/dashboard/settings",
-    "/dashboard/settings/security",
-    "/dashboard/settings/notifications",
-    "/dashboard/settings/file-storage",
-  ];
-  const whiteLabel = "/dashboard/settings/white-label";
-  const emailTemplates = "/dashboard/settings/email-templates";
-  const integrations = "/dashboard/integrations";
-  const services = "/dashboard/services";
-  const capacity = "/dashboard/capacity";
-  
-  const adminStaff = [
-    "/dashboard/users",
-    "/dashboard/plans",
-    "/dashboard/financials",
-    "/dashboard/financials/invoicing",
-    "/dashboard/financials/receivables",
-    "/dashboard/financials/time-tracking",
-    "/dashboard/financials/subscriptions",
-    "/dashboard/financials/cash-flow",
-    "/dashboard/financials/budgeting",
-    "/dashboard/financials/reports",
-    "/dashboard/reports",
-    "/dashboard/time",
-    "/dashboard/forms",
-  ];
-
-  switch (role) {
-    case "super_admin":
-      return [
-        "/dashboard",
-        ...servicesClient,
-        services,
-        ...projectsClient,
-        ...filesClient,
-        ...communicationsClient,
-        ...supportAdminStaff,
-        ...accountBase,
-        ...settingsBase,
-        whiteLabel,
-        emailTemplates,
-        integrations,
-        capacity,
-        "/dashboard/clients",
-        "/dashboard/projects",
-        ...projectPages,
-        ...adminStaff,
-        "/dashboard/admin/staff-management",
-        "/dashboard/admin/permissions",
-        "/dashboard/admin/services",
-        "/dashboard/admin/contracts",
-        "/dashboard/admin/notifications",
-        "/dashboard/admin/settings/sla",
-        "/dashboard/admin/settings/auth",
-        "/dashboard/admin/ai-usage",
-        "/dashboard/tenants",
-        "/dashboard/audit",
-        "/dashboard/admin/error-logs",
-      ];
-    case "staff":
-      // Staff with account manager flag sees invoices, otherwise they don't
-      return [
-        "/dashboard",
-        ...servicesClient,
-        services,
-        ...projectsClient,
-        ...filesClient,
-        ...communicationsClient,
-        ...supportAdminStaff,
-        ...(isAccountManager ? accountBase : accountBaseNoInvoices),
-        "/dashboard/settings/email-templates",
-        "/dashboard/projects",
-        ...projectPages,
-        ...settingsBase,
-        emailTemplates,
-        capacity,
-        "/dashboard/clients",
-        ...adminStaff,
-        "/dashboard/admin/staff-management",
-        "/dashboard/admin/services",
-        "/dashboard/admin/contracts",
-        "/dashboard/admin/notifications",
-        "/dashboard/admin/ai-usage",
-      ];
-    case "partner":
-      return [
-        "/dashboard",
-        "/dashboard/partner-overview",
-        "/dashboard/partner-overview/clients",
-        "/dashboard/partner-overview/ads",
-        "/dashboard/partner-overview/sites",
-        "/dashboard/partner-overview/financials",
-        "/dashboard/partner-overview/projects",
-        "/dashboard/google-ads",
-        ...servicesClient,
-        services,
-        ...projectsClient,
-        ...filesClient,
-        ...communicationsClient,
-        ...supportClient,
-        ...accountBase,
-        ...settingsBase,
-        whiteLabel,
-        "/dashboard/clients",
-        "/dashboard/projects",
-        ...projectPages,
-        "/dashboard/plans",
-        "/dashboard/reports",
-      ];
-    case "partner_staff":
-      return [
-        "/dashboard",
-        "/dashboard/partner-overview",
-        "/dashboard/partner-overview/clients",
-        "/dashboard/partner-overview/ads",
-        "/dashboard/partner-overview/sites",
-        "/dashboard/partner-overview/financials",
-        "/dashboard/partner-overview/projects",
-        "/dashboard/google-ads",
-        ...servicesClient,
-        ...projectsClient,
-        ...filesClient,
-        ...communicationsClient,
-        ...supportClient,
-        "/dashboard/projects",
-        ...projectPages,
-        "/dashboard/invoices",
-        "/dashboard/settings",
-        "/dashboard/settings/file-storage",
-        "/dashboard/profile",
-        "/dashboard/settings#security",
-        "/dashboard/settings#notifications",
-      ];
-    case "client":
-      return [
-        "/dashboard",
-        ...servicesClient,
-        ...projectsClient,
-        ...filesClient,
-        ...communicationsClient,
-        ...supportClient,
-        ...accountBase,
-        ...settingsBase,
-      ];
-    default:
-      return [];
-  }
-}
 
 export type SidebarBranding = {
   app_name: string;

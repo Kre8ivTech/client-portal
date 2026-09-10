@@ -120,22 +120,46 @@ export async function POST(
       );
     }
 
-    // Send branded password reset email (best-effort)
+    // generateLink creates the recovery URL but does not deliver it. Send it
+    // through the target organization's configured email provider.
     const generatedLink = linkData?.properties?.action_link || `${appUrl}/auth/callback?next=/reset-password`;
-    await sendTemplatedEmail({
+    const recipientName = targetUserName || targetUser.email;
+    const fallbackMessage = [
+      `Hi ${recipientName},`,
+      'A password reset was requested for your KT-Portal account.',
+      `Use this secure link to choose a new password: ${generatedLink}`,
+      'If you did not expect this request, you can ignore this email.',
+    ].join('\n\n');
+    const emailResult = await sendTemplatedEmail({
       to: targetUser.email,
       templateType: 'password_reset',
+      organizationId: targetUser.organization_id,
       variables: {
-        recipient_name: targetUserName || targetUser.email,
+        recipient_name: recipientName,
         reset_link: generatedLink,
         app_url: appUrl,
         current_year: new Date().getFullYear().toString(),
+        subject: 'Reset your KT-Portal password',
+        message: fallbackMessage,
       },
-    }).catch(() => {}) // best-effort
+    });
+
+    if (!emailResult.success) {
+      console.error('Password reset email delivery failed:', {
+        targetUserId: targetUser.id,
+        organizationId: targetUser.organization_id,
+        provider: emailResult.provider,
+        error: emailResult.error,
+      });
+      return NextResponse.json(
+        { error: 'Password reset email could not be delivered. Check the email settings and try again.' },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Password reset email sent to ${targetUser.email}`,
+      message: `Password reset email accepted for delivery to ${targetUser.email}`,
     });
   } catch (error) {
     console.error("Error resetting password:", error);

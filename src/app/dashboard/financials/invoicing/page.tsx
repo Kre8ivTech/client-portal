@@ -141,7 +141,7 @@ export default async function InvoicingRevenuePage() {
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">
                       <Link
-                          href={`/dashboard/admin/invoices/${invoice.id}`}
+                          href={`/dashboard/invoices/${invoice.id}`}
                           className="hover:underline"
                         >
                           {invoice.invoice_number}

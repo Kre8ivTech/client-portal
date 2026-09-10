@@ -7,6 +7,8 @@
  * Documentation: https://developer.intuit.com/app/developer/qbo/docs/get-started
  */
 
+import { escapeQboQueryValue, type QuickBooksCustomer } from './query';
+
 export interface QuickBooksConfig {
   clientId: string;
   clientSecret: string;
@@ -53,6 +55,7 @@ export interface QuickBooksInvoice {
 }
 
 export interface QuickBooksPayment {
+  Id?: string;
   TotalAmt: number;
   CustomerRef: {
     value: string;
@@ -239,42 +242,66 @@ export class QuickBooksClient {
    * Get or create a customer in QuickBooks
    */
   async findOrCreateCustomer(
-    organizationName: string
+    organizationName: string,
+    email?: string | null,
   ): Promise<{ Customer: { Id: string; DisplayName: string } }> {
-    // First, try to find existing customer
+    const safeName = escapeQboQueryValue(organizationName);
     try {
-      const searchResult = await this.get<any>(
+      const searchResult = await this.get<{
+        QueryResponse?: { Customer?: Array<{ Id: string; DisplayName: string }> };
+      }>(
         `/query?query=${encodeURIComponent(
-          `SELECT * FROM Customer WHERE DisplayName = '${organizationName.replace(/'/g, "\\'")}'`
+          `SELECT * FROM Customer WHERE DisplayName = '${safeName}'`
         )}`
       );
 
-      if (searchResult.QueryResponse?.Customer?.length > 0) {
+      if (searchResult.QueryResponse?.Customer && searchResult.QueryResponse.Customer.length > 0) {
         return { Customer: searchResult.QueryResponse.Customer[0] };
       }
     } catch (error) {
       console.warn('Error searching for customer:', error);
     }
 
-    // Create new customer if not found
-    return this.post('/customer', {
-      DisplayName: organizationName,
-    });
+    const payload: Record<string, unknown> = { DisplayName: organizationName };
+    if (email) {
+      payload.PrimaryEmailAddr = { Address: email };
+    }
+    return this.post('/customer', payload);
+  }
+
+  async listCustomers(maxResults = 100): Promise<QuickBooksCustomer[]> {
+    const result = await this.get<{ QueryResponse?: { Customer?: QuickBooksCustomer[] } }>(
+      `/query?query=${encodeURIComponent(`SELECT * FROM Customer MAXRESULTS ${maxResults}`)}`
+    );
+    return result.QueryResponse?.Customer ?? [];
+  }
+
+  async getCompanyInfo(): Promise<{ CompanyName: string } | null> {
+    const result = await this.get<{ CompanyInfo?: { CompanyName?: string } }>(
+      '/companyinfo/' + this.realmId
+    );
+    const name = result.CompanyInfo?.CompanyName?.trim();
+    return name ? { CompanyName: name } : null;
+  }
+
+  async getPayment(paymentId: string): Promise<{ Payment: { Id?: string } }> {
+    return this.get(`/payment/${paymentId}`);
   }
 
   /**
    * Test the connection to QuickBooks
    */
-  async testConnection(): Promise<boolean> {
+  async testConnection(): Promise<{ ok: boolean; companyName: string | null }> {
     try {
-      await this.get('/companyinfo/' + this.realmId);
-      return true;
+      const info = await this.getCompanyInfo();
+      return { ok: true, companyName: info?.CompanyName ?? null };
     } catch (error) {
       console.error('QuickBooks connection test failed:', error);
-      return false;
+      return { ok: false, companyName: null };
     }
   }
 }
+
 
 /**
  * Helper to get QuickBooks config from database or environment variables

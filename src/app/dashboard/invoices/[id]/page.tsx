@@ -11,6 +11,12 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { generatePageMetadata } from '@/lib/seo'
 import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import {
+  billedClientDisplayName,
+  billedClientOrganizationId,
+  billedClientOrganizationName,
+  canAccessInvoiceDetail,
+} from '@/lib/invoices/access'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -84,8 +90,6 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
   }
 
   const p = profile as { organization_id: string | null; role: string; is_account_manager: boolean }
-  const isSuperAdmin = p.role === 'super_admin' || p.role === 'admin'
-  const isStaff = p.role === 'staff'
 
   // Fetch invoice with line items and payment history
   const primaryQuery = await (supabase as any)
@@ -93,6 +97,13 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
     .select(`
       *,
       organization:organizations(id, name),
+      client:users!invoices_client_id_fkey(
+        id,
+        email,
+        organization_id,
+        profiles:profiles(name),
+        organizations(name)
+      ),
       line_items:invoice_line_items(*),
       payments:invoice_payments(
         id,
@@ -118,10 +129,10 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
   if (primaryQuery.error || !invoice) {
     try {
       const admin = getSupabaseAdmin()
-      let fallbackInvoiceQuery = admin
+      const fallbackInvoiceQuery = admin
         .from('invoices')
         .select(`
-          id, organization_id, plan_assignment_id, invoice_number, status,
+          id, organization_id, client_id, plan_assignment_id, invoice_number, status,
           issue_date, due_date, sent_at, paid_at, period_start, period_end,
           subtotal, tax_rate, tax_amount, discount_amount, discount_description,
           total, amount_paid, balance_due, currency, payment_terms_days,
@@ -129,11 +140,6 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
           metadata, created_by, updated_by, created_at, updated_at
         `)
         .eq('id', id)
-
-      if (!isSuperAdmin && !isStaff) {
-        if (!p.organization_id) notFound()
-        fallbackInvoiceQuery = fallbackInvoiceQuery.eq('organization_id', p.organization_id)
-      }
 
       const fallbackInvoice = await fallbackInvoiceQuery.maybeSingle()
       if (fallbackInvoice.error || !fallbackInvoice.data) notFound()
@@ -176,7 +182,34 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
 
   if (!invoice) notFound()
 
-  if (!isSuperAdmin && !isStaff && p.organization_id !== invoice.organization_id) {
+  if (invoice.client_id && !invoice.client) {
+    try {
+      const admin = getSupabaseAdmin()
+      const billedClientQuery = await admin
+        .from('users')
+        .select('id, email, organization_id, profiles:profiles(name), organizations(name)')
+        .eq('id', invoice.client_id)
+        .maybeSingle()
+      invoice = { ...invoice, client: billedClientQuery.data }
+    } catch {
+      // billed-to remains unavailable if the lookup fails
+    }
+  }
+
+  const billedOrgId =
+    billedClientOrganizationId(invoice.client) ??
+    (invoice.client_id === user.id ? p.organization_id : null)
+
+  if (
+    !canAccessInvoiceDetail(
+      { id: user.id, organization_id: p.organization_id, role: p.role },
+      {
+        organization_id: invoice.organization_id,
+        client_id: invoice.client_id ?? null,
+        billed_organization_id: billedOrgId,
+      },
+    )
+  ) {
     return (
       <div className="max-w-md mx-auto mt-16">
         <Card>
@@ -197,16 +230,16 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
     )
   }
 
-  const isAccountManager = p.role === 'super_admin' || (p.role === 'staff' && p.is_account_manager)
+  const isAccountManager = p.role === 'super_admin' || (p.role === 'staff' && p.is_account_manager) || p.role === 'partner'
 
-  // Check if QuickBooks is connected
+  // Check if QuickBooks is connected for the issuer organization
   let quickbooksConnected = false
-  if (isAccountManager) {
+  if (isAccountManager && p.organization_id) {
     const { data: qbIntegration } = await supabase
       .from('quickbooks_integrations')
       .select('id')
-      .eq('organization_id', invoice.organization_id)
-      .single()
+      .eq('organization_id', p.organization_id)
+      .maybeSingle()
     quickbooksConnected = !!qbIntegration
   }
 
@@ -272,6 +305,16 @@ export default async function InvoiceDetailPage({ params }: PageProps) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {billedClientDisplayName(invoice.client) && (
+            <div>
+              <p className="text-sm text-muted-foreground">Billed to</p>
+              <p className="font-medium">{billedClientDisplayName(invoice.client)}</p>
+              {billedClientOrganizationName(invoice.client) && (
+                <p className="text-sm text-muted-foreground">{billedClientOrganizationName(invoice.client)}</p>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Due Date</p>

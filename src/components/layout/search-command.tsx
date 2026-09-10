@@ -79,7 +79,7 @@ const allSearchItems: SearchItem[] = [
   { id: "notifications", href: "/dashboard/settings/notifications", icon: Bell, label: "Notifications", group: "Settings", keywords: ["notifications", "alerts"] },
   { id: "email-templates", href: "/dashboard/settings/email-templates", icon: Mail, label: "Email Templates", group: "Settings", keywords: ["email", "template"] },
   { id: "file-storage", href: "/dashboard/settings/file-storage", icon: HardDrive, label: "File Storage", group: "Settings", keywords: ["storage", "file", "s3"] },
-  { id: "integrations", href: "/dashboard/integrations", icon: Plug, label: "Integrations", group: "Settings", keywords: ["integration", "api", "connect"] },
+  { id: "integrations", href: "/dashboard/settings/integrations", icon: Plug, label: "Integrations", group: "Settings", keywords: ["integration", "api", "connect", "quickbooks"] },
   { id: "fin-invoicing", href: "/dashboard/financials/invoicing", icon: FileText, label: "Invoicing & Revenue", group: "Financial", keywords: ["invoice", "revenue", "income"] },
   { id: "fin-receivables", href: "/dashboard/financials/receivables", icon: DollarSign, label: "Accounts Receivable", group: "Financial", keywords: ["receivable", "payment", "collections"] },
   { id: "fin-time", href: "/dashboard/financials/time-tracking", icon: Clock, label: "Time & Utilization", group: "Financial", keywords: ["time", "tracking", "hours"] },
@@ -102,6 +102,8 @@ const allSearchItems: SearchItem[] = [
   { id: "admin-notifications", href: "/dashboard/admin/notifications", icon: Bell, label: "Notifications", group: "Admin", keywords: ["notification", "admin"] },
   { id: "sla-settings", href: "/dashboard/admin/settings/sla", icon: Clock, label: "SLA Settings", group: "Admin", keywords: ["sla", "service level"] },
   { id: "auth-settings", href: "/dashboard/admin/settings/auth", icon: Shield, label: "Auth Settings", group: "Admin", keywords: ["auth", "authentication"] },
+  { id: "admin-integrations", href: "/dashboard/admin/settings/integrations", icon: Plug, label: "Integration Settings", group: "Admin", keywords: ["quickbooks", "integration", "oauth"] },
+  { id: "platform-integrations", href: "/dashboard/integrations", icon: Plug, label: "Platform Integrations", group: "Admin", keywords: ["stripe", "ai", "s3", "zapier"] },
   { id: "audit", href: "/dashboard/audit", icon: History, label: "Audit Log", group: "Admin", keywords: ["audit", "log", "history"] },
 ];
 
@@ -136,6 +138,7 @@ function getItemsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "capacity",
         ...(isAccountManager ? accountBase : accountBaseNoInvoices),
         "email-templates",
+        ...(isAccountManager ? ["integrations"] : []),
         "projects",
         "fin-invoicing",
         "fin-receivables",
@@ -160,6 +163,7 @@ function getItemsForRole(role: NonNullable<Profile>["role"], isAccountManager: b
         "dashboard",
         ...supportClient,
         ...accountBase,
+        "integrations",
         "white-label",
         "clients",
         "projects",

@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import {
-  getQuickBooksConfig,
-  QuickBooksClient,
-  QuickBooksPayment,
-} from "@/lib/quickbooks/client";
+import { QuickBooksPayment } from "@/lib/quickbooks/client";
+import { getConnectedQuickBooksClient } from "@/lib/quickbooks/connection";
 
 /**
  * Sync a payment to QuickBooks
@@ -109,52 +106,13 @@ export async function POST(
       );
     }
 
-    // Get QuickBooks integration
-    const { data: integration, error: integrationError } = await supabase
-      .from("quickbooks_integrations")
-      .select("*")
-      .eq("organization_id", payment.invoice.organization_id)
-      .single();
-
-    if (integrationError || !integration) {
-      return NextResponse.json(
-        { error: "QuickBooks not connected for this organization" },
-        { status: 400 }
-      );
+    if (profile.organization_id !== payment.invoice.organization_id && profile.role !== "super_admin") {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Check if token needs refresh
-    const tokenExpiresAt = new Date(integration.token_expires_at);
-    const now = new Date();
-    let accessToken = integration.access_token;
-
-    if (tokenExpiresAt <= now) {
-      const config = await getQuickBooksConfig(supabase, payment.invoice.organization_id);
-      const newTokens = await QuickBooksClient.refreshToken(
-        config,
-        integration.refresh_token
-      );
-
-      await supabase
-        .from("quickbooks_integrations")
-        .update({
-          access_token: newTokens.access_token,
-          refresh_token: newTokens.refresh_token,
-          token_expires_at: new Date(
-            Date.now() + newTokens.expires_in * 1000
-          ).toISOString(),
-        })
-        .eq("id", integration.id);
-
-      accessToken = newTokens.access_token;
-    }
-
-    // Initialize QuickBooks client
-    const config = await getQuickBooksConfig(supabase, payment.invoice.organization_id);
-    const qbClient = new QuickBooksClient(
-      config,
-      integration.realm_id,
-      accessToken
+    const { client: qbClient } = await getConnectedQuickBooksClient(
+      supabase,
+      profile.role === "super_admin" ? payment.invoice.organization_id : profile.organization_id,
     );
 
     // Convert payment to QuickBooks format
@@ -189,20 +147,20 @@ export async function POST(
 
     // Create payment in QuickBooks
     const result = await qbClient.createPayment(qbPayment);
-    const qbPaymentId = result.Payment.TxnDate; // QuickBooks doesn't return ID directly in Payment, use TxnDate as reference
+    const qbPaymentId = result.Payment.Id || result.Payment.TxnDate;
 
     // Update payment in our database
     await supabase
       .from("invoice_payments")
       .update({
-        quickbooks_payment_id: payment.invoice.quickbooks_invoice_id, // Store invoice ID for reference
+        quickbooks_payment_id: qbPaymentId,
         quickbooks_synced_at: new Date().toISOString(),
       })
       .eq("id", id);
 
     return NextResponse.json({
       success: true,
-      quickbooks_payment_id: payment.invoice.quickbooks_invoice_id,
+      quickbooks_payment_id: qbPaymentId,
       message: "Payment synced to QuickBooks successfully",
     });
   } catch (error) {

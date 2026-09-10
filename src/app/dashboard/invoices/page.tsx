@@ -45,7 +45,7 @@ function formatDate(dateString: string) {
 }
 
 export default async function InvoicesPage() {
-  const { role, canManage } = await requireInvoiceAccess();
+  const { role, canCreate } = await requireInvoiceAccess();
   const supabase = await createServerSupabaseClient();
 
   // Fetch invoices with organization details
@@ -115,12 +115,12 @@ export default async function InvoicesPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-slate-900">Invoices</h2>
           <p className="text-slate-500">
-            {canManage ? "Create, manage, and track client invoices." : "View your billing history and payment status."}
+            {canCreate ? "Create, manage, and track client invoices." : "View your billing history and payment status."}
           </p>
         </div>
         <div className="flex gap-2">
           <ExportCsvButton />
-          {canManage && (
+          {canCreate && (
             <Button className="gap-2" asChild>
               <Link href="/dashboard/admin/invoices/new">
                 <Plus size={18} />
@@ -142,7 +142,7 @@ export default async function InvoicesPage() {
         <CardHeader>
           <CardTitle>Billing History</CardTitle>
           <CardDescription>
-            {canManage ? "All invoices across your managed organizations." : "Your organization's invoice history."}
+            {canCreate ? "All invoices across your managed organizations." : "Your organization's invoice history."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -209,11 +209,11 @@ export default async function InvoicesPage() {
               <FileText className="mx-auto mb-3 h-12 w-12 text-slate-300" />
               <p className="text-slate-600 font-medium mb-1">No invoices yet</p>
               <p className="text-sm text-slate-500 max-w-md mx-auto">
-                {canManage
+                {canCreate
                   ? "Create your first invoice to start billing clients."
                   : "Your invoices will appear here once they are created."}
               </p>
-              {canManage && (
+              {canCreate && (
                 <Button className="mt-4 gap-2" asChild>
                   <Link href="/dashboard/admin/invoices/new">
                     <Plus size={18} />

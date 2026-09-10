@@ -4,7 +4,9 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { triggerWebhooks } from '@/lib/zapier/webhooks'
+import { isInvoiceCreator, loadBillableClients } from '@/lib/invoices/billable-clients'
 import { notifyInvoiceCreated } from './invoice-notifications'
+import { maybeAutoSyncInvoiceToQuickBooks } from '@/lib/quickbooks/sync-invoice'
 
 export type CreateInvoiceData = {
   organization_id: string
@@ -29,15 +31,45 @@ export async function createInvoice(data: CreateInvoiceData) {
     return { error: 'Unauthorized' }
   }
 
+  const { data: profile } = await supabase
+    .from('users')
+    .select('id, organization_id, role, is_account_manager')
+    .eq('id', user.id)
+    .single()
+
+  const creator = profile as {
+    id: string
+    organization_id: string | null
+    role: string
+    is_account_manager: boolean
+  } | null
+
+  if (!creator || !isInvoiceCreator(creator) || !creator.organization_id) {
+    return { error: 'Forbidden - Account manager access required' }
+  }
+
+  if (!data.client_id) {
+    return { error: 'Client is required' }
+  }
+
+  const billableClients = await loadBillableClients(supabase, creator, user.id)
+  const billedClient = billableClients.find((client) => client.id === data.client_id)
+  if (!billedClient) {
+    return { error: 'Selected client is not in your billing scope' }
+  }
+
+  const issuerOrganizationId = creator.organization_id
+
   // Calculate totals
   const subtotal = data.line_items.reduce((sum, item) => sum + item.amount, 0)
   const total = subtotal // Add tax/discount logic later if needed
 
-  // Create invoice
+  // Create invoice on the issuer org so admin lists and QuickBooks stay scoped to the books owner.
   const { data: invoice, error: invoiceError } = await (supabase as any)
     .from('invoices')
     .insert({
-      organization_id: data.organization_id,
+      organization_id: issuerOrganizationId,
+      client_id: data.client_id,
       invoice_number: data.invoice_number,
       issue_date: data.issue_date,
       due_date: data.due_date,
@@ -48,7 +80,9 @@ export async function createInvoice(data: CreateInvoiceData) {
       created_by: user.id,
       status: 'draft',
       metadata: {
-        client_id: data.client_id
+        client_id: data.client_id,
+        billed_organization_id: billedClient.organization_id,
+        billed_organization_name: billedClient.organization_name,
       }
     })
     .select()
@@ -80,7 +114,8 @@ export async function createInvoice(data: CreateInvoiceData) {
   }
 
   // Trigger webhook for invoice creation
-  triggerWebhooks('invoice.created', data.organization_id, invoice)
+  triggerWebhooks('invoice.created', issuerOrganizationId, invoice)
+  maybeAutoSyncInvoiceToQuickBooks(invoice.id).catch(() => {})
 
   // Fire-and-forget email notification
   notifyInvoiceCreated(invoice.id).catch(() => {})

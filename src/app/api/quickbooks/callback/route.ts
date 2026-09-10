@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getQuickBooksConfig, QuickBooksClient } from "@/lib/quickbooks/client";
+import { encryptQuickBooksTokens } from "@/lib/quickbooks/tokens";
 
 /**
  * Handle QuickBooks OAuth callback
@@ -76,7 +77,6 @@ export async function GET(request: NextRequest) {
       Date.now() + tokens.x_refresh_token_expires_in * 1000
     );
 
-    // Test the connection
     const client = new QuickBooksClient(
       config,
       realmId,
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     );
     const connectionTest = await client.testConnection();
 
-    if (!connectionTest) {
+    if (!connectionTest.ok) {
       console.error("QuickBooks connection test failed");
       return NextResponse.redirect(
         new URL(
@@ -94,20 +94,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Store integration in database (upsert)
+    const encrypted = encryptQuickBooksTokens({
+      accessToken: tokens.access_token,
+      refreshToken: tokens.refresh_token,
+    });
+
     const { error: integrationError } = await supabase
       .from("quickbooks_integrations")
       .upsert(
         {
           organization_id: oauthState.organization_id,
           realm_id: realmId,
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
+          ...encrypted,
           token_expires_at: accessTokenExpiresAt.toISOString(),
+          refresh_token_expires_at: refreshTokenExpiresAt.toISOString(),
           is_sandbox: config.environment === "sandbox",
           connected_by: oauthState.user_id,
           connected_at: new Date().toISOString(),
           sync_status: "idle",
+          company_name: connectionTest.companyName,
         },
         {
           onConflict: "organization_id",

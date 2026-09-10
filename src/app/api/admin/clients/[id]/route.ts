@@ -13,16 +13,21 @@ type UserAuthRow = {
   role: string
 }
 
-type OrganizationRow = {
+type OrganizationCoreRow = {
   id: string
   name: string
   slug: string
   type: string
   status: string | null
   parent_org_id: string | null
+}
+
+type OrganizationRow = OrganizationCoreRow & {
   custom_domain: string | null
   custom_domain_verified: boolean | null
 }
+
+const ORGANIZATION_CORE_COLUMNS = 'id, name, slug, type, status, parent_org_id' as const
 
 async function requireSuperAdmin() {
   const supabase = await createServerSupabaseClient()
@@ -70,6 +75,17 @@ async function loadClient(
     .select(
       'id, name, slug, type, status, parent_org_id, custom_domain, custom_domain_verified',
     )
+    .eq('id', organizationId)
+    .maybeSingle()
+}
+
+async function loadClientForDeletion(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  organizationId: string,
+) {
+  return supabase
+    .from('organizations')
+    .select(ORGANIZATION_CORE_COLUMNS)
     .eq('id', organizationId)
     .maybeSingle()
 }
@@ -224,7 +240,7 @@ export async function DELETE(
     const access = await requireSuperAdmin()
     if (!access.ok) return access.response
 
-    const { data: existingClient, error: clientError } = await loadClient(
+    const { data: existingClient, error: clientError } = await loadClientForDeletion(
       access.supabase,
       organizationId.data,
     )
@@ -234,7 +250,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Failed to load client' }, { status: 500 })
     }
 
-    const client = existingClient as OrganizationRow | null
+    const client = existingClient as OrganizationCoreRow | null
     if (!client) {
       return NextResponse.json({ error: 'Client not found' }, { status: 404 })
     }

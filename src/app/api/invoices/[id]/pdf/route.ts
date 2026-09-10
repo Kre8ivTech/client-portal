@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { billedClientOrganizationId, canAccessInvoiceDetail } from '@/lib/invoices/access'
 import * as React from 'react'
 
 // Note: PDF generation requires @react-pdf/renderer packageRun: npm install @react-pdf/renderer
@@ -52,9 +53,27 @@ export async function GET(
     }
 
     const p = profile as { organization_id: string | null; role: string }
-    const isSuperAdmin = p.role === 'super_admin'
-    const isStaff = p.role === 'staff'
-    if (!isSuperAdmin && !isStaff && p.organization_id !== invoice.organization_id) {
+    let billedOrgId: string | null = null
+    if (invoice.client_id === user.id) {
+      billedOrgId = p.organization_id
+    } else if (invoice.client_id) {
+      const { data: billed } = await supabase
+        .from('users')
+        .select('organization_id')
+        .eq('id', invoice.client_id)
+        .maybeSingle()
+      billedOrgId = billedClientOrganizationId(billed)
+    }
+    if (
+      !canAccessInvoiceDetail(
+        { id: user.id, organization_id: p.organization_id, role: p.role },
+        {
+          organization_id: invoice.organization_id,
+          client_id: invoice.client_id ?? null,
+          billed_organization_id: billedOrgId,
+        },
+      )
+    ) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 })
     }
 

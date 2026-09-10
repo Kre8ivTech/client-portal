@@ -85,7 +85,11 @@ export default async function AdminInvoicesPage() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
-                    <h3 className="font-bold text-lg">{invoice.invoice_number}</h3>
+                    <h3 className="font-bold text-lg">
+                      <Link href={`/dashboard/invoices/${invoice.id}`} className="hover:underline">
+                        {invoice.invoice_number}
+                      </Link>
+                    </h3>
                     <span
                       className={`px-2 py-1 text-xs rounded ${
                         invoice.status === 'paid'

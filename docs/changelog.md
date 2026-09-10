@@ -118,7 +118,18 @@ kt-portal/
 
 ## [Unreleased]
 
+### Added
+- **Invoice client picker** (2026-09-08) — Admin/new-invoice now lists every billable client in scope: super admins see all clients; account-manager staff and partner (parent-org) admins see their own organization plus child-org clients. Search is available when the list is long.
+- **QuickBooks Online** (2026-09-08) — Admins can connect QuickBooks via OAuth, store tokens encrypted, sync customers, and push invoices (and payments) to QuickBooks. Optional auto-sync on invoice create.
+
 ### Fixed
+- **Invoice detail for billed clients** (2026-09-08) — Viewers billed on an invoice (and others in that client org) can open `/dashboard/invoices/[id]` even when the invoice is stored on the issuer org. The page now shows billed-to.
+- **Partner New Invoice** (2026-09-08) — `/dashboard/invoices` shows New Invoice for roles that can create invoices, including partner/parent-org admins.
+- **QuickBooks navigation** (2026-09-08) — Settings → Integrations goes to org QuickBooks (`/dashboard/settings/integrations`). Super admins also get Admin → Integration Settings (QB app credentials) and Platform Integrations (Stripe/AI/S3).
+- **Invoice detail links** (2026-09-08) — Admin invoice cards and Financials invoicing now link to `/dashboard/invoices/[id]`.
+- **Child-org user visibility** (2026-09-08) — Partners and account managers can SELECT users/profiles in child organizations so invoicing is not limited to the admin's own org.
+- **Admin Password Reset Delivery** (2026-08-24) — Routed client recovery emails through the client organization’s configured email provider, added a usable fallback message when no password-reset template exists, and stopped reporting success when delivery fails.
+- **Client Deactivation** (2026-08-24) — Allowed super admins to deactivate clients when optional white-label custom-domain columns are unavailable in the deployed database schema.
 - **Auth Settings Logging** (2026-02-10) — Improved error handling for missing authentication settings columns. Changed log level from WARN to INFO when columns don't exist in preview/staging environments. Migration `20260204140000_auth_sso_mfa_recaptcha.sql` adds required SSO, MFA, and reCAPTCHA columns and will be applied automatically on next production deployment.
 
 ### Planned

@@ -39,6 +39,7 @@ export const invoiceSchema = z.object({
   internal_notes: z.string().max(5000).optional().nullable(),
 
   line_items: z.array(invoiceLineItemSchema).min(1, 'At least one line item is required'),
+  client_id: z.string().uuid().optional(),
 })
 
 export type InvoiceInput = z.infer<typeof invoiceSchema>

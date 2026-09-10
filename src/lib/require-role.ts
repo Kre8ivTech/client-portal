@@ -76,6 +76,14 @@ export function canManageInvoices(role: DashboardRole, isAccountManager: boolean
 }
 
 /**
+ * Checks if user can create invoices for billable clients in their scope.
+ * Super admins, account-manager staff, and partner (parent-org) admins can create.
+ */
+export function canCreateInvoices(role: DashboardRole, isAccountManager: boolean): boolean {
+  return canManageInvoices(role, isAccountManager) || role === "partner";
+}
+
+/**
  * Checks if user can view invoices.
  * Staff without account_manager flag cannot view invoices at all.
  * Clients, partners, and partner_staff can view but not manage.
@@ -112,5 +120,6 @@ export async function requireInvoiceAccess() {
     role,
     isAccountManager,
     canManage: canManageInvoices(role, isAccountManager),
+    canCreate: canCreateInvoices(role, isAccountManager),
   };
 }

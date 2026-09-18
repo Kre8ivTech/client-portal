@@ -6,6 +6,7 @@
 import { NotificationResult } from '../index'
 import type { EmailTemplateType } from '@/lib/email-templates-shared'
 import { getEffectiveSmtpConfig, sendWithSmtp } from './smtp'
+import { hasMicrosoftMailConfiguration, sendWithMicrosoft } from './microsoft'
 
 interface EmailOptions {
   to: string
@@ -65,6 +66,10 @@ export async function sendEmail({
           provider: 'smtp',
         }
       }
+    }
+
+    if (hasMicrosoftMailConfiguration()) {
+      return sendWithMicrosoft({ to, subject, html })
     }
 
     const apiKey = process.env.RESEND_API_KEY
@@ -199,6 +204,13 @@ export async function sendTemplatedEmail({
       }
     }
 
+    if (hasMicrosoftMailConfiguration()) {
+      const result = await sendWithMicrosoft({
+        to, subject: renderedSubject, html: renderedHtml, replyTo: template.reply_to,
+      })
+      return { ...result, ...(result.success ? { templateId: template.id } : {}) }
+    }
+
     const apiKey = process.env.RESEND_API_KEY
     if (!apiKey) {
       console.error('[Notifications] RESEND_API_KEY not configured')
@@ -295,6 +307,10 @@ export async function sendRawEmail({
           provider: 'smtp',
         }
       }
+    }
+
+    if (hasMicrosoftMailConfiguration()) {
+      return sendWithMicrosoft({ to, subject, html })
     }
 
     const apiKey = process.env.RESEND_API_KEY

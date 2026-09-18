@@ -26,3 +26,7 @@ The application hostname remains `clients.kre8ivtech.com`. Hosting moves from Ve
 ## Infrastructure constraint observed September 17, 2026
 
 The current OpenShip host is a 1-vCPU, 2-GB t2.small in us-west-2. It had about 781 MB available memory, 694 MB swap used, and 7.1 GB disk free. The EC2 standard On-Demand quota was 1 vCPU; an existing request for 8 vCPUs was still CASE_OPENED. A successful local build does not establish safe production capacity. Do not cut over solely because the container starts.
+
+## Candidate validation
+
+The Linux amd64 container passed liveness, login, forgot-password, dashboard redirect, and twenty read-only public-page requests with a 512 MB runtime memory cap and no swap allowance. Observed memory was about 161 MB; this is a smoke-test measurement, not an authenticated workload capacity test. The image contains no local environment files or Git directory. Builds use one worker and a 1536 MB Node heap limit; a 768 MB build heap failed and must not be used. Prefer off-host builds until capacity increases.

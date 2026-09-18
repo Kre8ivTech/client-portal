@@ -114,8 +114,8 @@ export function CalendarOfficeHours({
             Calendar integration
           </CardTitle>
           <CardDescription>
-            Connect Google, Microsoft, or Apple Calendar (OAuth credentials are configured by your administrator in
-            Integrations). Connected calendars sync to capacity planning.
+            Connect a calendar account using the providers enabled by your administrator.
+            Automatic event synchronization is not yet enabled.
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6 space-y-4">

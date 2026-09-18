@@ -1,3 +1,5 @@
+import { CalendarIntegrations } from "@/components/integrations/calendar-integrations";
+import { microsoftCalendarConfig } from "@/lib/integrations/microsoft-calendar";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import { CalendarOfficeHours } from "@/components/settings/calendar-office-hours";
@@ -48,7 +50,7 @@ export default async function SettingsPage({
     organization_id: string | null;
   } | null;
   const role = userRow?.role ?? "client";
-  const isStaffOrAdmin = role === "staff" || role === "super_admin";
+  const isStaffOrAdmin = role === "staff" || role === "admin" || role === "super_admin";
   const isSuperAdmin = role === "super_admin";
 
   const appSettings = await getAppSettings();
@@ -63,7 +65,7 @@ export default async function SettingsPage({
     process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
   );
   const microsoftOAuthConfigured = !!(
-    process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET
+    microsoftCalendarConfig().clientId && microsoftCalendarConfig().clientSecret
   );
 
   const oauthErrorMessage = (code: string | undefined) => {
@@ -76,6 +78,8 @@ export default async function SettingsPage({
       oauth_not_configured: "Server is missing Google or Microsoft OAuth credentials.",
       token_exchange_failed: "Could not exchange authorization code. Check client secret and redirect URI.",
       save_failed: "Could not save the connection. Try again or contact support.",
+      profile_failed: "Could not verify your Microsoft account. Reconnect and allow profile access.",
+      authorization_failed: "Microsoft did not authorize the connection. Your organization may require administrator approval.",
       oauth_failed: "OAuth failed unexpectedly.",
     };
     return map[code] ?? code;
@@ -100,7 +104,7 @@ export default async function SettingsPage({
         <Alert className="border-green-200 bg-green-50">
           <CheckCircle2 className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-800">
-            Microsoft Outlook connected. Your calendar will be used for capacity-related features.
+            Microsoft Outlook connected. Your account is ready for calendar integration; automatic event synchronization is not yet enabled.
           </AlertDescription>
         </Alert>
       )}
@@ -120,6 +124,15 @@ export default async function SettingsPage({
           <CalendarOfficeHours
             profileId={user.id}
             oauthIntegrations={oauthCalendarRows ?? []}
+            googleOAuthConfigured={googleOAuthConfigured}
+            microsoftOAuthConfigured={microsoftOAuthConfigured}
+          />
+        )}
+
+        {!isStaffOrAdmin && (
+          <CalendarIntegrations
+            integrations={oauthCalendarRows ?? []}
+            oauthReturnPath="/dashboard/settings"
             googleOAuthConfigured={googleOAuthConfigured}
             microsoftOAuthConfigured={microsoftOAuthConfigured}
           />

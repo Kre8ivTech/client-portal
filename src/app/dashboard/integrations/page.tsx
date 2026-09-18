@@ -1,3 +1,4 @@
+import { microsoftCalendarConfig } from "@/lib/integrations/microsoft-calendar";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +36,8 @@ function oauthErrorMessage(code: string | undefined) {
     oauth_not_configured: "Server is missing Google or Microsoft OAuth credentials.",
     token_exchange_failed: "Could not exchange authorization code. Check client secret and redirect URI.",
     save_failed: "Could not save the connection. Try again or contact support.",
+    profile_failed: "Could not verify your Microsoft account. Reconnect and allow profile access.",
+    authorization_failed: "Microsoft did not authorize the connection. Your organization may require administrator approval.",
     oauth_failed: "OAuth failed unexpectedly.",
   };
   return map[code] ?? code;
@@ -127,7 +130,7 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
     process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
   );
   const microsoftCalendarOAuthConfigured = !!(
-    process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET
+    microsoftCalendarConfig().clientId && microsoftCalendarConfig().clientSecret
   );
 
   return (

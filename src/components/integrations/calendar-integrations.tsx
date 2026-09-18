@@ -180,50 +180,10 @@ export function CalendarIntegrations({
           <div className="flex gap-2">
             <AlertCircle className="h-5 w-5 shrink-0 text-amber-600" />
             <div className="space-y-2">
-              <p className="font-medium">OAuth environment variables required</p>
+              <p className="font-medium">Some calendar connections are unavailable</p>
               <p className="text-xs text-amber-800">
-                <strong>End users do not enter keys.</strong> After this one-time setup, they use the{" "}
-                <strong>Connect</strong> button next to Google Calendar or Microsoft Outlook and sign in with their
-                account—that is the OAuth flow. The values below are only for whoever deploys the app (Google Cloud or
-                Azure app registration + Vercel/host env).
-              </p>
-              <p className="text-xs text-amber-800">
-                Add the following to your deployment (Vercel / host env). Use the same authorized redirect URIs as in
-                the provider console.
-              </p>
-              <div className="bg-amber-100/80 rounded p-2 font-mono text-[11px] space-y-1">
-                {!googleOAuthConfigured && (
-                  <>
-                    <div>GOOGLE_CLIENT_ID=...</div>
-                    <div>GOOGLE_CLIENT_SECRET=...</div>
-                    <div className="text-amber-700 pt-1">
-                      Redirect:{" "}
-                      <code className="break-all">
-                        {(process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")}
-                        /api/integrations/google/callback
-                      </code>
-                    </div>
-                  </>
-                )}
-                {!microsoftOAuthConfigured && (
-                  <>
-                    <div className={!googleOAuthConfigured ? "pt-2 border-t border-amber-200 mt-2" : ""}>
-                      MICROSOFT_CLIENT_ID=...
-                    </div>
-                    <div>MICROSOFT_CLIENT_SECRET=...</div>
-                    <div className="text-amber-700 pt-1">
-                      Redirect:{" "}
-                      <code className="break-all">
-                        {(process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/$/, "")}
-                        /api/integrations/microsoft/callback
-                      </code>
-                    </div>
-                  </>
-                )}
-              </div>
-              <p className="text-xs text-amber-800">
-                Also set <code className="bg-amber-100 px-1 rounded">NEXT_PUBLIC_APP_URL</code> to your site URL so
-                redirect URIs match (e.g. https://app.example.com).
+                Your administrator needs to finish setting up the unavailable providers.
+                Use an available Connect button to authorize your own calendar.
               </p>
             </div>
           </div>
@@ -294,7 +254,7 @@ export function CalendarIntegrations({
             {microsoftIntegration ? (
               <p className="text-xs text-muted-foreground">{microsoftIntegration.provider_email}</p>
             ) : (
-              <p className="text-xs text-muted-foreground">Sync with Microsoft 365</p>
+              <p className="text-xs text-muted-foreground">Connect your Microsoft 365 calendar</p>
             )}
           </div>
         </div>
@@ -378,7 +338,7 @@ export function CalendarIntegrations({
       </div>
 
       <p className="text-xs text-muted-foreground pt-2">
-        Calendar integrations allow staff to sync their availability and automatically block time for client appointments.
+        Connect your calendar account here. Automatic event synchronization and appointment blocking are not yet enabled.
       </p>
 
       {/* Apple CalDAV Modal */}

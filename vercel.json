@@ -1,6 +1,6 @@
 {
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
+  "buildCommand": "npm run build:local",
+  "installCommand": "npx --yes pnpm@10.15.1 install --frozen-lockfile --ignore-scripts",
   "framework": "nextjs",
   "regions": ["iad1"],
   "crons": [

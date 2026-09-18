@@ -15,10 +15,11 @@ import { GET } from "@/app/api/integrations/microsoft/callback/route";
 const verifier = "v".repeat(43);
 function request(cookie = true) {
   const state = createSignedOAuthState({ userId: "portal-user", ts: Date.now(), returnTo: "/dashboard/settings", challenge: calendarPkceChallenge(verifier) });
-  return new NextRequest(`https://clients.kre8ivtech.com/api/integrations/microsoft/callback?code=test&state=${state}`, { headers: cookie ? { cookie: `microsoft-calendar-pkce=${verifier}` } : {} });
+  return new NextRequest(`https://0.0.0.0:3000/api/integrations/microsoft/callback?code=test&state=${state}`, { headers: cookie ? { cookie: `microsoft-calendar-pkce=${verifier}` } : {} });
 }
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://clients.kre8ivtech.com");
   vi.stubEnv("OAUTH_STATE_SECRET", "test-state-secret");
   vi.stubEnv("ENCRYPTION_SECRET", "test-encryption-key-".repeat(3));
   vi.stubEnv("MICROSOFT_CALENDAR_CLIENT_ID", "application-id");
@@ -40,7 +41,7 @@ describe("Microsoft calendar callback", () => {
   it("saves an external client connection encrypted without adding them to staff capacity", async () => {
     const fetchMock = responses();
     const response = await GET(request());
-    expect(response.headers.get("location")).toContain("success=microsoft_connected");
+    expect(response.headers.get("location")).toBe("https://clients.kre8ivtech.com/dashboard/settings?success=microsoft_connected");
     const saved = mocks.upsert.mock.calls[0][0];
     expect(saved).toMatchObject({ user_id: "portal-user", organization_id: "client-org", provider_user_id: "ms-user" });
     expect(saved.access_token).toMatch(/^enc:v1:/);
@@ -52,7 +53,7 @@ describe("Microsoft calendar callback", () => {
   });
   it("rejects a failed Graph profile response without saving", async () => {
     responses(403);
-    expect((await GET(request())).headers.get("location")).toContain("error=profile_failed");
+    expect((await GET(request())).headers.get("location")).toBe("https://clients.kre8ivtech.com/dashboard/settings?error=profile_failed");
     expect(mocks.upsert).not.toHaveBeenCalled();
   });
   it("rejects callbacks from another browser or another portal user", async () => {

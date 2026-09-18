@@ -10,7 +10,9 @@ function redirectToIntegration(
   returnPath: string,
   params: Record<string, string>
 ) {
-  const url = new URL(returnPath, request.nextUrl.origin);
+  // The reverse proxy exposes a public origin while Next binds to 0.0.0.0.
+  // Use configured origin, not request/forwarded headers, for OAuth returns.
+  const url = new URL(returnPath, process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   const response = NextResponse.redirect(url);
   response.cookies.set(MICROSOFT_CALENDAR_COOKIE, "", {

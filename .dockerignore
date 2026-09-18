@@ -1,0 +1,16 @@
+.git
+.env
+.env.*
+.vercel
+.next
+node_modules
+output
+coverage
+test-results
+playwright-report
+.ijfw
+.claude
+.cursor
+*.log
+*.pem
+*.key

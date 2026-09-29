@@ -18,12 +18,18 @@ import { OrganizationPlanInfo } from '@/components/organizations/organization-pl
 import { ClientAdminControls } from '@/components/clients/ClientAdminControls'
 import { normalizeDashboardRole } from '@/lib/require-role'
 
+const CLIENT_TABS = ["overview", "settings", "users", "plan"] as const;
+
 export default async function ClientOrgPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ tab?: string }>
 }) {
   const { id: orgId } = await params
+  const { tab } = await searchParams
+  const activeTab = CLIENT_TABS.includes(tab as (typeof CLIENT_TABS)[number]) ? tab! : "overview"
   const supabase = (await createServerSupabaseClient()) as any
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -218,7 +224,7 @@ export default async function ClientOrgPage({
       </div>
 
       {/* Tabbed Content */}
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs key={activeTab} defaultValue={activeTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview" className="gap-2">
             <Building2 className="h-4 w-4" />

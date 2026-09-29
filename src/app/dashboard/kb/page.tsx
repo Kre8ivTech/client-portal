@@ -30,8 +30,10 @@ export default async function KnowledgeBasePage({
     .select('id, title, excerpt, slug, category_id')
     .eq('status', 'published')
 
-  if (q) {
-    articlesQuery = articlesQuery.or(`title.ilike.%${q}%,excerpt.ilike.%${q}%`)
+  const searchQuery = q?.replace(/[%_,]/g, " ").trim() ?? ""
+
+  if (searchQuery) {
+    articlesQuery = articlesQuery.or(`title.ilike.%${searchQuery}%,excerpt.ilike.%${searchQuery}%`)
   }
 
   const { data: featuredArticles, error: articlesError } = await articlesQuery.limit(5)
@@ -141,12 +143,25 @@ export default async function KnowledgeBasePage({
         <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 blur-[100px] rounded-full"></div>
         <div className="relative z-10 space-y-8">
           <div>
-            <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 mb-4">Featured Content</Badge>
-            <h2 className="text-3xl font-black tracking-tight">Essential Reading</h2>
-            <p className="text-slate-400 mt-2 font-medium">Most read articles from our documentation team.</p>
+            <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 mb-4">
+              {searchQuery ? "Search" : "Featured Content"}
+            </Badge>
+            <h2 className="text-3xl font-black tracking-tight">
+              {searchQuery ? `Results for “${searchQuery}”` : "Essential Reading"}
+            </h2>
+            <p className="text-slate-400 mt-2 font-medium">
+              {searchQuery
+                ? "Articles that match your search."
+                : "Most read articles from our documentation team."}
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {searchQuery && (!featuredArticles || featuredArticles.length === 0) ? (
+              <p className="md:col-span-2 text-slate-300">
+                No articles matched “{searchQuery}”. Try another phrase or browse the categories above.
+              </p>
+            ) : null}
             {featuredArticles?.map((article: any) => (
               <Link 
                 key={article.id} 

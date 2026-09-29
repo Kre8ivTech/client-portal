@@ -6,7 +6,12 @@ import { normalizeDashboardRole } from "@/lib/require-role";
 import { PlusCircle, AlertCircle } from "lucide-react";
 import Link from "next/link";
 
-export default async function TicketsPage() {
+export default async function TicketsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; priority?: string; sla?: string; client?: string }>;
+}) {
+  const params = await searchParams;
   const supabase = await createServerSupabaseClient();
 
   // Get current user to check if they're staff
@@ -72,7 +77,7 @@ export default async function TicketsPage() {
             refreshing the page. If this continues, contact support.
           </AlertDescription>
         </Alert>
-        <TicketList initialTickets={[]} />
+        <TicketList initialTickets={[]} initialFilters={params} />
       </div>
     );
   }
@@ -100,9 +105,11 @@ export default async function TicketsPage() {
       </div>
 
       <TicketList
+        key={`${params.status ?? ""}:${params.priority ?? ""}:${params.sla ?? ""}:${params.client ?? ""}`}
         initialTickets={tickets || []}
         organizations={organizations}
         canDeleteTickets={canDeleteTickets}
+        initialFilters={params}
       />
     </div>
   );

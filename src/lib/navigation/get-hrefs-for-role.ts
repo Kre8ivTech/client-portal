@@ -42,7 +42,6 @@ export function getHrefsForRole(role: DashboardRole, isAccountManager: boolean):
     "/dashboard/profile",
     "/dashboard/billing",
     "/dashboard/invoices",
-    "/dashboard/invoices#proposals",
     "/dashboard/vault",
   ];
   // Account items without invoices (for non-account-manager staff)
@@ -185,8 +184,8 @@ export function getHrefsForRole(role: DashboardRole, isAccountManager: boolean):
         "/dashboard/settings",
         "/dashboard/settings/file-storage",
         "/dashboard/profile",
-        "/dashboard/settings#security",
-        "/dashboard/settings#notifications",
+        "/dashboard/settings/security",
+        "/dashboard/settings/notifications",
       ];
     case "client":
       return [

@@ -74,7 +74,11 @@ export default async function TicketsArchivePage() {
             If this continues, contact support.
           </AlertDescription>
         </Alert>
-        <TicketList initialTickets={[]} organizations={organizations} />
+        <TicketList
+          initialTickets={[]}
+          organizations={organizations}
+          statusScope={["resolved", "closed", "cancelled"]}
+        />
       </div>
     );
   }
@@ -121,6 +125,7 @@ export default async function TicketsArchivePage() {
           initialTickets={tickets || []}
           organizations={organizations}
           canDeleteTickets={canDeleteTickets}
+          statusScope={["resolved", "closed", "cancelled"]}
         />
       )}
     </div>

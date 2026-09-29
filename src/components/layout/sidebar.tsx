@@ -66,9 +66,6 @@ type Profile = {
 
 type NavItem = { href: string; icon: LucideIcon; label: string };
 
-// Navigation structure follows the logical grouping requested in the problem statement.
-// Hash fragments (e.g., #tasks, #proposals) are used for sub-sections that don't have dedicated routes yet.
-// These should be implemented with proper client-side routing or tab navigation in the future.
 const navGroups: { label: string; items: NavItem[] }[] = [
   {
     label: "Main",
@@ -130,7 +127,6 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/profile", icon: User, label: "Profile" },
       { href: "/dashboard/billing", icon: CreditCard, label: "Billing & Plans" },
       { href: "/dashboard/invoices", icon: FileText, label: "Invoices & Payments" },
-      { href: "/dashboard/invoices#proposals", icon: FileEdit, label: "Proposals" },
       { href: "/dashboard/vault", icon: Lock, label: "Password Vault" },
     ],
   },

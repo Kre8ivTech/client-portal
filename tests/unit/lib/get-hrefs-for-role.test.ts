@@ -19,6 +19,19 @@ describe("getHrefsForRole integrations", () => {
     expect(getHrefsForRole("partner_staff", false)).not.toContain(ORG_INTEGRATIONS_HREF)
   })
 
+  it("gives partner staff real security and notification routes", () => {
+    const hrefs = getHrefsForRole("partner_staff", false)
+    expect(hrefs).toContain("/dashboard/settings/security")
+    expect(hrefs).toContain("/dashboard/settings/notifications")
+    expect(hrefs).not.toContain("/dashboard/settings#security")
+    expect(hrefs).not.toContain("/dashboard/settings#notifications")
+  })
+
+  it("does not link to a proposals section that has no page", () => {
+    expect(getHrefsForRole("client", false)).not.toContain("/dashboard/invoices#proposals")
+    expect(getHrefsForRole("super_admin", false)).not.toContain("/dashboard/invoices#proposals")
+  })
+
   it("exposes admin QuickBooks config and platform integrations to super admins only", () => {
     const admin = getHrefsForRole("super_admin", false)
     expect(admin).toContain(ADMIN_INTEGRATIONS_HREF)

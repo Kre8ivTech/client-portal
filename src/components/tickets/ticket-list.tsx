@@ -31,6 +31,13 @@ import { cn } from '@/lib/utils'
 import { getCombinedSLAStatus, getSLARowColor } from '@/lib/sla-status'
 import { DeleteTicketButton } from '@/components/tickets/DeleteTicketButton'
 import {
+  normalizeTicketPriorityFilter,
+  normalizeTicketSlaFilter,
+  normalizeTicketStatusFilter,
+  ticketMatchesPriority,
+  ticketMatchesSlaStatus,
+} from '@/lib/tickets/list-filters'
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -52,6 +59,14 @@ interface TicketListProps {
   initialTickets: Ticket[]
   organizations?: Array<{ id: string; name: string }>
   canDeleteTickets?: boolean
+  /** When set, the list only loads these statuses (used by the archive). */
+  statusScope?: string[]
+  initialFilters?: {
+    status?: string
+    priority?: string
+    sla?: string
+    client?: string
+  }
 }
 
 const STATUS_OPTIONS = [
@@ -70,6 +85,7 @@ const PRIORITY_OPTIONS = [
   { value: 'high', label: 'High' },
   { value: 'medium', label: 'Medium' },
   { value: 'low', label: 'Low' },
+  { value: 'critical,high', label: 'Critical & High' },
 ]
 
 const SLA_FILTER_OPTIONS = [
@@ -84,16 +100,22 @@ export function TicketList({
   initialTickets,
   organizations,
   canDeleteTickets = false,
+  statusScope,
+  initialFilters,
 }: TicketListProps) {
   const supabase = createClient()
   const queryClient = useQueryClient()
   useRealtimeTickets()
 
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [priorityFilter, setPriorityFilter] = useState('all')
-  const [clientFilter, setClientFilter] = useState('all')
-  const [slaFilter, setSlaFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState(() =>
+    normalizeTicketStatusFilter(initialFilters?.status),
+  )
+  const [priorityFilter, setPriorityFilter] = useState(() =>
+    normalizeTicketPriorityFilter(initialFilters?.priority),
+  )
+  const [clientFilter, setClientFilter] = useState(initialFilters?.client || 'all')
+  const [slaFilter, setSlaFilter] = useState(() => normalizeTicketSlaFilter(initialFilters?.sla))
   const [page, setPage] = useState(1)
 
   const ticketSelect = organizations && organizations.length > 0
@@ -106,22 +128,57 @@ export function TicketList({
         organization:organizations(id, name)
       `
 
-  const { data: ticketsResponse, isError, error } = useQuery({
-    queryKey: ['tickets', page],
+  const statusScopeKey = statusScope?.slice().sort().join(',') ?? 'all'
+  const serverPaged = slaFilter === 'all'
+  const filtersAreDefault =
+    statusFilter === 'all' &&
+    priorityFilter === 'all' &&
+    clientFilter === 'all' &&
+    slaFilter === 'all'
+
+  const { data: ticketsResponse, isError, error, isLoading } = useQuery({
+    queryKey: ['tickets', statusScopeKey, statusFilter, priorityFilter, clientFilter, slaFilter, serverPaged ? page : 0],
     queryFn: async () => {
       const from = (page - 1) * PAGE_SIZE
       const to = page * PAGE_SIZE - 1
 
-      const { data, error, count } = await supabase
+      let request = supabase
         .from('tickets')
         .select(ticketSelect, { count: 'exact' })
         .order('created_at', { ascending: false })
-        .range(from, to)
+
+      if (statusScope && statusScope.length > 0) {
+        if (statusFilter !== 'all' && statusScope.includes(statusFilter)) {
+          request = request.eq('status', statusFilter)
+        } else {
+          request = request.in('status', statusScope)
+        }
+      } else if (statusFilter !== 'all') {
+        request = request.eq('status', statusFilter)
+      }
+
+      if (priorityFilter !== 'all') {
+        const priorities = priorityFilter.split(',').map((value) => value.trim()).filter(Boolean)
+        if (priorities.length > 1) {
+          request = request.in('priority', priorities)
+        } else if (priorities[0]) {
+          request = request.eq('priority', priorities[0])
+        }
+      }
+
+      if (clientFilter !== 'all') {
+        request = request.eq('organization_id', clientFilter)
+      }
+
+      const pagedRequest = serverPaged ? request.range(from, to) : request.limit(1000)
+      const { data, error, count } = await pagedRequest
 
       if (error) throw error
       return { tickets: data as Ticket[], totalCount: count ?? 0 }
     },
-    initialData: { tickets: initialTickets, totalCount: initialTickets.length },
+    initialData: filtersAreDefault
+      ? { tickets: initialTickets, totalCount: initialTickets.length }
+      : undefined,
   })
 
   const tickets = useMemo(
@@ -129,7 +186,6 @@ export function TicketList({
     [ticketsResponse?.tickets]
   )
   const totalCount = ticketsResponse?.totalCount ?? 0
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE)
 
   // Filter tickets based on search and filters
   const filteredTickets = useMemo(() => {
@@ -147,8 +203,7 @@ export function TicketList({
       // Status filter
       const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter
 
-      // Priority filter
-      const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter
+      const matchesPriority = ticketMatchesPriority(ticket.priority, priorityFilter)
 
       // Client filter
       const matchesClient = clientFilter === 'all' || ticket.organization_id === clientFilter
@@ -164,19 +219,26 @@ export function TicketList({
           ticket.resolved_at,
           ticket.status
         )
-        matchesSLA = slaStatus.status === slaFilter
+        matchesSLA = ticketMatchesSlaStatus(slaStatus.status, slaFilter)
       }
 
       return matchesSearch && matchesStatus && matchesPriority && matchesClient && matchesSLA
     })
   }, [tickets, searchTerm, statusFilter, priorityFilter, clientFilter, slaFilter])
 
+  const visibleTickets = serverPaged
+    ? filteredTickets
+    : filteredTickets.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const totalPages = serverPaged
+    ? Math.ceil(totalCount / PAGE_SIZE)
+    : Math.max(1, Math.ceil(filteredTickets.length / PAGE_SIZE))
+
   // Separate priority tickets (Critical/High) from others
   const { priorityTickets, otherTickets } = useMemo(() => {
     const priority: Ticket[] = []
     const other: Ticket[] = []
 
-    filteredTickets.forEach((ticket) => {
+    visibleTickets.forEach((ticket) => {
       // Only separate if we're not filtering by a specific priority
       // If user filters for "Low", we shouldn't show a empty "High" table
       if (priorityFilter === 'all' && (ticket.priority === 'critical' || ticket.priority === 'high')) {
@@ -187,7 +249,7 @@ export function TicketList({
     })
 
     return { priorityTickets: priority, otherTickets: other }
-  }, [filteredTickets, priorityFilter])
+  }, [visibleTickets, priorityFilter])
 
   const hasActiveFilters = 
     searchTerm !== '' || 
@@ -203,6 +265,34 @@ export function TicketList({
     setClientFilter('all')
     setSlaFilter('all')
     setPage(1)
+  }
+
+  const changeStatusFilter = (value: string) => {
+    setStatusFilter(value)
+    setPage(1)
+  }
+
+  const changePriorityFilter = (value: string) => {
+    setPriorityFilter(value)
+    setPage(1)
+  }
+
+  const changeClientFilter = (value: string) => {
+    setClientFilter(value)
+    setPage(1)
+  }
+
+  const changeSlaFilter = (value: string) => {
+    setSlaFilter(value)
+    setPage(1)
+  }
+
+  if (isLoading && !ticketsResponse) {
+    return (
+      <div className="rounded-md border bg-white p-6 text-center text-sm text-slate-500">
+        Loading tickets...
+      </div>
+    )
   }
 
   if (isError) {
@@ -228,7 +318,7 @@ export function TicketList({
               className="pl-10"
             />
           </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={changeStatusFilter}>
             <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
@@ -240,7 +330,7 @@ export function TicketList({
               ))}
             </SelectContent>
           </Select>
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+          <Select value={priorityFilter} onValueChange={changePriorityFilter}>
             <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="Priority" />
             </SelectTrigger>
@@ -256,7 +346,7 @@ export function TicketList({
         
         <div className="flex flex-col md:flex-row gap-3">
           {organizations && organizations.length > 0 && (
-            <Select value={clientFilter} onValueChange={setClientFilter}>
+            <Select value={clientFilter} onValueChange={changeClientFilter}>
               <SelectTrigger className="w-full md:w-[220px]">
                 <SelectValue placeholder="All Clients" />
               </SelectTrigger>
@@ -271,7 +361,7 @@ export function TicketList({
             </Select>
           )}
           
-          <Select value={slaFilter} onValueChange={setSlaFilter}>
+          <Select value={slaFilter} onValueChange={changeSlaFilter}>
             <SelectTrigger className="w-full md:w-[180px]">
               <SelectValue placeholder="SLA Status" />
             </SelectTrigger>
@@ -296,7 +386,7 @@ export function TicketList({
       {/* Results count */}
       <p className="text-sm text-slate-500">
         {hasActiveFilters
-          ? `Showing ${filteredTickets.length} of ${totalCount} tickets`
+          ? `Showing ${visibleTickets.length} of ${serverPaged ? totalCount : filteredTickets.length} tickets`
           : `Showing ${Math.min((page - 1) * PAGE_SIZE + 1, totalCount)}–${Math.min(page * PAGE_SIZE, totalCount)} of ${totalCount} tickets`
         }
       </p>

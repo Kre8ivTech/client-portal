@@ -127,7 +127,7 @@ export function SLAComplianceWidget({ stats }: SLAComplianceWidgetProps) {
                   {stats.breached} ticket{stats.breached !== 1 ? 's' : ''} breached SLA
                 </p>
                 <Link
-                  href="/dashboard/tickets?sla=breached"
+                  href="/dashboard/tickets?sla=breach"
                   className="text-xs text-red-600 hover:underline"
                 >
                   Review breached tickets →
@@ -146,7 +146,7 @@ export function SLAComplianceWidget({ stats }: SLAComplianceWidgetProps) {
                   {stats.at_risk} ticket{stats.at_risk !== 1 ? 's' : ''} at risk
                 </p>
                 <Link
-                  href="/dashboard/tickets?sla=at-risk"
+                  href="/dashboard/tickets?sla=warning"
                   className="text-xs text-amber-600 hover:underline"
                 >
                   Take action now →

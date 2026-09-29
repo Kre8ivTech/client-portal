@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { getPortalBranding } from "@/lib/actions/portal-branding";
 import { getAuthSettings, verifyRecaptcha, type AuthSettings } from "@/lib/actions/auth-settings";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
+import { getLoginQueryMessage } from "@/lib/auth/login-query-message";
 import { SSOButtons } from "@/components/auth/sso-buttons";
 import { MFAVerify } from "@/components/auth/mfa-verify";
 
@@ -61,11 +62,9 @@ export default function LoginPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    if (params.get("error") === "auth_callback_failed") {
-      setMessage({
-        type: "error",
-        text: "Authentication failed. Please ensure the callback URL is configured correctly.",
-      });
+    const notice = getLoginQueryMessage(params);
+    if (notice) {
+      setMessage(notice);
       window.history.replaceState({}, "", window.location.pathname);
     }
     if (params.get("mfa_required") === "1") {
@@ -91,20 +90,6 @@ export default function LoginPage() {
         setShowMFA(true);
       };
       void loadMfaChallenge();
-    }
-    if (params.get("session_expired") === "1") {
-      setMessage({
-        type: "error",
-        text: "Your session expired due to inactivity. Please sign in again.",
-      });
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-    if (params.get("security_error") === "1") {
-      setMessage({
-        type: "error",
-        text: "We could not verify your session security settings. Please sign in again. If this keeps happening, contact support.",
-      });
-      window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
 
@@ -416,6 +401,7 @@ export default function LoginPage() {
 
           {message && (
             <div
+              role="alert"
               className={cn(
                 "p-4 rounded-xl flex items-start gap-4 text-sm animate-in fade-in slide-in-from-top-4 duration-300",
                 message.type === "success"

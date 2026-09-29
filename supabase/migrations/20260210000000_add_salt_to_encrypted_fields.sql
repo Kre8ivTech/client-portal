@@ -22,40 +22,35 @@ ALTER TABLE app_settings
   ADD COLUMN aws_s3_config_salt TEXT;
 
 COMMENT ON COLUMN app_settings.aws_s3_config_salt IS
-  'Random salt used for AWS S3 credential encryption (32 bytes base64-encoded). ' ||
-  'Must be stored alongside encrypted data for decryption. ' ||
-  'Each encryption operation uses a unique salt for security.';
+  'Random salt used for AWS S3 credential encryption (32 bytes base64-encoded). Must be stored alongside encrypted data for decryption. Each encryption operation uses a unique salt for security.';
 
 -- Add check constraint to ensure salt is present when encrypted data exists
 -- This prevents storing encrypted data without its salt
 ALTER TABLE app_settings
   ADD CONSTRAINT check_salt_with_encrypted_config
   CHECK (
-    (aws_s3_config IS NULL AND aws_s3_config_salt IS NULL) OR
-    (aws_s3_config IS NOT NULL AND aws_s3_config_salt IS NOT NULL)
+    (aws_s3_config_encrypted IS NULL AND aws_s3_config_salt IS NULL) OR
+    (aws_s3_config_encrypted IS NOT NULL AND aws_s3_config_salt IS NOT NULL)
   );
 
 COMMENT ON CONSTRAINT check_salt_with_encrypted_config ON app_settings IS
-  'Ensures salt is always stored with encrypted AWS S3 credentials. ' ||
-  'Prevents decryption failures from missing salt.';
+  'Ensures salt is always stored with encrypted AWS S3 credentials. Prevents decryption failures from missing salt.';
 
--- Add index for performance when querying organizations with encrypted credentials
-CREATE INDEX idx_app_settings_encrypted_credentials
-  ON app_settings(organization_id)
-  WHERE aws_s3_config IS NOT NULL;
+-- Add index for performance when querying encrypted credentials
+CREATE INDEX IF NOT EXISTS idx_app_settings_encrypted_credentials
+  ON app_settings(aws_s3_config_encrypted)
+  WHERE aws_s3_config_encrypted IS NOT NULL;
 
 COMMENT ON INDEX idx_app_settings_encrypted_credentials IS
-  'Performance index for querying organizations with encrypted AWS S3 credentials. ' ||
-  'Used by admin panels and credential migration scripts.';
+  'Performance index for querying encrypted AWS S3 credentials. Used by admin panels and credential migration scripts.';
 
--- Add index for audit queries (find organizations with specific auth tag patterns)
-CREATE INDEX idx_app_settings_auth_tag
+-- Add index for audit queries (find rows with specific auth tag patterns)
+CREATE INDEX IF NOT EXISTS idx_app_settings_auth_tag
   ON app_settings(aws_s3_config_auth_tag)
   WHERE aws_s3_config_auth_tag IS NOT NULL;
 
 COMMENT ON INDEX idx_app_settings_auth_tag IS
-  'Performance index for encrypted credential auditing and validation queries. ' ||
-  'Used by security audit scripts.';
+  'Performance index for encrypted credential auditing and validation queries. Used by security audit scripts.';
 
 -- RLS Policies: No changes needed
 -- Existing RLS policies on app_settings automatically apply to the new column:

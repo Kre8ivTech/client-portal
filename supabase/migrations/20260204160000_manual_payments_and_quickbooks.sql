@@ -65,7 +65,7 @@ CREATE POLICY "Account managers can view QB integrations"
   ON quickbooks_integrations FOR SELECT
   USING (
     organization_id IN (
-      SELECT organization_id FROM profiles
+      SELECT organization_id FROM users
       WHERE id = auth.uid()
       AND (
         role = 'super_admin'
@@ -78,7 +78,7 @@ CREATE POLICY "Account managers can manage QB integrations"
   ON quickbooks_integrations FOR ALL
   USING (
     organization_id IN (
-      SELECT organization_id FROM profiles
+      SELECT organization_id FROM users
       WHERE id = auth.uid()
       AND (
         role = 'super_admin'
@@ -155,7 +155,7 @@ BEGIN
   -- Get user profile
   SELECT role, is_account_manager, organization_id
   INTO user_role, user_is_manager, user_org_id
-  FROM profiles
+  FROM users
   WHERE id = auth.uid();
 
   -- Get invoice organization
@@ -189,7 +189,7 @@ CREATE POLICY "Account managers can create payments"
   ON invoice_payments FOR INSERT
   WITH CHECK (
     EXISTS (
-      SELECT 1 FROM profiles
+      SELECT 1 FROM users
       WHERE id = auth.uid()
       AND (
         role = 'super_admin'
@@ -233,7 +233,7 @@ CREATE POLICY "Account managers can view payment audit log"
     invoice_id IN (
       SELECT id FROM invoices
       WHERE organization_id IN (
-        SELECT organization_id FROM profiles
+        SELECT organization_id FROM users
         WHERE id = auth.uid()
         AND (
           role = 'super_admin'

@@ -11,7 +11,7 @@ CREATE TABLE service_request_responses (
 
   -- Foreign Keys
   service_request_id UUID NOT NULL REFERENCES service_requests(id) ON DELETE CASCADE,
-  responder_id UUID NOT NULL REFERENCES profiles(id),
+  responder_id UUID NOT NULL REFERENCES public.users(id),
 
   -- Response Details
   response_type TEXT NOT NULL CHECK (response_type IN ('admin_response', 'client_feedback')),
@@ -69,7 +69,7 @@ COMMENT ON COLUMN service_requests.status IS 'Request status: pending (new), res
 
 ALTER TABLE service_requests
   ADD COLUMN latest_response_at TIMESTAMPTZ,
-  ADD COLUMN latest_response_by UUID REFERENCES profiles(id),
+  ADD COLUMN latest_response_by UUID REFERENCES public.users(id),
   ADD COLUMN response_count INTEGER DEFAULT 0;
 
 COMMENT ON COLUMN service_requests.latest_response_at IS 'Timestamp of most recent response (admin or client)';
@@ -90,7 +90,7 @@ CREATE POLICY "Users can view responses for their requests"
       SELECT id FROM service_requests
       WHERE requested_by = auth.uid()
         OR organization_id IN (
-          SELECT organization_id FROM profiles
+          SELECT organization_id FROM public.users
           WHERE id = auth.uid()
         )
     )
@@ -101,10 +101,10 @@ CREATE POLICY "Staff can view org responses"
   ON service_request_responses FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-        AND profiles.role IN ('super_admin', 'staff', 'partner')
-        AND profiles.organization_id IN (
+      SELECT 1 FROM public.users
+      WHERE users.id = auth.uid()
+        AND users.role IN ('super_admin', 'staff', 'partner')
+        AND users.organization_id IN (
           SELECT sr.organization_id FROM service_requests sr
           WHERE sr.id = service_request_responses.service_request_id
         )
@@ -118,10 +118,10 @@ CREATE POLICY "Staff can create admin responses"
     response_type = 'admin_response'
     AND responder_id = auth.uid()
     AND EXISTS (
-      SELECT 1 FROM profiles
-      WHERE profiles.id = auth.uid()
-        AND profiles.role IN ('super_admin', 'staff', 'partner')
-        AND profiles.organization_id IN (
+      SELECT 1 FROM public.users
+      WHERE users.id = auth.uid()
+        AND users.role IN ('super_admin', 'staff', 'partner')
+        AND users.organization_id IN (
           SELECT sr.organization_id FROM service_requests sr
           WHERE sr.id = service_request_responses.service_request_id
         )

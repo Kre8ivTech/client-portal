@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS task_comments (
   content_html TEXT, -- Optional: for rich text rendering
   parent_comment_id UUID REFERENCES task_comments(id) ON DELETE CASCADE, -- For nested replies
   is_internal BOOLEAN DEFAULT false, -- For internal team notes vs client-visible
-  created_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  created_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
 
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS task_files (
   mime_type TEXT NOT NULL,
   storage_path TEXT NOT NULL, -- Supabase Storage path
   description TEXT,
-  uploaded_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  uploaded_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
 
@@ -83,7 +83,7 @@ CREATE POLICY "Users can view task comments in their org projects"
       JOIN projects p ON p.id = pt.project_id
       WHERE pt.id = task_comments.task_id
       AND p.organization_id IN (
-        SELECT organization_id FROM profiles
+        SELECT organization_id FROM public.users
         WHERE id = auth.uid()
       )
     )
@@ -99,7 +99,7 @@ CREATE POLICY "Partners can view task comments in client projects"
       JOIN organizations o ON o.id = p.organization_id
       WHERE pt.id = task_comments.task_id
       AND o.parent_org_id IN (
-        SELECT organization_id FROM profiles
+        SELECT organization_id FROM public.users
         WHERE id = auth.uid()
       )
     )
@@ -128,7 +128,7 @@ CREATE POLICY "Users can create task comments in org projects"
       JOIN projects p ON p.id = pt.project_id
       WHERE pt.id = task_comments.task_id
       AND p.organization_id IN (
-        SELECT organization_id FROM profiles
+        SELECT organization_id FROM public.users
         WHERE id = auth.uid()
       )
     )
@@ -172,7 +172,7 @@ CREATE POLICY "Users can view task files in their org projects"
       JOIN projects p ON p.id = pt.project_id
       WHERE pt.id = task_files.task_id
       AND p.organization_id IN (
-        SELECT organization_id FROM profiles
+        SELECT organization_id FROM public.users
         WHERE id = auth.uid()
       )
     )
@@ -188,7 +188,7 @@ CREATE POLICY "Partners can view task files in client projects"
       JOIN organizations o ON o.id = p.organization_id
       WHERE pt.id = task_files.task_id
       AND o.parent_org_id IN (
-        SELECT organization_id FROM profiles
+        SELECT organization_id FROM public.users
         WHERE id = auth.uid()
       )
     )
@@ -217,7 +217,7 @@ CREATE POLICY "Users can upload task files in org projects"
       JOIN projects p ON p.id = pt.project_id
       WHERE pt.id = task_files.task_id
       AND p.organization_id IN (
-        SELECT organization_id FROM profiles
+        SELECT organization_id FROM public.users
         WHERE id = auth.uid()
       )
     )

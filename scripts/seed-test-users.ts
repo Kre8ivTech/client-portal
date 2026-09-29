@@ -135,14 +135,23 @@ async function main() {
 
     const orgId = orgByRole[u.role];
     const { error: updateError } = await (supabase as any)
-      .from("profiles")
-      .update({ role: u.role, organization_id: orgId, name: u.name })
+      .from("users")
+      .update({ role: u.role, organization_id: orgId })
       .eq("id", userId);
 
     if (updateError) {
-      console.error("Failed to update profile for", u.email, updateError);
+      console.error("Failed to update user for", u.email, updateError);
     } else {
-      console.log("Updated profile:", u.email, "role=" + u.role, "org=" + orgId);
+      console.log("Updated user:", u.email, "role=" + u.role, "org=" + orgId);
+    }
+
+    const { error: profileError } = await (supabase as any)
+      .from("profiles")
+      .update({ name: u.name })
+      .eq("user_id", userId);
+
+    if (profileError) {
+      console.error("Failed to update profile for", u.email, profileError);
     }
   }
 

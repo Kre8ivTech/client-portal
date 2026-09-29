@@ -34,7 +34,7 @@ CREATE INDEX idx_ai_usage_user_id ON ai_usage_logs(user_id);
 CREATE INDEX idx_ai_usage_org_id ON ai_usage_logs(organization_id);
 CREATE INDEX idx_ai_usage_created_at ON ai_usage_logs(created_at DESC);
 CREATE INDEX idx_ai_usage_provider ON ai_usage_logs(provider);
-CREATE INDEX idx_ai_usage_date ON ai_usage_logs(DATE(created_at));
+CREATE INDEX idx_ai_usage_date ON ai_usage_logs(created_at);
 
 -- Enable RLS
 ALTER TABLE ai_usage_logs ENABLE ROW LEVEL SECURITY;

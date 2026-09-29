@@ -1,12 +1,17 @@
 -- Email Templates for Task Submission Notifications
 -- Adds templates for service request and project request notifications
 
+-- Idempotent inserts need a non-partial unique key. The default-only unique index
+-- does not match ON CONFLICT for templates that are not marked is_default.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_email_templates_type_org
+ON email_templates(template_type, COALESCE(organization_id, '00000000-0000-0000-0000-000000000000'::uuid));
+
 -- Service Request Submitted (to admin and assigned staff)
 INSERT INTO email_templates (
   template_type,
   name,
   subject,
-  body,
+  body_html,
   organization_id
 ) VALUES (
   'new_service_request',
@@ -110,7 +115,7 @@ INSERT INTO email_templates (
   template_type,
   name,
   subject,
-  body,
+  body_html,
   organization_id
 ) VALUES (
   'new_project_request',
@@ -219,7 +224,7 @@ INSERT INTO email_templates (
   template_type,
   name,
   subject,
-  body,
+  body_html,
   organization_id
 ) VALUES (
   'task_acknowledgement_reminder',

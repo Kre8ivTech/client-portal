@@ -42,7 +42,7 @@ CREATE POLICY "Super admins can view QB app configs"
   ON quickbooks_app_config FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM profiles
+      SELECT 1 FROM public.users
       WHERE id = auth.uid()
       AND role = 'super_admin'
     )
@@ -53,7 +53,7 @@ CREATE POLICY "Super admins can manage QB app configs"
   ON quickbooks_app_config FOR ALL
   USING (
     EXISTS (
-      SELECT 1 FROM profiles
+      SELECT 1 FROM public.users
       WHERE id = auth.uid()
       AND role = 'super_admin'
     )

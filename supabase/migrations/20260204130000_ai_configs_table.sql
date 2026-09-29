@@ -15,11 +15,21 @@ CREATE TABLE IF NOT EXISTS ai_configs (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Earlier migration created ai_configs with a required role. Add the columns this
+-- migration expects, then seed a global row that satisfies that constraint.
+ALTER TABLE ai_configs ADD COLUMN IF NOT EXISTS model_params JSONB DEFAULT '{
+    "temperature": 0.7,
+    "max_tokens": 1024
+}'::jsonb;
+ALTER TABLE ai_configs ADD COLUMN IF NOT EXISTS greeting_message TEXT DEFAULT 'Hello! I''m your AI assistant. How can I help you today?';
+ALTER TABLE ai_configs ALTER COLUMN role SET DEFAULT 'global';
+
 -- Create a default global config if none exists
-INSERT INTO ai_configs (id, organization_id, system_prompt)
+INSERT INTO ai_configs (id, organization_id, role, system_prompt)
 VALUES (
     '00000000-0000-0000-0000-000000000002',
     NULL,
+    'global',
     'You are a helpful AI assistant for the KT-Portal client management system. You help users with:
 
 - Support tickets and service requests

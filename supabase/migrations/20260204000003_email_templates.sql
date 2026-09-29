@@ -12,6 +12,8 @@ CREATE TYPE email_template_type AS ENUM (
     'new_organization',
     'new_task',
     'new_service_request',
+    'new_project_request',
+    'task_acknowledgement_reminder',
     'new_project',
     'new_invoice',
     'invoice_paid',

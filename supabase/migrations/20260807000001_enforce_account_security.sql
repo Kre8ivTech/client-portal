@@ -107,14 +107,19 @@ BEGIN
       AND c.relname = 'objects'
       AND c.relrowsecurity
   ) THEN
-    DROP POLICY IF EXISTS "Enforce active account and MFA" ON storage.objects;
-    CREATE POLICY "Enforce active account and MFA"
-      ON storage.objects
-      AS RESTRICTIVE
-      FOR ALL
-      TO authenticated
-      USING ((SELECT public.current_user_meets_access_policy()))
-      WITH CHECK ((SELECT public.current_user_meets_access_policy()));
+    BEGIN
+      DROP POLICY IF EXISTS "Enforce active account and MFA" ON storage.objects;
+      CREATE POLICY "Enforce active account and MFA"
+        ON storage.objects
+        AS RESTRICTIVE
+        FOR ALL
+        TO authenticated
+        USING ((SELECT public.current_user_meets_access_policy()))
+        WITH CHECK ((SELECT public.current_user_meets_access_policy()));
+    EXCEPTION
+      WHEN insufficient_privilege THEN
+        RAISE NOTICE 'skipping storage.objects access policy: %', SQLERRM;
+    END;
   END IF;
 END;
 $$;

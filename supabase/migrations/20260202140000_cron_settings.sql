@@ -6,11 +6,12 @@
 -- APP SETTINGS TABLE EXTENSION
 -- =============================================================================
 
--- Check if app_settings table exists, if not create it
+-- The earlier app_settings migration creates a singleton integration row.
+-- SLA and notification settings are stored as additional key/value rows on that table.
 CREATE TABLE IF NOT EXISTS app_settings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    key VARCHAR(255) UNIQUE NOT NULL,
-    value JSONB NOT NULL,
+    key VARCHAR(255),
+    value JSONB,
     description TEXT,
     category VARCHAR(100),
     updated_by UUID REFERENCES users(id),
@@ -18,10 +19,19 @@ CREATE TABLE IF NOT EXISTS app_settings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS key VARCHAR(255);
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS value JSONB;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS category VARCHAR(100);
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES users(id);
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
 -- Enable RLS
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
 -- Only super admins can manage app settings
+DROP POLICY IF EXISTS "Super admins can manage app settings" ON app_settings;
 CREATE POLICY "Super admins can manage app settings"
 ON app_settings FOR ALL
 TO authenticated
@@ -39,6 +49,7 @@ WITH CHECK (
 );
 
 -- Staff can view app settings
+DROP POLICY IF EXISTS "Staff can view app settings" ON app_settings;
 CREATE POLICY "Staff can view app settings"
 ON app_settings FOR SELECT
 TO authenticated
@@ -49,11 +60,12 @@ USING (
     )
 );
 
--- Create index
-CREATE INDEX IF NOT EXISTS idx_app_settings_key ON app_settings(key);
+-- Create index. The singleton row keeps key NULL, so uniqueness is partial.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_app_settings_key ON app_settings(key) WHERE key IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_app_settings_category ON app_settings(category);
 
 -- Trigger for updated_at
+DROP TRIGGER IF EXISTS update_app_settings_updated_at ON app_settings;
 CREATE TRIGGER update_app_settings_updated_at
     BEFORE UPDATE ON app_settings
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -63,8 +75,9 @@ CREATE TRIGGER update_app_settings_updated_at
 -- =============================================================================
 
 -- Insert default SLA monitoring settings
-INSERT INTO app_settings (key, value, description, category) VALUES
+INSERT INTO app_settings (id, key, value, description, category) VALUES
 (
+    gen_random_uuid(),
     'sla_monitoring',
     '{
         "enabled": true,
@@ -83,6 +96,7 @@ INSERT INTO app_settings (key, value, description, category) VALUES
     'monitoring'
 ),
 (
+    gen_random_uuid(),
     'sla_response_times',
     '{
         "standard": {
@@ -97,6 +111,7 @@ INSERT INTO app_settings (key, value, description, category) VALUES
     'monitoring'
 ),
 (
+    gen_random_uuid(),
     'notification_settings',
     '{
         "enabled": true,
@@ -111,7 +126,7 @@ INSERT INTO app_settings (key, value, description, category) VALUES
     'Global notification system settings',
     'notifications'
 )
-ON CONFLICT (key) DO NOTHING;
+ON CONFLICT (key) WHERE key IS NOT NULL DO NOTHING;
 
 -- =============================================================================
 -- FUNCTION: Get App Setting

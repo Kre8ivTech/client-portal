@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS task_acknowledgements (
   task_id UUID NOT NULL,
 
   -- Who should acknowledge (recipient of notification)
-  acknowledged_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  acknowledged_by UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
 
   -- When acknowledged (NULL until acknowledged)
   acknowledged_at TIMESTAMPTZ,
@@ -55,7 +55,7 @@ CREATE POLICY "Users can view org acknowledgements"
   ON task_acknowledgements FOR SELECT
   USING (
     organization_id IN (
-      SELECT organization_id FROM profiles
+      SELECT organization_id FROM public.users
       WHERE id = auth.uid()
     )
   );
@@ -65,7 +65,7 @@ CREATE POLICY "Staff can create acknowledgements"
   ON task_acknowledgements FOR INSERT
   WITH CHECK (
     organization_id IN (
-      SELECT organization_id FROM profiles
+      SELECT organization_id FROM public.users
       WHERE id = auth.uid()
       AND role IN ('super_admin', 'staff', 'partner', 'partner_staff')
     )
@@ -78,7 +78,7 @@ CREATE POLICY "Staff can update own acknowledgements"
   USING (
     acknowledged_by = auth.uid()
     AND organization_id IN (
-      SELECT organization_id FROM profiles
+      SELECT organization_id FROM public.users
       WHERE id = auth.uid()
     )
   )
@@ -93,7 +93,7 @@ CREATE POLICY "Partners can view client acknowledgements"
     organization_id IN (
       SELECT id FROM organizations
       WHERE parent_org_id IN (
-        SELECT organization_id FROM profiles
+        SELECT organization_id FROM public.users
         WHERE id = auth.uid()
       )
     )

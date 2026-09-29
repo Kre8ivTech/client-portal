@@ -44,7 +44,7 @@ CREATE POLICY "Super admins can view S3 configs"
   ON aws_s3_config FOR SELECT
   USING (
     EXISTS (
-      SELECT 1 FROM profiles
+      SELECT 1 FROM public.users
       WHERE id = auth.uid()
       AND role = 'super_admin'
     )
@@ -54,7 +54,7 @@ CREATE POLICY "Super admins can manage S3 configs"
   ON aws_s3_config FOR ALL
   USING (
     EXISTS (
-      SELECT 1 FROM profiles
+      SELECT 1 FROM public.users
       WHERE id = auth.uid()
       AND role = 'super_admin'
     )

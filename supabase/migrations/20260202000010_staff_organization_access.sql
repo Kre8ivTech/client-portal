@@ -211,7 +211,7 @@ CREATE POLICY "Users can view invoices"
     )
     OR
     -- Partners can see invoices for their child organizations
-    client_org_id IN (
+    organization_id IN (
       SELECT id FROM public.organizations
       WHERE parent_org_id IN (
         SELECT organization_id
@@ -243,7 +243,7 @@ CREATE POLICY "Users can view contracts"
     )
     OR
     -- Partners can see contracts for their child organizations
-    client_org_id IN (
+    organization_id IN (
       SELECT id FROM public.organizations
       WHERE parent_org_id IN (
         SELECT organization_id
@@ -275,7 +275,7 @@ CREATE POLICY "Users can view service requests"
     )
     OR
     -- Partners can see service requests for their child organizations
-    client_org_id IN (
+    organization_id IN (
       SELECT id FROM public.organizations
       WHERE parent_org_id IN (
         SELECT organization_id
@@ -300,11 +300,7 @@ CREATE POLICY "Users can view conversations"
     )
     OR
     -- Users can see conversations they're part of
-    auth.uid() = ANY(
-      SELECT jsonb_array_elements_text(participant_ids)::uuid
-      FROM public.conversations c
-      WHERE c.id = conversations.id
-    )
+    auth.uid() = ANY(participant_ids)
     OR
     -- Users can see conversations in their organization
     organization_id IN (

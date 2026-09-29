@@ -18,7 +18,7 @@ CREATE POLICY "Staff can view time entries in their org"
 CREATE POLICY "Staff can insert own time entries"
   ON time_entries FOR INSERT
   WITH CHECK (
-    profile_id = auth.uid()
+    user_id = auth.uid()
     AND (
       EXISTS (
         SELECT 1 FROM users 
@@ -31,7 +31,7 @@ CREATE POLICY "Staff can insert own time entries"
 CREATE POLICY "Staff can update own time entries"
   ON time_entries FOR UPDATE
   USING (
-    profile_id = auth.uid()
+    user_id = auth.uid()
     AND (
       EXISTS (
         SELECT 1 FROM users 
@@ -44,7 +44,7 @@ CREATE POLICY "Staff can update own time entries"
 CREATE POLICY "Staff can delete own time entries"
   ON time_entries FOR DELETE
   USING (
-    profile_id = auth.uid()
+    user_id = auth.uid()
     AND (
       EXISTS (
         SELECT 1 FROM users 

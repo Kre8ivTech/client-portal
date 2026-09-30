@@ -75,7 +75,7 @@ export function LiveChatWidget({
     return (
       <Button 
         onClick={toggleChat}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl bg-blue-600 hover:bg-blue-700 transition-all hover:scale-110 active:scale-95 z-50"
+        className="fixed bottom-24 right-4 md:bottom-6 md:right-6 h-14 w-14 rounded-full shadow-2xl bg-blue-600 hover:bg-blue-700 transition-all hover:scale-110 active:scale-95 z-50"
         aria-label="Open live chat"
       >
         <MessageCircle size={28} />
@@ -88,7 +88,7 @@ export function LiveChatWidget({
 
   return (
     <div className={cn(
-      "fixed bottom-6 right-6 w-96 max-w-[calc(100vw-3rem)] bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-200 z-50 overflow-hidden transition-all duration-300",
+      "fixed bottom-24 right-4 w-96 max-w-[calc(100vw-2rem)] md:bottom-6 md:right-6 bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-200 z-50 overflow-hidden transition-all duration-300",
       isMinimized ? "h-16" : "h-[500px]"
     )}>
       {/* Header */}

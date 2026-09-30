@@ -1,4 +1,5 @@
 import { buildAssignmentDrafts, nextRunAt, type ScheduleFrequency } from "@/lib/ai/workflow-schedule";
+import { formatAttachmentSummary, toAgentContexts, type AgentSourceRow } from "@/lib/ai/format-agent-context";
 
 type QueryResult<T> = { data: T | null; error: { message: string } | null };
 
@@ -6,11 +7,13 @@ type Db = {
   from: (table: string) => any;
 };
 
+type StepAgent = AgentSourceRow & { name?: string };
+
 type StepRow = {
   id: string;
   position: number;
   instruction: string;
-  ai_agents?: { name?: string } | { name?: string }[] | null;
+  ai_agents?: StepAgent | StepAgent[] | null;
 };
 
 type ScheduleRow = {
@@ -30,10 +33,35 @@ type ScheduleRow = {
   } | null;
 };
 
-function agentName(step: StepRow): string {
+function agentRecord(step: StepRow): StepAgent | null {
   const agent = step.ai_agents;
-  if (Array.isArray(agent)) return agent[0]?.name || "Agent";
-  return agent?.name || "Agent";
+  if (Array.isArray(agent)) return agent[0] ?? null;
+  return agent ?? null;
+}
+
+function agentName(step: StepRow): string {
+  return agentRecord(step)?.name || "Agent";
+}
+
+function stepDetails(step: StepRow): string {
+  const agent = agentRecord(step);
+  const [context] = toAgentContexts([
+    {
+      name: agent?.name || "Agent",
+      href: agent?.href || "",
+      instruction: agent?.instruction || "",
+      ai_skills: agent?.ai_skills,
+      ai_tasks: agent?.ai_tasks,
+      ai_agent_connectors: agent?.ai_agent_connectors,
+      ai_agent_guardrails: agent?.ai_agent_guardrails,
+    },
+  ]);
+  const summary = formatAttachmentSummary({
+    skills: context?.skills ?? [],
+    connectors: (context?.connectors ?? []).map((connector) => connector.name),
+    guardrails: (context?.guardrails ?? []).map((guardrail) => `${guardrail.name}: ${guardrail.instruction}`),
+  });
+  return `${step.instruction}\n\n${summary}`;
 }
 
 export async function materializeDueSchedules(
@@ -44,7 +72,7 @@ export async function materializeDueSchedules(
   let query = db
     .from("ai_workflow_schedules")
     .select(
-      "id, workflow_id, assignee_id, frequency, weekday, time_of_day, timezone, created_by, ai_workflows(id, name, status, ai_workflow_steps(id, position, instruction, ai_agents(name)))",
+      "id, workflow_id, assignee_id, frequency, weekday, time_of_day, timezone, created_by, ai_workflows(id, name, status, ai_workflow_steps(id, position, instruction, ai_agents(name, href, instruction, ai_skills(name, is_active, display_order), ai_agent_connectors(is_enabled, ai_connectors(name, is_active)), ai_agent_guardrails(is_enabled, ai_guardrails(name, instruction, is_active)))))",
     )
     .eq("is_active", true);
 
@@ -77,7 +105,7 @@ export async function materializeDueSchedules(
         dueAt: now,
         steps: steps.map((step) => ({
           id: step.id,
-          instruction: step.instruction,
+          instruction: stepDetails(step),
           agentName: agentName(step),
         })),
       });

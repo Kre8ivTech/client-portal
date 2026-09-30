@@ -3,11 +3,17 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/require-role";
 import {
   AgentWorkflowManager,
+  type AgentOption,
   type AssignmentView,
   type PersonOption,
   type ScheduleView,
   type WorkflowView,
 } from "@/components/admin/agent-workflow-manager";
+import type {
+  AgentSetupView,
+  CatalogConnector,
+  CatalogGuardrail,
+} from "@/components/admin/agent-attachments";
 
 type StepRow = {
   id: string;
@@ -22,13 +28,33 @@ function relatedName(value: { name?: string } | { name?: string }[] | null | und
   return value?.name || fallback;
 }
 
+function one<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? value[0] ?? null : value;
+}
+
 export default async function AgentWorkflowsPage() {
   await requireRole(["super_admin", "staff"]);
   const supabase = await createServerSupabaseClient();
 
-  const [{ data: agentRows }, { data: peopleRows }, { data: workflowRows }, { data: assignmentRows }, { data: scheduleRows }] =
-    await Promise.all([
-      supabase.from("ai_agents").select("id, name, display_order").eq("is_active", true).order("display_order"),
+  const [
+    { data: agentRows },
+    { data: connectorRows },
+    { data: guardrailRows },
+    { data: peopleRows },
+    { data: workflowRows },
+    { data: assignmentRows },
+    { data: scheduleRows },
+  ] = await Promise.all([
+      supabase
+        .from("ai_agents")
+        .select(
+          "id, name, display_order, ai_skills(id, name, description, is_active, display_order), ai_agent_connectors(id, is_enabled, ai_connectors(id, name, description)), ai_agent_guardrails(id, is_enabled, ai_guardrails(id, name, instruction, severity))",
+        )
+        .eq("is_active", true)
+        .order("display_order"),
+      supabase.from("ai_connectors").select("id, name, description").eq("is_active", true).order("name"),
+      supabase.from("ai_guardrails").select("id, name, instruction, severity").eq("is_active", true).order("name"),
       supabase.from("users").select("id, email, role, status, profiles(name)").in("role", ["super_admin", "staff"]).order("email"),
       supabase
         .from("ai_workflows")
@@ -52,6 +78,57 @@ export default async function AgentWorkflowsPage() {
       const name = profile?.name as string | undefined;
       return { id: person.id, label: name ? `${name} (${person.email})` : person.email };
     });
+
+  const setupAgents: AgentSetupView[] = ((agentRows ?? []) as any[]).map((agent) => {
+    const skills = ([...(agent.ai_skills ?? [])] as any[])
+      .filter((skill) => skill.is_active !== false)
+      .sort((left, right) => (left.display_order ?? 0) - (right.display_order ?? 0))
+      .map((skill) => ({ id: skill.id, name: skill.name, description: skill.description }));
+    const connectors = ((agent.ai_agent_connectors ?? []) as any[])
+      .filter((link) => link.is_enabled !== false)
+      .map((link) => {
+        const connector = one<{ id: string; name: string; description: string }>(link.ai_connectors);
+        if (!connector) return null;
+        return { id: link.id, connectorId: connector.id, name: connector.name, description: connector.description };
+      })
+      .filter((connector): connector is AgentSetupView["connectors"][number] => connector != null);
+    const guardrails = ((agent.ai_agent_guardrails ?? []) as any[])
+      .filter((link) => link.is_enabled !== false)
+      .map((link) => {
+        const guardrail = one<AgentSetupView["guardrails"][number]>(link.ai_guardrails);
+        if (!guardrail?.name) return null;
+        return {
+          id: link.id,
+          guardrailId: guardrail.id,
+          name: guardrail.name,
+          instruction: guardrail.instruction,
+          severity: guardrail.severity === "warn" ? "warn" : "block",
+        };
+      })
+      .filter((guardrail): guardrail is AgentSetupView["guardrails"][number] => guardrail != null);
+    return { id: agent.id, name: agent.name, skills, connectors, guardrails };
+  });
+
+  const agentOptions: AgentOption[] = setupAgents.map((agent) => ({
+    id: agent.id,
+    name: agent.name,
+    skills: agent.skills.map((skill) => skill.name),
+    connectors: agent.connectors.map((connector) => connector.name),
+    guardrails: agent.guardrails.map((guardrail) => guardrail.name),
+  }));
+
+  const connectorCatalog: CatalogConnector[] = ((connectorRows ?? []) as CatalogConnector[]).map((connector) => ({
+    id: connector.id,
+    name: connector.name,
+    description: connector.description,
+  }));
+
+  const guardrailCatalog: CatalogGuardrail[] = ((guardrailRows ?? []) as any[]).map((guardrail) => ({
+    id: guardrail.id,
+    name: guardrail.name,
+    instruction: guardrail.instruction,
+    severity: guardrail.severity === "warn" ? "warn" : "block",
+  }));
 
   const workflows: WorkflowView[] = ((workflowRows ?? []) as any[]).map((workflow) => ({
     id: workflow.id,
@@ -104,14 +181,17 @@ export default async function AgentWorkflowsPage() {
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Agent workflows</h2>
         <p className="mt-1 text-muted-foreground">
-          Build a workflow from capability agents, assign the work, and schedule when it runs.{" "}
+          Build a workflow from capability agents, assign the work, and schedule when it runs. Add skills, connectors, and guardrails on Agent setup.{" "}
           <Link href="/dashboard/admin/ai-assistant" className="underline">
             Review the agent catalog
           </Link>
         </p>
       </div>
       <AgentWorkflowManager
-        agents={(agentRows ?? []).map((agent: { id: string; name: string }) => ({ id: agent.id, name: agent.name }))}
+        agents={agentOptions}
+        setupAgents={setupAgents}
+        connectorCatalog={connectorCatalog}
+        guardrailCatalog={guardrailCatalog}
         people={people}
         workflows={workflows}
         assignments={assignments}

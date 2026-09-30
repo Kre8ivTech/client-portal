@@ -18,8 +18,20 @@ import {
   updateAgentTaskStatus,
 } from "@/lib/actions/agent-workflows";
 import { SCHEDULE_TIME_ZONES, WEEKDAY_LABELS } from "@/lib/ai/workflow-schedule";
+import {
+  AgentAttachments,
+  type AgentSetupView,
+  type CatalogConnector,
+  type CatalogGuardrail,
+} from "@/components/admin/agent-attachments";
 
-export type AgentOption = { id: string; name: string };
+export type AgentOption = {
+  id: string;
+  name: string;
+  skills: string[];
+  connectors: string[];
+  guardrails: string[];
+};
 export type PersonOption = { id: string; label: string };
 export type WorkflowStepView = { id: string; agentId: string; agentName: string; instruction: string };
 export type WorkflowView = {
@@ -67,12 +79,18 @@ function scheduleLabel(schedule: ScheduleView) {
 
 export function AgentWorkflowManager({
   agents,
+  setupAgents,
+  connectorCatalog,
+  guardrailCatalog,
   people,
   workflows,
   assignments,
   schedules,
 }: {
   agents: AgentOption[];
+  setupAgents: AgentSetupView[];
+  connectorCatalog: CatalogConnector[];
+  guardrailCatalog: CatalogGuardrail[];
   people: PersonOption[];
   workflows: WorkflowView[];
   assignments: AssignmentView[];
@@ -186,6 +204,7 @@ export function AgentWorkflowManager({
           <TabsTrigger value="workflows">Workflows</TabsTrigger>
           <TabsTrigger value="assignments">Assignments</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
+          <TabsTrigger value="setup">Agent setup</TabsTrigger>
         </TabsList>
 
         <TabsContent value="workflows" className="grid gap-4 lg:grid-cols-[280px_1fr]">
@@ -236,7 +255,9 @@ export function AgentWorkflowManager({
 
             <fieldset className="space-y-3">
               <legend className="text-sm font-medium">Steps</legend>
-              {steps.map((step, index) => (
+              {steps.map((step, index) => {
+                const stepAgent = agents.find((agent) => agent.id === step.agentId);
+                return (
                 <div key={step.key} className="space-y-2 rounded-md border p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-medium">Step {index + 1}</p>
@@ -269,13 +290,19 @@ export function AgentWorkflowManager({
                         <option key={agent.id} value={agent.id}>{agent.name}</option>
                       ))}
                     </select>
+                    {stepAgent ? (
+                      <p className="text-xs text-muted-foreground">
+                        Skills: {stepAgent.skills.join(", ") || "None"}. Connectors: {stepAgent.connectors.join(", ") || "None"}. Guardrails: {stepAgent.guardrails.join(", ") || "None"}.
+                      </p>
+                    ) : null}
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor={`step-instruction-${step.key}`}>Instruction</Label>
                     <Textarea id={`step-instruction-${step.key}`} value={step.instruction} onChange={(event) => setSteps((current) => current.map((item) => item.key === step.key ? { ...item, instruction: event.target.value } : item))} required minLength={3} rows={2} />
                   </div>
                 </div>
-              ))}
+                );
+              })}
               <Button type="button" variant="outline" onClick={() => setSteps((current) => [...current, { key: crypto.randomUUID(), agentId: agents[0]?.id ?? "", instruction: "" }])}>
                 Add step
               </Button>
@@ -505,6 +532,10 @@ export function AgentWorkflowManager({
               ))}
             </ul>
           </div>
+        </TabsContent>
+
+        <TabsContent value="setup">
+          <AgentAttachments agents={setupAgents} connectorCatalog={connectorCatalog} guardrailCatalog={guardrailCatalog} />
         </TabsContent>
       </Tabs>
     </div>

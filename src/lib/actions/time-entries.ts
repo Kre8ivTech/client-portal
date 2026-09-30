@@ -3,6 +3,7 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { writeAuditLog } from "@/lib/audit";
+import { settlePlanOverage } from "@/lib/billing/settle-plan-overage";
 
 export type CreateTimeEntryResult =
   | { success: true; data: unknown }
@@ -119,6 +120,14 @@ export async function createTimeEntry(formData: FormData): Promise<CreateTimeEnt
 
     // Calculate billable hours (rounded up to nearest hour)
     const billableHours = Math.ceil(hours);
+
+    if (planAssignmentId) {
+      await settlePlanOverage({
+        planAssignmentId,
+        workType: workType === "dev" ? "dev" : "support",
+        actorId: user.id,
+      });
+    }
 
     await writeAuditLog({
       action: "time_entry.create",

@@ -16,6 +16,7 @@ import { DeliverableList } from "./deliverable-list";
 import { DeliverableForm } from "./deliverable-form";
 import { CloseTicketDialog } from "./close-ticket-dialog";
 import { TicketTimeTracking } from "./ticket-time-tracking";
+import { TicketSatisfaction } from "./ticket-satisfaction";
 import { notifyTicketAssigned } from "@/lib/actions/ticket-notifications";
 
 type Ticket = Database["public"]["Tables"]["tickets"]["Row"] & {
@@ -176,6 +177,15 @@ export function TicketDetail({
             </div>
             <DeliverableList deliverables={currentDeliverables} isStaff={isStaff} />
           </div>
+
+          {(ticket.status === "resolved" || ticket.status === "closed") && (
+            <TicketSatisfaction
+              ticketId={ticket.id}
+              rating={(ticket as Ticket & { satisfaction_rating?: number | null }).satisfaction_rating ?? null}
+              comment={(ticket as Ticket & { satisfaction_comment?: string | null }).satisfaction_comment ?? null}
+              canRate={isCreator}
+            />
+          )}
 
           <TicketComments ticketId={ticket.id} userId={userId} userRole={userRole} />
         </div>

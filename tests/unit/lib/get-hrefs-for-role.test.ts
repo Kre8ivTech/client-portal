@@ -32,6 +32,17 @@ describe("getHrefsForRole integrations", () => {
     expect(getHrefsForRole("super_admin", false)).not.toContain("/dashboard/invoices#proposals")
   })
 
+  it("shows sites and handoffs to clients and live chat to staff", () => {
+    const client = getHrefsForRole("client", false)
+    expect(client).toContain("/dashboard/sites")
+    expect(client).toContain("/dashboard/handoffs")
+    expect(client).not.toContain("/dashboard/support/chats")
+    expect(getHrefsForRole("staff", false)).toContain("/dashboard/support/chats")
+    expect(getHrefsForRole("staff", false)).toContain("/dashboard/admin/intake")
+    expect(getHrefsForRole("partner", false)).toContain("/dashboard/support/chats")
+    expect(getHrefsForRole("client", false)).not.toContain("/dashboard/admin/status")
+  })
+
   it("gives staff and super admins the agent workflow manager", () => {
     expect(getHrefsForRole("super_admin", false)).toContain("/dashboard/admin/agents")
     expect(getHrefsForRole("staff", false)).toContain("/dashboard/admin/agents")

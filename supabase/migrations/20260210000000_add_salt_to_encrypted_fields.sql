@@ -26,12 +26,15 @@ COMMENT ON COLUMN app_settings.aws_s3_config_salt IS
 
 -- Add check constraint to ensure salt is present when encrypted data exists
 -- This prevents storing encrypted data without its salt
+-- Existing rows were encrypted with the legacy static salt and have no per-row salt.
+-- NOT VALID keeps those rows decryptable and enforces the rule for new writes.
 ALTER TABLE app_settings
   ADD CONSTRAINT check_salt_with_encrypted_config
   CHECK (
     (aws_s3_config_encrypted IS NULL AND aws_s3_config_salt IS NULL) OR
     (aws_s3_config_encrypted IS NOT NULL AND aws_s3_config_salt IS NOT NULL)
-  );
+  )
+  NOT VALID;
 
 COMMENT ON CONSTRAINT check_salt_with_encrypted_config ON app_settings IS
   'Ensures salt is always stored with encrypted AWS S3 credentials. Prevents decryption failures from missing salt.';

@@ -5,6 +5,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  ...(process.env.NEXT_BUILD_WORKERS === '1' ? { experimental: { cpus: 1 } } : {}),
   outputFileTracingRoot: path.join(__dirname),
   serverExternalPackages: ['docusign-esign', 'isomorphic-dompurify', 'jsdom'],
   poweredByHeader: false,

@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.github
+tests
+playwright-report
+test-results
+coverage
+.claude
+personal
+private
+supabase/.temp
+*.md
+.env
+.env.*

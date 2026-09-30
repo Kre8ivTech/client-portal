@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openship.io/openship.schema.json",
+  "framework": "docker-compose",
+  "services": [
+    {
+      "name": "kre8ivtech-client-portal-candidate",
+      "build": ".",
+      "dockerfile": "Dockerfile",
+      "ports": ["3000"],
+      "exposed": true,
+      "exposedPort": "3000",
+      "restart": "unless-stopped",
+      "resources": {
+        "cpuCores": 1,
+        "memoryMb": 2048
+      }
+    }
+  ]
+}

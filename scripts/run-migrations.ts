@@ -159,15 +159,15 @@ function linkSupabaseProject() {
   }
 }
 
-function applyRecoveryMigrations() {
-  log('\nApplying required recovery migrations directly...', 'yellow')
-
-  execSync('npx tsx scripts/apply-recovery-migrations.ts', {
-    stdio: 'inherit',
-    env: process.env,
-  })
-
-  log('Required recovery migrations applied successfully', 'green')
+function isHistoryMismatch(errorOutput: string) {
+  return (
+    errorOutput.includes("Found local migration files") ||
+    errorOutput.includes("Remote migration versions not found") ||
+    errorOutput.includes("include-all") ||
+    errorOutput.includes("history table") ||
+    errorOutput.includes("migration history") ||
+    (errorOutput.includes("duplicate key") && errorOutput.includes("schema_migrations"))
+  );
 }
 
 function runMigrations() {
@@ -178,17 +178,14 @@ function runMigrations() {
     const dbUrl = getDbUrl()
     const dbPassword = process.env.SUPABASE_DB_PASSWORD || process.env.POSTGRES_PASSWORD
 
-    // First try normal push (without --include-all)
-    // This is safer as it only applies new migrations
-    let needsIncludeAll = false
     try {
       log('\n▶️  Attempting to apply new migrations...', 'blue')
       execSync(
         dbUrl
-          ? `${supabaseCmd} db push --db-url "${dbUrl}"`
-          : `${supabaseCmd} db push`,
+          ? `${supabaseCmd} db push --db-url "${dbUrl}" --yes`
+          : `${supabaseCmd} db push --yes`,
         {
-          stdio: ['ignore', 'pipe', 'pipe'], // Capture output to detect errors
+          stdio: ['ignore', 'pipe', 'pipe'],
           encoding: 'utf-8',
           env: {
             ...process.env,
@@ -201,10 +198,8 @@ function runMigrations() {
       log('\n✅ Migrations applied successfully!', 'green')
       return true
     } catch (pushError: any) {
-      // Capture both stdout and stderr
       const errorOutput = (pushError.stdout || '') + (pushError.stderr || '') + (pushError.message || '')
 
-      // Log the error for debugging
       if (pushError.stdout) {
         console.log(pushError.stdout)
       }
@@ -212,74 +207,18 @@ function runMigrations() {
         console.error(pushError.stderr)
       }
 
-      // Check if error is about duplicate keys (migrations already applied)
-      if (errorOutput.includes('duplicate key') && errorOutput.includes('schema_migrations')) {
-        log('Legacy duplicate migration versions detected', 'yellow')
-        applyRecoveryMigrations()
-        return true
-      }
-
-      // Check if the error is about history mismatch which can be resolved with --include-all
-      if (errorOutput.includes('include-all') || errorOutput.includes('history table') || errorOutput.includes('Found local migration files')) {
-        log('⚠️  Migration history mismatch detected. Will retry with --include-all...', 'yellow')
-        needsIncludeAll = true
-      } else {
-        // Genuine error, rethrow
+      if (!isHistoryMismatch(errorOutput)) {
         throw pushError
       }
+
+      log('Migration history has older duplicate versions. Applying versions that are not on the remote database.', 'yellow')
+      execSync('npx tsx scripts/apply-pending-migrations.ts', {
+        stdio: 'inherit',
+        env: process.env,
+      })
+      log('\n✅ Pending migrations applied successfully!', 'green')
+      return true
     }
-
-    // Only use --include-all if history mismatch detected
-    if (needsIncludeAll) {
-      log('\n▶️  Applying migrations with --include-all...', 'blue')
-      try {
-        const output = execSync(
-          dbUrl
-            ? `${supabaseCmd} db push --include-all --db-url "${dbUrl}"`
-            : `${supabaseCmd} db push --include-all`,
-          {
-            stdio: ['ignore', 'pipe', 'pipe'], // Capture output to detect duplicate key errors
-            encoding: 'utf-8',
-            env: {
-              ...process.env,
-              SUPABASE_ACCESS_TOKEN: process.env.SUPABASE_ACCESS_TOKEN,
-              SUPABASE_DB_PASSWORD: dbPassword,
-            },
-            input: 'Y\n' // Auto-confirm the prompt
-          }
-        )
-
-        // Log the output
-        if (output) {
-          console.log(output)
-        }
-
-        log('\n✅ Migrations applied successfully!', 'green')
-        return true
-      } catch (includeAllError: any) {
-        const errorOutput = (includeAllError.stdout || '') + (includeAllError.stderr || '') + (includeAllError.message || '')
-
-        // Log the error output for debugging
-        if (includeAllError.stdout) {
-          console.log(includeAllError.stdout)
-        }
-        if (includeAllError.stderr) {
-          console.error(includeAllError.stderr)
-        }
-
-        // Check again for duplicate keys (migrations already applied via --include-all)
-        if (errorOutput.includes('duplicate key') && errorOutput.includes('schema_migrations')) {
-          log('Legacy duplicate migration versions detected with --include-all', 'yellow')
-          applyRecoveryMigrations()
-          return true
-        }
-
-        // Genuine error
-        throw includeAllError
-      }
-    }
-
-    return true
   } catch (error: any) {
     log('❌ Migration failed', 'red')
     log(`   Error: ${error.message}`, 'red')

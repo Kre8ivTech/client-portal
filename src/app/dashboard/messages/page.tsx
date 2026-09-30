@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, MessageSquare, PenSquare } from "lucide-react";
 import type { Database } from "@/types/database";
 import { notifyNewMessage } from "@/lib/actions/message-notifications";
+import { subscribeReplacingTopic } from "@/lib/realtime/replace-channel";
 
 type Conversation = Database["public"]["Tables"]["conversations"]["Row"];
 type Message = Database["public"]["Tables"]["messages"]["Row"];
@@ -88,13 +89,17 @@ export default function MessagesPage() {
   }, [supabase]);
 
   useEffect(() => {
+    let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     async function init() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+      if (cancelled || !user) {
+        if (!cancelled) setLoading(false);
+        return;
+      }
       setUserId(user.id);
 
       // Fetch display name for notification context
@@ -103,32 +108,41 @@ export default function MessagesPage() {
         .select("full_name, email")
         .eq("id", user.id)
         .single();
+      if (cancelled) return;
       if (profile) {
         setUserName(profile.full_name || profile.email || "Someone");
       }
 
       await refreshConversations();
+      if (cancelled) return;
       setLoading(false);
 
-      channel = supabase
-        .channel("conversations_changes")
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "conversations",
-          },
-          () => {
-            refreshConversations();
-          },
-        )
-        .subscribe();
+      // React Strict Mode runs this effect twice. The first run is cancelled
+      // while getUser() is in flight, so its channel is never removed. Reusing
+      // that topic then throws when .on() is called after subscribe().
+      const next = await subscribeReplacingTopic(
+        supabase,
+        "conversations_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "conversations",
+        },
+        () => {
+          refreshConversations();
+        },
+      );
+      if (cancelled) {
+        supabase.removeChannel(next);
+        return;
+      }
+      channel = next;
     }
 
     init();
 
     return () => {
+      cancelled = true;
       if (channel) {
         supabase.removeChannel(channel);
       }

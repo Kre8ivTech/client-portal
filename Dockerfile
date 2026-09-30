@@ -28,4 +28,4 @@ ENV NODE_ENV=production
 ENV PORT=3000
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx tsx scripts/apply-pending-migrations.ts && npx next start -H 0.0.0.0 -p ${PORT}"]
+CMD ["sh", "-c", "npx tsx scripts/apply-pending-migrations.ts || true; exec npx next start -H 0.0.0.0 -p ${PORT}"]

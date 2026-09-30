@@ -6,7 +6,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
 COPY package.json ./
-RUN npm install --no-audit --no-fund
+RUN npm install -g npm@11 && npm install --no-audit --no-fund
 
 COPY . .
 

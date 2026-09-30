@@ -19,6 +19,11 @@ export function listMigrationFiles(migrationsDir: string): MigrationFile[] {
     });
 }
 
+export function isExistingSchemaError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /already exists/i.test(message);
+}
+
 export function pendingMigrationFiles(files: MigrationFile[], appliedVersions: Iterable<string>): MigrationFile[] {
   const applied = new Set(appliedVersions);
   const seen = new Set<string>();

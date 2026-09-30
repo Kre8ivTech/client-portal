@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { pendingMigrationFiles, type MigrationFile } from "../../../scripts/pending-migrations";
+import {
+  isExistingSchemaError,
+  pendingMigrationFiles,
+  type MigrationFile,
+} from "../../../scripts/pending-migrations";
 
 const files: MigrationFile[] = [
   { version: "20260202000010", name: "notifications_system", filename: "20260202000010_notifications_system.sql" },
@@ -19,5 +23,15 @@ describe("pendingMigrationFiles", () => {
       "20260202000010_notifications_system.sql",
       "20260930050000_client_support_intake.sql",
     ]);
+  });
+});
+
+describe("isExistingSchemaError", () => {
+  it("matches objects that are already present", () => {
+    expect(isExistingSchemaError(new Error('policy "Staff can view all notification logs" for table "notification_log" already exists'))).toBe(true);
+  });
+
+  it("does not match missing columns", () => {
+    expect(isExistingSchemaError(new Error('column "role" does not exist'))).toBe(false);
   });
 });

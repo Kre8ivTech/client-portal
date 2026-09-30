@@ -2,7 +2,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { Client } from "pg";
 import { normalizeSupabaseSslConnection } from "./lib/postgres-connection";
-import { listMigrationFiles, pendingMigrationFiles } from "./pending-migrations";
+import { isExistingSchemaError, listMigrationFiles, pendingMigrationFiles } from "./pending-migrations";
 
 function getConnectionString(): string {
   const configuredUrl =
@@ -57,7 +57,14 @@ export async function applyPendingMigrations(): Promise<string[]> {
         console.log(`Applied migration ${migration.filename}`);
       } catch (error) {
         await client.query("ROLLBACK");
-        throw error;
+        if (!isExistingSchemaError(error)) throw error;
+
+        await client.query(
+          "INSERT INTO supabase_migrations.schema_migrations (version, name) VALUES ($1, $2) ON CONFLICT (version) DO NOTHING",
+          [migration.version, migration.name],
+        );
+        const message = error instanceof Error ? error.message : String(error);
+        console.log(`Recorded existing migration ${migration.filename}: ${message}`);
       }
     }
 

@@ -221,7 +221,7 @@ export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps
       {isOpen ? (
         <Card
           className={cn(
-            "fixed bottom-6 right-6 w-[380px] md:w-[420px] shadow-2xl border-2 z-50 transition-all duration-200",
+            "fixed bottom-24 right-4 left-4 w-auto md:bottom-6 md:left-auto md:right-6 md:w-[420px] shadow-2xl border-2 z-50 transition-all duration-200",
             isMinimized ? "h-[60px]" : "h-[550px] md:h-[600px]",
           )}
         >
@@ -367,7 +367,7 @@ export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps
       ) : (
         <Button
           size="lg"
-          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl z-50 p-0 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 hover:scale-105 transition-all"
+          className="fixed bottom-24 right-20 md:bottom-6 md:right-24 h-14 w-14 rounded-full shadow-2xl z-50 p-0 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 hover:scale-105 transition-all"
           onClick={() => setIsOpen(true)}
           aria-label="Open AI assistant"
         >

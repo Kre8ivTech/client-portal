@@ -7,6 +7,9 @@ COMMENT ON COLUMN public.ticket_comments.is_intel IS
   'Platform intelligence note; visible only to super_admin/admin. Implies internal.';
 
 ALTER TABLE public.ticket_comments
+  DROP CONSTRAINT IF EXISTS ticket_comments_intel_implies_internal;
+
+ALTER TABLE public.ticket_comments
   ADD CONSTRAINT ticket_comments_intel_implies_internal
   CHECK (NOT is_intel OR is_internal IS TRUE);
 

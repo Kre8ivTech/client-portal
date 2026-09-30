@@ -161,6 +161,7 @@ export default async function DashboardLayout({
       <AIChatbotWidget
         userId={user.id}
         organizationId={profile?.organization_id || undefined}
+        role={profile?.role ?? "client"}
       />
     </div>
   );

@@ -10,6 +10,7 @@ import {
   checkAIRateLimit,
   checkChatbotTokenBudget,
 } from "@/lib/ai/usage-tracker";
+import { capabilityPromptForRole } from "@/lib/ai/load-capability-prompt";
 
 const PORTAL_ASSISTANT_SCOPE = `
 [Portal assistant policy — follow strictly]
@@ -227,16 +228,20 @@ export async function POST(request: NextRequest) {
     if (rulesData) orgRules = rulesData;
 
     // Fetch AI config (may not exist)
-    const { data: configData } = await supabase
+    const { data: configRows } = await supabase
       .from("ai_configs")
-      .select("system_prompt, model_params, greeting_message")
+      .select("system_prompt, model_params, greeting_message, role, organization_id")
       .or(organization_id ? `organization_id.eq.${organization_id},organization_id.is.null` : "organization_id.is.null")
-      .eq("is_active", true)
-      .order("organization_id", { ascending: false, nullsFirst: false })
-      .limit(1)
-      .single();
+      .eq("is_active", true);
 
-    if (configData) aiConfigs = configData;
+    const rows = configRows || [];
+    const roleName = typedUserRecord.role;
+    aiConfigs =
+      rows.find((row: any) => row.role === roleName && row.organization_id === organization_id) ||
+      rows.find((row: any) => row.role === roleName && !row.organization_id) ||
+      rows.find((row: any) => row.role === "global" && !row.organization_id) ||
+      rows[0] ||
+      null;
 
     // Get system settings
     appSettings = await getSystemSettings();
@@ -267,6 +272,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    systemPrompt += `\n\n${await capabilityPromptForRole(typedUserRecord.role)}`;
     systemPrompt += PORTAL_ASSISTANT_SCOPE;
 
     const conversationHistory = (conversationMessages || []).map((msg: any) => ({

@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Eye, EyeOff, Check, AlertCircle, Bot, Sparkles } from "lucide-react";
 import { updateAppSettings, type AppSettings } from "@/lib/actions/app-settings";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import Link from "next/link";
 
 type AIProvider = "openrouter" | "anthropic" | "openai" | "gemini";
 
@@ -28,6 +29,9 @@ interface AIProvidersFormProps {
     | "openai_api_key"
     | "gemini_api_key"
   >;
+  capabilityAgentCount: number;
+  capabilitySkillCount: number;
+  capabilityTaskCount: number;
 }
 
 const providerInfo: Record<AIProvider, { name: string; description: string; models: string }> = {
@@ -53,7 +57,12 @@ const providerInfo: Record<AIProvider, { name: string; description: string; mode
   },
 };
 
-export function AIProvidersForm({ initialSettings }: AIProvidersFormProps) {
+export function AIProvidersForm({
+  initialSettings,
+  capabilityAgentCount,
+  capabilitySkillCount,
+  capabilityTaskCount,
+}: AIProvidersFormProps) {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -327,6 +336,17 @@ export function AIProvidersForm({ initialSettings }: AIProvidersFormProps) {
             </AlertDescription>
           </Alert>
         )}
+
+        <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+          <p className="font-medium">Capability agents</p>
+          <p className="text-muted-foreground mt-1">
+            {capabilityAgentCount} agents, {capabilitySkillCount} skills, and {capabilityTaskCount} tasks are set up
+            for the portal capabilities. The assistant only offers the ones available to the signed-in role.
+          </p>
+          <Link href="/dashboard/admin/ai-assistant" className="mt-2 inline-block text-sm font-medium underline">
+            Review agents, skills, and tasks
+          </Link>
+        </div>
 
         <div className="flex justify-end pt-2">
           <Button onClick={handleSave} disabled={loading}>

@@ -45,7 +45,7 @@ export function WhiteLabelSetupGuide({
     {
       title: 'Create your portal identity',
       description:
-        'Add a portal name, hosted logo URL, and primary brand color. You can also customize the tagline and login background.',
+        'Add a portal name, hosted logo URL, and primary brand color. Your clients see this brand as soon as they sign in.',
       href: '#white-label-branding',
       action: 'Open branding',
       complete: brandingComplete,
@@ -89,8 +89,8 @@ export function WhiteLabelSetupGuide({
         <div className="space-y-1.5">
           <CardTitle className="text-xl">White-label launch checklist</CardTitle>
           <CardDescription className="max-w-2xl">
-            Complete these steps to publish a branded portal on your own domain. Most setups take
-            about 15 minutes, plus DNS propagation time.
+            Saving your portal identity brands the portal for your team and your clients right away.
+            A custom domain then shows that brand on your own hostname, including the sign-in page.
           </CardDescription>
         </div>
         <Badge variant={completedSteps === steps.length ? 'success' : 'secondary'}>

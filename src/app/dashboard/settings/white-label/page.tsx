@@ -98,7 +98,8 @@ export default async function WhiteLabelSettingsPage() {
       <div>
         <h2 className="text-3xl font-bold tracking-tight border-b pb-4">White Label Settings</h2>
         <p className="text-muted-foreground mt-2">
-          Customize the look and feel of your portal.
+          Your portal name, colors, and logo apply to your team and to the clients under your
+          organization. A verified custom domain shows that same brand before sign-in.
         </p>
       </div>
 
@@ -120,7 +121,7 @@ export default async function WhiteLabelSettingsPage() {
             <div id="white-label-branding" className="scroll-mt-6">
               <OrganizationBrandingForm
                 organization={organization}
-                canEdit={true}
+                canEdit={role === "partner"}
               />
             </div>
             {organization.type === "partner" && (

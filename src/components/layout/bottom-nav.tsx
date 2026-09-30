@@ -19,6 +19,8 @@ const moreItems = [
   { href: '/dashboard/contracts', label: 'Contracts' },
   { href: '/dashboard/services', label: 'Services' },
   { href: '/dashboard/kb', label: 'Knowledge Base' },
+  { href: '/dashboard/sites', label: 'Sites' },
+  { href: '/dashboard/handoffs', label: 'Handoffs' },
   { href: '/dashboard/files', label: 'Files' },
   { href: '/dashboard/billing', label: 'Billing' },
   { href: '/dashboard/settings', label: 'Settings' },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -32,6 +32,7 @@ export function CloseTicketDialog({ ticketId, ticketNumber, onClose, isStaff = f
   const [isInternal, setIsInternal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const closedRef = useRef(false);
   const router = useRouter();
 
   const handleClose = async () => {
@@ -52,6 +53,7 @@ export function CloseTicketDialog({ ticketId, ticketNumber, onClose, isStaff = f
     });
 
     if (result.success) {
+      closedRef.current = true;
       setOpen(false);
       setNote("");
       setIsInternal(false);
@@ -65,6 +67,10 @@ export function CloseTicketDialog({ ticketId, ticketNumber, onClose, isStaff = f
   };
 
   const handleOpenChange = (newOpen: boolean) => {
+    if (closedRef.current) {
+      setOpen(false);
+      return;
+    }
     if (!isSubmitting) {
       setOpen(newOpen);
       if (!newOpen) {

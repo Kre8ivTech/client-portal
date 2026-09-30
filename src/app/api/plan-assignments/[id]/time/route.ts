@@ -2,6 +2,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { writeAuditLog } from "@/lib/audit";
+import { settlePlanOverage } from "@/lib/billing/settle-plan-overage";
 
 type ProfileRow = { organization_id: string | null; role: string };
 type AssignmentRow = {
@@ -171,6 +172,12 @@ export async function POST(
       .select("support_hours_used, dev_hours_used")
       .eq("id", planAssignmentId)
       .single();
+
+    await settlePlanOverage({
+      planAssignmentId,
+      workType: input.work_type === "dev" ? "dev" : "support",
+      actorId: user.id,
+    });
 
     await writeAuditLog({
       action: "time_entry.create",

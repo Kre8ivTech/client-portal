@@ -33,7 +33,11 @@ export function getHrefsForRole(role: DashboardRole, isAccountManager: boolean):
   const supportClient = [
     "/dashboard/tickets",
     "/dashboard/kb",
+    "/dashboard/sites",
+    "/dashboard/handoffs",
   ];
+  const liveChats = "/dashboard/support/chats";
+  const intakeAdmin = ["/dashboard/admin/status", "/dashboard/admin/intake"];
   const supportAdminStaff = [
     ...supportClient,
     "/dashboard/user-guide",
@@ -108,6 +112,8 @@ export function getHrefsForRole(role: DashboardRole, isAccountManager: boolean):
         PLATFORM_INTEGRATIONS_HREF,
         "/dashboard/admin/agents",
         "/dashboard/admin/ai-usage",
+        liveChats,
+        ...intakeAdmin,
         "/dashboard/tenants",
         "/dashboard/audit",
         "/dashboard/admin/error-logs",
@@ -138,6 +144,8 @@ export function getHrefsForRole(role: DashboardRole, isAccountManager: boolean):
         "/dashboard/admin/notifications",
         "/dashboard/admin/agents",
         "/dashboard/admin/ai-usage",
+        liveChats,
+        ...intakeAdmin,
       ];
     case "partner":
       return [
@@ -164,6 +172,7 @@ export function getHrefsForRole(role: DashboardRole, isAccountManager: boolean):
         ...projectPages,
         "/dashboard/plans",
         "/dashboard/reports",
+        liveChats,
       ];
     case "partner_staff":
       return [
@@ -188,6 +197,7 @@ export function getHrefsForRole(role: DashboardRole, isAccountManager: boolean):
         "/dashboard/profile",
         "/dashboard/settings/security",
         "/dashboard/settings/notifications",
+        liveChats,
       ];
     case "client":
       return [

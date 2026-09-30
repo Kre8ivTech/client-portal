@@ -118,6 +118,9 @@ const navGroups: { label: string; items: NavItem[] }[] = [
     label: "Support",
     items: [
       { href: "/dashboard/tickets", icon: Ticket, label: "Tickets" },
+      { href: "/dashboard/support/chats", icon: MessagesSquare, label: "Live chats" },
+      { href: "/dashboard/sites", icon: Globe, label: "Sites" },
+      { href: "/dashboard/handoffs", icon: ClipboardList, label: "Handoffs" },
       { href: "/dashboard/kb", icon: BookOpen, label: "Knowledge Base" },
       { href: "/dashboard/user-guide", icon: HelpCircle, label: "User Guide" },
     ],
@@ -176,6 +179,8 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/admin/settings/integrations", icon: Plug, label: "Integration Settings" },
       { href: "/dashboard/integrations", icon: Plug, label: "Platform Integrations" },
       { href: "/dashboard/admin/agents", icon: Workflow, label: "Agent Workflows" },
+      { href: "/dashboard/admin/status", icon: Globe, label: "Status" },
+      { href: "/dashboard/admin/intake", icon: Mail, label: "Website intake" },
       { href: "/dashboard/admin/ai-usage", icon: BarChart3, label: "AI Usage" },
       { href: "/dashboard/audit", icon: History, label: "Audit Log" },
       { href: "/dashboard/admin/error-logs", icon: Bug, label: "Error Log" },

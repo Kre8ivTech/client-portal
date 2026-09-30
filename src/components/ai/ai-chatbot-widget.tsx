@@ -9,6 +9,7 @@ import { Bot, X, Send, Minimize2, Maximize2, Loader2, Sparkles, AlertCircle, Rot
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { format } from "date-fns";
+import { suggestedTasksForRole } from "@/lib/ai/capability-catalog";
 
 interface Message {
   id: string;
@@ -21,9 +22,10 @@ interface Message {
 interface AIChatbotWidgetProps {
   userId?: string;
   organizationId?: string;
+  role?: string;
 }
 
-export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps) {
+export function AIChatbotWidget({ userId, organizationId, role }: AIChatbotWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -36,6 +38,7 @@ export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps
   const inputRef = useRef<HTMLInputElement>(null);
   const isInitializingRef = useRef(false);
   const supabase = useMemo(() => createClient(), []);
+  const suggestedTasks = useMemo(() => suggestedTasksForRole(role), [role]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -92,7 +95,7 @@ export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps
         id: crypto.randomUUID(),
         role: "assistant",
         content:
-          "Hello! I'm your AI assistant. I can help you with questions about your projects, services, invoices, contracts, and more. How can I help you today?",
+          "Hello! I can help with the portal capabilities available to you. Pick a task below or ask how to use a page.",
         created_at: new Date().toISOString(),
       };
       setMessages([welcomeMessage]);
@@ -111,13 +114,14 @@ export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps
     initializeConversation();
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || loading || !conversationId) return;
+  const sendMessage = async (prompt?: string) => {
+    const content = (prompt ?? input).trim();
+    if (!content || loading || !conversationId) return;
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
-      content: input.trim(),
+      content,
       created_at: new Date().toISOString(),
     };
 
@@ -336,6 +340,23 @@ export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps
                   </ScrollArea>
 
                   <div className="p-3 md:p-4 border-t bg-muted/30">
+                    {messages.length <= 1 && suggestedTasks.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {suggestedTasks.map((task) => (
+                          <Button
+                            key={task.slug}
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-auto whitespace-normal text-left text-xs"
+                            disabled={loading || !conversationId}
+                            onClick={() => sendMessage(task.starterPrompt)}
+                          >
+                            {task.name}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       <Input
                         ref={inputRef}
@@ -348,7 +369,7 @@ export function AIChatbotWidget({ userId, organizationId }: AIChatbotWidgetProps
                       />
                       <Button
                         size="icon"
-                        onClick={sendMessage}
+                        onClick={() => sendMessage()}
                         disabled={loading || !input.trim() || !conversationId}
                         className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
                       >

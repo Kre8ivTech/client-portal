@@ -61,6 +61,8 @@ export function AIConfigForm({ configs }: AIConfigFormProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="client">Client</SelectItem>
+              <SelectItem value="partner">Partner</SelectItem>
+              <SelectItem value="partner_staff">Partner Staff</SelectItem>
               <SelectItem value="staff">Staff</SelectItem>
               <SelectItem value="super_admin">Super Admin</SelectItem>
             </SelectContent>

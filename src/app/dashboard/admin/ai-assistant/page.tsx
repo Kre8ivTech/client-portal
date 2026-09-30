@@ -1,11 +1,35 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { AIConfigForm } from '@/components/admin/ai-config-form'
+import { AICapabilityAgents } from '@/components/admin/ai-capability-agents'
 import { AIDocumentsManager } from '@/components/admin/ai-documents-manager'
 import { AIRulesManager } from '@/components/admin/ai-rules-manager'
+import { CAPABILITY_AGENTS, type AiCapabilityAgent, type AiRole } from '@/lib/ai/capability-catalog'
 import { requireRole } from '@/lib/require-role'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Bot, FileText, Shield, MessageSquare } from 'lucide-react'
+import { Bot, FileText, Shield, MessageSquare, Sparkles } from 'lucide-react'
+
+const AI_ROLE_SET = new Set<AiRole>(['super_admin', 'staff', 'partner', 'partner_staff', 'client'])
+
+function agentsFromRows(rows: any[] | null): AiCapabilityAgent[] | null {
+  if (!rows?.length) return null
+  return [...rows]
+    .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+    .map((row) => ({
+      slug: row.capability_slug,
+      name: row.name,
+      description: row.description,
+      instruction: row.instruction,
+      href: row.href,
+      roles: (row.roles ?? []).filter((role: string) => AI_ROLE_SET.has(role as AiRole)),
+      skills: [...(row.ai_skills ?? [])]
+        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+        .map((skill) => ({ slug: skill.slug, name: skill.name, description: skill.description })),
+      tasks: [...(row.ai_tasks ?? [])]
+        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+        .map((task) => ({ slug: task.slug, name: task.name, starterPrompt: task.starter_prompt })),
+    }))
+}
 
 export default async function AIAdminPage() {
   await requireRole(['super_admin', 'staff'])
@@ -16,13 +40,22 @@ export default async function AIAdminPage() {
     { data: configs },
     { data: documents },
     { data: rules },
-    { data: organizations }
+    { data: organizations },
+    agentResult,
   ] = await Promise.all([
     supabase.from('ai_configs').select('*').is('organization_id', null),
     supabase.from('ai_documents').select('*').order('created_at', { ascending: false }),
     supabase.from('ai_rules').select('*').order('priority', { ascending: false }),
-    supabase.from('organizations').select('id, name, slug')
+    supabase.from('organizations').select('id, name, slug'),
+    supabase
+      .from('ai_agents')
+      .select('capability_slug, name, description, instruction, href, roles, display_order, ai_skills(slug, name, description, display_order), ai_tasks(slug, name, starter_prompt, display_order)')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true }),
   ])
+
+  const savedAgents = agentResult.error ? null : agentsFromRows(agentResult.data)
+  const capabilityAgents = savedAgents ?? CAPABILITY_AGENTS
 
   return (
     <div className="w-full space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -33,13 +66,17 @@ export default async function AIAdminPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">AI Assistant Settings</h2>
           <p className="text-muted-foreground mt-1">
-            Configure AI behavior, knowledge base, and rules for organization-specific chatbots
+            Configure capability agents, skills, tasks, prompts, knowledge, and rules
           </p>
         </div>
       </div>
 
-      <Tabs defaultValue="prompts" className="space-y-6">
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
+      <Tabs defaultValue="agents" className="space-y-6">
+        <TabsList className="flex h-auto w-full max-w-4xl flex-wrap justify-start gap-1">
+          <TabsTrigger value="agents" className="gap-2">
+            <Sparkles className="h-4 w-4" />
+            Agents
+          </TabsTrigger>
           <TabsTrigger value="prompts" className="gap-2">
             <MessageSquare className="h-4 w-4" />
             Prompts
@@ -57,6 +94,23 @@ export default async function AIAdminPage() {
             Organizations
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="agents" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Capability agents</CardTitle>
+              <CardDescription>
+                One agent for each portal capability, with the skills it can explain and the tasks it offers in chat.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AICapabilityAgents
+                agents={capabilityAgents}
+                source={savedAgents ? 'database' : 'catalog'}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="prompts" className="space-y-4">
           <Card>

@@ -15,6 +15,7 @@ import {
 import { CalendarIntegrations } from "@/components/integrations/calendar-integrations";
 import { StripeSettingsForm } from "@/components/integrations/stripe-settings-form";
 import { AIProvidersForm } from "@/components/integrations/ai-providers-form";
+import { CAPABILITY_AGENTS } from "@/lib/ai/capability-catalog";
 import { ZapierIntegration } from "@/components/integrations/zapier-integration";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { S3ConfigForm } from "@/components/admin/s3-config-form";
@@ -215,6 +216,9 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
             openai_api_key: appSettings.openai_api_key,
             gemini_api_key: appSettings.gemini_api_key,
           }}
+          capabilityAgentCount={CAPABILITY_AGENTS.length}
+          capabilitySkillCount={CAPABILITY_AGENTS.reduce((sum, agent) => sum + agent.skills.length, 0)}
+          capabilityTaskCount={CAPABILITY_AGENTS.reduce((sum, agent) => sum + agent.tasks.length, 0)}
         />
 
         {/* Email Integration */}

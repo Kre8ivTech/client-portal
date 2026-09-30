@@ -106,6 +106,7 @@ export function getHrefsForRole(role: DashboardRole, isAccountManager: boolean):
         "/dashboard/admin/settings/auth",
         ADMIN_INTEGRATIONS_HREF,
         PLATFORM_INTEGRATIONS_HREF,
+        "/dashboard/admin/agents",
         "/dashboard/admin/ai-usage",
         "/dashboard/tenants",
         "/dashboard/audit",
@@ -135,6 +136,7 @@ export function getHrefsForRole(role: DashboardRole, isAccountManager: boolean):
         "/dashboard/admin/services",
         "/dashboard/admin/contracts",
         "/dashboard/admin/notifications",
+        "/dashboard/admin/agents",
         "/dashboard/admin/ai-usage",
       ];
     case "partner":

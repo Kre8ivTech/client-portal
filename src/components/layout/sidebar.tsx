@@ -43,6 +43,7 @@ import {
   ChevronDown,
   Bug,
   Globe,
+  Workflow,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -174,6 +175,7 @@ const navGroups: { label: string; items: NavItem[] }[] = [
       { href: "/dashboard/admin/settings/auth", icon: Shield, label: "Auth Settings" },
       { href: "/dashboard/admin/settings/integrations", icon: Plug, label: "Integration Settings" },
       { href: "/dashboard/integrations", icon: Plug, label: "Platform Integrations" },
+      { href: "/dashboard/admin/agents", icon: Workflow, label: "Agent Workflows" },
       { href: "/dashboard/admin/ai-usage", icon: BarChart3, label: "AI Usage" },
       { href: "/dashboard/audit", icon: History, label: "Audit Log" },
       { href: "/dashboard/admin/error-logs", icon: Bug, label: "Error Log" },

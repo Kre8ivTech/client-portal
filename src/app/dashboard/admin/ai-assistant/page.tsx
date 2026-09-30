@@ -7,6 +7,7 @@ import { CAPABILITY_AGENTS, type AiCapabilityAgent, type AiRole } from '@/lib/ai
 import { requireRole } from '@/lib/require-role'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import Link from 'next/link'
 import { Bot, FileText, Shield, MessageSquare, Sparkles } from 'lucide-react'
 
 const AI_ROLE_SET = new Set<AiRole>(['super_admin', 'staff', 'partner', 'partner_staff', 'client'])
@@ -66,7 +67,8 @@ export default async function AIAdminPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">AI Assistant Settings</h2>
           <p className="text-muted-foreground mt-1">
-            Configure capability agents, skills, tasks, prompts, knowledge, and rules
+            Configure capability agents, skills, tasks, prompts, knowledge, and rules.{" "}
+            <Link href="/dashboard/admin/agents" className="underline">Build workflows, assignments, and schedules</Link>
           </p>
         </div>
       </div>

@@ -32,6 +32,13 @@ describe("getHrefsForRole integrations", () => {
     expect(getHrefsForRole("super_admin", false)).not.toContain("/dashboard/invoices#proposals")
   })
 
+  it("gives staff and super admins the agent workflow manager", () => {
+    expect(getHrefsForRole("super_admin", false)).toContain("/dashboard/admin/agents")
+    expect(getHrefsForRole("staff", false)).toContain("/dashboard/admin/agents")
+    expect(getHrefsForRole("partner", false)).not.toContain("/dashboard/admin/agents")
+    expect(getHrefsForRole("client", false)).not.toContain("/dashboard/admin/agents")
+  })
+
   it("exposes admin QuickBooks config and platform integrations to super admins only", () => {
     const admin = getHrefsForRole("super_admin", false)
     expect(admin).toContain(ADMIN_INTEGRATIONS_HREF)

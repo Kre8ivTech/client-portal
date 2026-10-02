@@ -2,22 +2,21 @@ import { requireRole } from "@/lib/require-role";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Globe,
   CheckCircle2,
   AlertCircle,
   XCircle,
   Shield,
-  Clock,
-  Activity,
   Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow, differenceInDays } from "date-fns";
+import { SiteMonitorCard } from "@/components/sites/site-monitor-card";
+import { SiteMonitorEmptyState } from "@/components/sites/site-monitor-empty";
 import { SiteMonitorForm } from "@/components/sites/site-monitor-form";
 import { WordPressPluginDownload } from "@/components/sites/wordpress-plugin-download";
-import { WordPressPluginStatus } from "@/components/sites/wordpress-plugin-status";
+import { compareSiteMonitors, sslState } from "@/lib/sites/site-monitor-display";
 
 export const dynamic = "force-dynamic";
 
@@ -39,29 +38,6 @@ type SiteMonitor = {
   platform: string | null;
   wp_plugins: unknown;
   wp_plugins_updated_at: string | null;
-};
-
-function getSSLStatus(expiryDate: string | null): "valid" | "expiring_soon" | "expired" | "unknown" {
-  if (!expiryDate) return "unknown";
-  const expiry = new Date(expiryDate);
-  const now = new Date();
-  if (expiry < now) return "expired";
-  if (differenceInDays(expiry, now) <= 14) return "expiring_soon";
-  return "valid";
-}
-
-const statusConfig: Record<string, { icon: typeof CheckCircle2; color: string; label: string }> = {
-  up: { icon: CheckCircle2, color: "text-green-600", label: "Up" },
-  down: { icon: XCircle, color: "text-red-600", label: "Down" },
-  degraded: { icon: AlertCircle, color: "text-amber-600", label: "Degraded" },
-  unknown: { icon: Clock, color: "text-slate-400", label: "Unknown" },
-};
-
-const sslBadgeColors: Record<string, string> = {
-  valid: "bg-green-100 text-green-700",
-  expiring_soon: "bg-amber-100 text-amber-700",
-  expired: "bg-red-100 text-red-700",
-  unknown: "bg-slate-100 text-slate-500",
 };
 
 export default async function SiteMonitoringPage() {
@@ -106,7 +82,7 @@ export default async function SiteMonitoringPage() {
       siteMonitors = ((data ?? []) as any[]).map((site) => ({
         ...site,
         org_name: orgNameMap.get(site.organization_id) ?? "Unknown",
-        ssl_status: getSSLStatus(site.ssl_expiry_date),
+        ssl_status: sslState(site.ssl_expiry_date),
       }));
     }
   }
@@ -121,15 +97,7 @@ export default async function SiteMonitoringPage() {
     ? siteMonitors.reduce((s, m) => s + (m.response_time_ms ?? 0), 0) / siteMonitors.filter((m) => m.response_time_ms !== null).length
     : 0;
 
-  // Sort: down first, then degraded, then expiring SSL, then up
-  const sortOrder: Record<string, number> = { down: 0, degraded: 1, unknown: 2, up: 3 };
-  siteMonitors.sort((a, b) => {
-    const statusDiff = (sortOrder[a.status] ?? 9) - (sortOrder[b.status] ?? 9);
-    if (statusDiff !== 0) return statusDiff;
-    // Secondary sort by SSL urgency
-    const sslOrder: Record<string, number> = { expired: 0, expiring_soon: 1, unknown: 2, valid: 3 };
-    return (sslOrder[a.ssl_status] ?? 9) - (sslOrder[b.ssl_status] ?? 9);
-  });
+  const orderedMonitors = [...siteMonitors].sort((a, b) => compareSiteMonitors(a, b));
 
   return (
     <div className="space-y-6">
@@ -249,164 +217,38 @@ export default async function SiteMonitoringPage() {
             </Card>
           </div>
 
-          {/* Sites Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
-                All Monitored Sites
-              </CardTitle>
-              <CardDescription>
-                {siteMonitors.length} website{siteMonitors.length !== 1 ? "s" : ""} monitored.
-                Issues appear first.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {siteMonitors.length === 0 ? (
-                <div className="flex h-[160px] flex-col items-center justify-center rounded-lg border-2 border-dashed text-center text-sm text-muted-foreground">
-                  <Globe className="h-8 w-8 text-muted-foreground/50" />
-                  <p className="mt-2">No websites are listed yet.</p>
-                  <p className="text-xs">Add a client site above. Status stays unknown until a check is recorded.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Website</TableHead>
-                        <TableHead>Client</TableHead>
-                        <TableHead className="text-center">SSL</TableHead>
-                        <TableHead className="text-right">Response</TableHead>
-                        <TableHead className="text-right">Uptime (30d)</TableHead>
-                        <TableHead className="text-center">Performance</TableHead>
-                        <TableHead>Last Check</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {siteMonitors.map((site) => {
-                        const StatusIcon = statusConfig[site.status]?.icon ?? Clock;
-                        const statusColor = statusConfig[site.status]?.color ?? "text-slate-400";
-                        const statusLabel = statusConfig[site.status]?.label ?? "Unknown";
-
-                        return (
-                          <TableRow key={site.id}>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <StatusIcon className={`h-4 w-4 ${statusColor}`} />
-                                <span className={`text-sm font-medium ${statusColor}`}>
-                                  {statusLabel}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div>
-                                <p className="font-medium">{site.name}</p>
-                                <a
-                                  href={site.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-primary hover:underline"
-                                >
-                                  {site.url}
-                                </a>
-                                <div className="mt-2">
-                                  <WordPressPluginStatus
-                                    platform={site.platform}
-                                    plugins={site.wp_plugins}
-                                    updatedAt={site.wp_plugins_updated_at}
-                                  />
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-sm">{site.org_name}</span>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge className={sslBadgeColors[site.ssl_status]}>
-                                {site.ssl_status === "valid" && "Valid"}
-                                {site.ssl_status === "expiring_soon" && "Expiring"}
-                                {site.ssl_status === "expired" && "Expired"}
-                                {site.ssl_status === "unknown" && "N/A"}
-                              </Badge>
-                              {site.ssl_expiry_date && site.ssl_status !== "unknown" && (
-                                <p className="mt-0.5 text-xs text-muted-foreground">
-                                  {differenceInDays(new Date(site.ssl_expiry_date), new Date())}d left
-                                </p>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {site.response_time_ms !== null ? (
-                                <span
-                                  className={`font-medium ${
-                                    site.response_time_ms > 2000
-                                      ? "text-red-600"
-                                      : site.response_time_ms > 1000
-                                        ? "text-amber-600"
-                                        : "text-green-600"
-                                  }`}
-                                >
-                                  {site.response_time_ms}ms
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {site.uptime_percentage_30d !== null ? (
-                                <span
-                                  className={`font-medium ${
-                                    site.uptime_percentage_30d < 99
-                                      ? "text-red-600"
-                                      : site.uptime_percentage_30d < 99.9
-                                        ? "text-amber-600"
-                                        : "text-green-600"
-                                  }`}
-                                >
-                                  {site.uptime_percentage_30d.toFixed(2)}%
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell className="text-center">
-                              {site.performance_score !== null ? (
-                                <Badge
-                                  variant="outline"
-                                  className={
-                                    site.performance_score >= 90
-                                      ? "bg-green-50 text-green-700"
-                                      : site.performance_score >= 50
-                                        ? "bg-amber-50 text-amber-700"
-                                        : "bg-red-50 text-red-700"
-                                  }
-                                >
-                                  {site.performance_score}/100
-                                </Badge>
-                              ) : (
-                                <span className="text-xs text-muted-foreground">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {site.last_check_at ? (
-                                <span className="text-sm text-muted-foreground">
-                                  {formatDistanceToNow(new Date(site.last_check_at), {
-                                    addSuffix: true,
-                                  })}
-                                </span>
-                              ) : (
-                                <span className="text-sm text-muted-foreground">Never</span>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <section className="space-y-3">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">All monitored sites</h2>
+              <p className="text-sm text-muted-foreground">
+                {orderedMonitors.length} website{orderedMonitors.length === 1 ? "" : "s"} monitored. Issues appear first.
+              </p>
+            </div>
+            {orderedMonitors.length === 0 ? (
+              <SiteMonitorEmptyState />
+            ) : (
+              <ul className="grid gap-4 md:grid-cols-2">
+                {orderedMonitors.map((site) => (
+                  <li key={site.id}>
+                    <SiteMonitorCard
+                      name={site.name}
+                      url={site.url}
+                      status={site.status}
+                      organizationName={site.org_name}
+                      lastCheckAt={site.last_check_at}
+                      sslExpiryDate={site.ssl_expiry_date}
+                      uptimePercentage30d={site.uptime_percentage_30d}
+                      responseTimeMs={site.response_time_ms}
+                      performanceScore={site.performance_score}
+                      platform={site.platform}
+                      wpPlugins={site.wp_plugins}
+                      wpPluginsUpdatedAt={site.wp_plugins_updated_at}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
           {/* SSL Expiry Alerts */}
           {(sslExpiring > 0 || sslExpired > 0) && (
@@ -425,7 +267,7 @@ export default async function SiteMonitoringPage() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2">
-                  {siteMonitors
+                  {orderedMonitors
                     .filter((s) => s.ssl_status === "expired" || s.ssl_status === "expiring_soon")
                     .map((site) => (
                       <li

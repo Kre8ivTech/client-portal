@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/require-role";
+import { SiteMonitorCard } from "@/components/sites/site-monitor-card";
+import { SiteMonitorEmptyState } from "@/components/sites/site-monitor-empty";
 import { SiteMonitorForm } from "@/components/sites/site-monitor-form";
 import { WordPressPluginDownload } from "@/components/sites/wordpress-plugin-download";
-import { WordPressPluginStatus } from "@/components/sites/wordpress-plugin-status";
 import { canOfferSiteMonitorForm, siteMonitorFormListsChildClientsOnly } from "@/lib/sites/site-monitor-access";
+import { compareSiteMonitors } from "@/lib/sites/site-monitor-display";
 import { canDownloadWordPressPlugin } from "@/lib/sites/wordpress-plugin-package";
 
 type Monitor = {
@@ -57,7 +59,7 @@ export default async function SitesPage() {
     organizationQuery,
   ]);
 
-  const sites = (monitors ?? []) as Monitor[];
+  const sites = ([...(monitors ?? [])] as Monitor[]).sort((a, b) => compareSiteMonitors(a, b));
   const organizations = ((orgs.data ?? []) as { id: string; name: string }[]).map((org) => ({ id: org.id, name: org.name }));
 
   return (
@@ -66,8 +68,8 @@ export default async function SitesPage() {
         <h2 className="text-3xl font-bold tracking-tight">Sites</h2>
         <p className="mt-1 text-muted-foreground">
           Uptime, SSL, platform, maintenance window, and WordPress plugin status for each site. Plugin status
-          appears after the monitor plugin sends a heartbeat. A new site stays unknown until a check is
-          recorded. Public incident notices are on{" "}
+          appears after the monitor plugin sends a heartbeat. Issues appear first. A new site stays unknown until a
+          check is recorded. Public incident notices are on{" "}
           <Link href="/status" className="underline">
             the status page
           </Link>
@@ -76,47 +78,30 @@ export default async function SitesPage() {
       </div>
       {canDownloadWordPressPlugin(role) ? <WordPressPluginDownload /> : null}
       {canAdd ? <SiteMonitorForm organizations={organizations} /> : null}
-      {sites.length === 0 ? <p className="text-sm text-muted-foreground">No sites are listed yet.</p> : null}
-      <ul className="grid gap-4 md:grid-cols-2">
-        {sites.map((site) => (
-          <li key={site.id} className="space-y-2 rounded-lg border p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-semibold">{site.name}</h3>
-                <a href={site.url} className="text-sm underline" target="_blank" rel="noreferrer">
-                  {site.url}
-                </a>
-              </div>
-              <span className="text-sm capitalize">{site.status}</span>
-            </div>
-            {orgName(site.organizations) ? <p className="text-xs text-muted-foreground">{orgName(site.organizations)}</p> : null}
-            <dl className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <dt className="text-muted-foreground">30-day uptime</dt>
-                <dd>{site.uptime_percentage_30d != null ? `${site.uptime_percentage_30d}%` : "Not checked yet"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">SSL expires</dt>
-                <dd>{site.ssl_expiry_date || "Unknown"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Platform</dt>
-                <dd>{site.platform || "Not set"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Maintenance</dt>
-                <dd>{site.maintenance_window || "Not set"}</dd>
-              </div>
-            </dl>
-            <WordPressPluginStatus
-              platform={site.platform}
-              plugins={site.wp_plugins}
-              updatedAt={site.wp_plugins_updated_at}
-            />
-            {site.care_notes ? <p className="text-sm">{site.care_notes}</p> : null}
-          </li>
-        ))}
-      </ul>
+      {sites.length === 0 ? (
+        <SiteMonitorEmptyState />
+      ) : (
+        <ul className="grid gap-4 md:grid-cols-2">
+          {sites.map((site) => (
+            <li key={site.id}>
+              <SiteMonitorCard
+                name={site.name}
+                url={site.url}
+                status={site.status}
+                organizationName={orgName(site.organizations)}
+                lastCheckAt={site.last_check_at}
+                sslExpiryDate={site.ssl_expiry_date}
+                uptimePercentage30d={site.uptime_percentage_30d}
+                platform={site.platform}
+                maintenanceWindow={site.maintenance_window}
+                careNotes={site.care_notes}
+                wpPlugins={site.wp_plugins}
+                wpPluginsUpdatedAt={site.wp_plugins_updated_at}
+              />
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

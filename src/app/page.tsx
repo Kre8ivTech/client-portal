@@ -1,7 +1,9 @@
-import LoginPage from "@/app/(auth)/login/page";
+import { LoginForm } from "@/components/auth/login-form";
+import { loadPortalBranding } from "@/lib/white-label/load-portal-branding";
 
 export const dynamic = "force-dynamic";
 
-export default function Home() {
-  return <LoginPage />;
+export default async function Home() {
+  const branding = await loadPortalBranding();
+  return <LoginForm initialBranding={branding} />;
 }

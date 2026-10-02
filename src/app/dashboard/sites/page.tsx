@@ -2,8 +2,10 @@ import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/require-role";
 import { SiteMonitorForm } from "@/components/sites/site-monitor-form";
+import { WordPressPluginDownload } from "@/components/sites/wordpress-plugin-download";
 import { WordPressPluginStatus } from "@/components/sites/wordpress-plugin-status";
 import { canOfferSiteMonitorForm, siteMonitorFormListsChildClientsOnly } from "@/lib/sites/site-monitor-access";
+import { canDownloadWordPressPlugin } from "@/lib/sites/wordpress-plugin-package";
 
 type Monitor = {
   id: string;
@@ -72,6 +74,7 @@ export default async function SitesPage() {
           .
         </p>
       </div>
+      {canDownloadWordPressPlugin(role) ? <WordPressPluginDownload /> : null}
       {canAdd ? <SiteMonitorForm organizations={organizations} /> : null}
       {sites.length === 0 ? <p className="text-sm text-muted-foreground">No sites are listed yet.</p> : null}
       <ul className="grid gap-4 md:grid-cols-2">

@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { formatDistanceToNow, differenceInDays } from "date-fns";
 import { SiteMonitorForm } from "@/components/sites/site-monitor-form";
+import { WordPressPluginDownload } from "@/components/sites/wordpress-plugin-download";
 import { WordPressPluginStatus } from "@/components/sites/wordpress-plugin-status";
 
 export const dynamic = "force-dynamic";
@@ -147,6 +148,8 @@ export default async function SiteMonitoringPage() {
           ← Back to Overview
         </Link>
       </div>
+
+      <WordPressPluginDownload />
 
       {tableExists ? <SiteMonitorForm organizations={formOrganizations} /> : null}
 

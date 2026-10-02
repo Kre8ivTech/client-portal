@@ -10,6 +10,9 @@ RUN npm install -g npm@11 && npm install --no-audit --no-fund
 
 COPY . .
 
+# The plugin download route reads this directory from the running image.
+RUN test -f wordpress/kt-portal-monitor/kt-portal-monitor.php
+
 ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY

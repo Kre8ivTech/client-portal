@@ -1,3 +1,4 @@
+# Keep wordpress/kt-portal-monitor in the image. The download route reads it at runtime.
 node_modules
 .next
 .git

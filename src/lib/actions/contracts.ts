@@ -6,6 +6,14 @@ import { writeAuditLog } from '@/lib/audit'
 import { escapeHtml, sanitizeHtml } from '@/lib/security'
 import { triggerWebhooks } from '@/lib/zapier/webhooks'
 import { notifyContractDeclined } from '@/lib/actions/contract-notifications'
+import { normalizeDashboardRole } from '@/lib/require-role'
+import { contractSendSchema, contractTemplateSubmitSchema } from '@/lib/validators/contract'
+import {
+  contractDocumentFromHtml,
+  decideContractSubmit,
+  DOCUSIGN_NOT_CONFIGURED_MESSAGE,
+} from '@/lib/contracts/docusign-config'
+import { CONTRACT_RECIPIENT_ROLES, CONTRACT_RECIPIENT_STATUSES } from '@/lib/contracts/recipients'
 
 type ContractStatus = 'draft' | 'pending_signature' | 'signed' | 'expired' | 'cancelled'
 
@@ -37,13 +45,9 @@ export async function createContractFromTemplate(
       .eq('id', user.id)
       .single()
 
-    const role = profile?.role
+    const role = normalizeDashboardRole(profile?.role)
     if (role !== 'staff' && role !== 'super_admin') {
       return { success: false, error: 'Only staff and admin can create contracts' }
-    }
-
-    if (!profile?.organization_id) {
-      return { success: false, error: 'No organization found' }
     }
 
     // Fetch the template
@@ -61,7 +65,7 @@ export async function createContractFromTemplate(
     // Validate client exists and belongs to organization
     const { data: client, error: clientError } = await supabase
       .from('users')
-      .select('id, organization_id, email, full_name')
+      .select('id, organization_id, email, role, status, profiles(name)')
       .eq('id', clientId)
       .single()
 
@@ -69,9 +73,29 @@ export async function createContractFromTemplate(
       return { success: false, error: 'Client not found' }
     }
 
+    const clientStatus = client.status || 'active'
+    if (
+      !(CONTRACT_RECIPIENT_ROLES as readonly string[]).includes(client.role) ||
+      !(CONTRACT_RECIPIENT_STATUSES as readonly string[]).includes(clientStatus)
+    ) {
+      return { success: false, error: 'Client not found' }
+    }
+
+    const organizationId = client.organization_id || profile.organization_id
+    if (!organizationId) {
+      return { success: false, error: 'No organization found' }
+    }
+
     // Perform variable substitution on template content with HTML escaping
     let contractContent = template.template_content
     const variables = template.variables || []
+
+    for (const variable of variables) {
+      const key = variable.name || variable.key
+      if (variable.required && !String(metadata[key] ?? '').trim()) {
+        return { success: false, error: `Missing required field: ${variable.label || key}` }
+      }
+    }
 
     // Replace template variables with escaped metadata values to prevent XSS
     for (const variable of variables) {
@@ -89,7 +113,7 @@ export async function createContractFromTemplate(
     const { data: contract, error: contractError } = await supabase
       .from('contracts')
       .insert({
-        organization_id: profile.organization_id,
+        organization_id: organizationId,
         client_id: clientId,
         template_id: templateId,
         title: metadata.title || template.name,
@@ -97,6 +121,7 @@ export async function createContractFromTemplate(
         contract_type: template.contract_type,
         status: 'draft',
         content_html: contractContent,
+        created_by: user.id,
         metadata: {
           ...metadata,
           variables: metadata
@@ -223,48 +248,121 @@ export async function updateContractDraft(
   }
 }
 
+function displayNameFromProfiles(
+  profiles: { name?: string | null } | { name?: string | null }[] | null | undefined,
+  fallback: string,
+) {
+  const row = Array.isArray(profiles) ? profiles[0] : profiles
+  const name = row?.name?.trim()
+  return name || fallback
+}
+
 /**
- * Send contract for signature (prepares for DocuSign)
+ * Create a contract from a template and send it through DocuSign.
+ * When DocuSign is not configured, nothing is stored as sent.
+ */
+export async function submitNewContract(
+  templateId: string,
+  clientId: string,
+  metadata: Record<string, string> = {},
+) {
+  const parsed = contractTemplateSubmitSchema.safeParse({ templateId, clientId, metadata })
+  if (!parsed.success) {
+    return { success: false as const, error: 'Validation failed' }
+  }
+
+  const decision = decideContractSubmit(process.env)
+  if (decision.outcome !== 'send') {
+    return { success: false as const, error: decision.message, code: 'docusign_not_configured' as const }
+  }
+
+  const supabase = (await createServerSupabaseClient()) as any
+  const created = await createContractFromTemplate(
+    parsed.data.templateId,
+    parsed.data.clientId,
+    parsed.data.metadata,
+  )
+  if (!created.success || !created.data) {
+    return created
+  }
+
+  const { data: client } = await supabase
+    .from('users')
+    .select('id, email, profiles(name)')
+    .eq('id', parsed.data.clientId)
+    .single()
+
+  if (!client?.email) {
+    await supabase.from('contracts').delete().eq('id', created.data.id)
+    return { success: false as const, error: 'Client not found' }
+  }
+
+  const sent = await sendContractForSignature(created.data.id, [
+    {
+      email: client.email,
+      name: displayNameFromProfiles(client.profiles, client.email),
+      role: 'client',
+      signing_order: 1,
+      user_id: client.id,
+    },
+  ])
+
+  if (!sent.success) {
+    if (sent.code !== 'envelope_created') {
+      await supabase.from('contracts').delete().eq('id', created.data.id)
+    }
+    return {
+      success: false as const,
+      error: sent.error || 'Failed to send contract for signature',
+    }
+  }
+
+  return { success: true as const, data: { ...created.data, ...sent.data } }
+}
+
+/**
+ * Send a draft contract for signature through DocuSign.
+ * Refuses when credentials are missing and does not mark the contract sent.
  */
 export async function sendContractForSignature(
   contractId: string,
   signers: ContractSigner[]
 ) {
   try {
+    const decision = decideContractSubmit(process.env)
+    if (decision.outcome !== 'send') {
+      return { success: false, error: DOCUSIGN_NOT_CONFIGURED_MESSAGE, code: 'docusign_not_configured' }
+    }
+
+    const parsedSigners = contractSendSchema.safeParse({
+      signers: (signers || []).map((signer, index) => ({
+        ...signer,
+        signing_order: signer.signing_order || index + 1,
+      })),
+    })
+    if (!parsedSigners.success) {
+      return { success: false, error: 'Validation failed' }
+    }
+
     const supabase = (await createServerSupabaseClient()) as any
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { success: false, error: 'Unauthorized' }
 
-    // Get user profile and check permissions
     const { data: profile } = await supabase
       .from('users')
       .select('organization_id, role')
       .eq('id', user.id)
       .single()
 
-    const role = profile?.role
+    const role = normalizeDashboardRole(profile?.role)
     if (role !== 'staff' && role !== 'super_admin') {
       return { success: false, error: 'Only staff and admin can send contracts' }
     }
 
-    // Validate signers array
-    if (!signers || signers.length === 0) {
-      return { success: false, error: 'At least one signer is required' }
-    }
-
-    // Validate each signer
-    for (const signer of signers) {
-      if (!signer.email || !signer.name || !signer.role) {
-        return { success: false, error: 'Each signer must have email, name, and role' }
-      }
-    }
-
-    // Verify contract exists and is in draft status
     const { data: contract, error: fetchError } = await supabase
       .from('contracts')
-      .select('id, status, organization_id')
+      .select('id, status, organization_id, title, description, content_html')
       .eq('id', contractId)
-      .eq('organization_id', profile.organization_id)
       .single()
 
     if (fetchError || !contract) {
@@ -275,15 +373,19 @@ export async function sendContractForSignature(
       return { success: false, error: 'Only draft contracts can be sent for signature' }
     }
 
-    // Insert signers
-    const signersData = signers.map((signer, index) => ({
+    if (!contract.content_html) {
+      return { success: false, error: 'Contract must have content before sending' }
+    }
+
+    const signersData = parsedSigners.data.signers.map((signer, index) => ({
       contract_id: contractId,
-      user_id: signer.user_id || null,
+      user_id: signers[index]?.user_id || null,
       email: signer.email,
       name: signer.name,
       role: signer.role,
-      signing_order: signer.signing_order || index + 1,
-      status: 'pending'
+      signing_order: signer.signing_order,
+      status: 'pending' as const,
+      docusign_recipient_id: String(index + 1),
     }))
 
     const { error: signersError } = await supabase
@@ -294,40 +396,76 @@ export async function sendContractForSignature(
       return { success: false, error: signersError.message }
     }
 
-    // Update contract status
+    const document = contractDocumentFromHtml(contract.title, contract.content_html)
+    const { createEnvelope } = await import('@/lib/docusign/envelopes')
+
+    let envelopeId: string
+    let envelopeStatus: string
+    try {
+      const envelope = await createEnvelope(
+        document,
+        parsedSigners.data.signers.map((signer, index) => ({
+          email: signer.email,
+          name: signer.name,
+          recipientId: String(index + 1),
+          routingOrder: String(signer.signing_order),
+        })),
+        contractId,
+        `Please sign: ${contract.title}`,
+        contract.description || undefined,
+      )
+      envelopeId = envelope.envelopeId
+      envelopeStatus = envelope.status
+    } catch (error) {
+      await supabase.from('contract_signers').delete().eq('contract_id', contractId)
+      console.error('DocuSign envelope error:', error)
+      return { success: false, error: 'Failed to create DocuSign envelope' }
+    }
+
     const { error: updateError } = await supabase
       .from('contracts')
       .update({
         status: 'pending_signature',
-        updated_at: new Date().toISOString()
+        docusign_envelope_id: envelopeId,
+        docusign_status: envelopeStatus,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', contractId)
 
     if (updateError) {
-      return { success: false, error: updateError.message }
+      return {
+        success: false,
+        error: updateError.message,
+        code: 'envelope_created',
+        data: { docusign_envelope_id: envelopeId, docusign_status: envelopeStatus },
+      }
     }
 
-    // Write audit log
     await writeAuditLog({
       action: 'contract.send_for_signature',
       entity_type: 'contract',
       entity_id: contractId,
       new_values: {
         status: 'pending_signature',
-        signers_count: signers.length
-      }
+        docusign_envelope_id: envelopeId,
+        docusign_status: envelopeStatus,
+        signers_count: signersData.length,
+      },
     })
-
-    // TODO: Integrate with DocuSign API to create envelope and send for signature
-    // This would typically involve:
-    // 1. Creating a DocuSign envelope with the contract content
-    // 2. Adding recipients (signers) to the envelope
-    // 3. Sending the envelope
-    // 4. Storing the envelope ID in contract.docusign_envelope_id
 
     revalidatePath('/dashboard/contracts')
     revalidatePath(`/dashboard/contracts/${contractId}`)
-    return { success: true, data: { status: 'pending_signature', signers: signersData } }
+    revalidatePath('/dashboard/admin/contracts')
+    revalidatePath(`/dashboard/admin/contracts/${contractId}`)
+    return {
+      success: true,
+      data: {
+        status: 'pending_signature',
+        docusign_envelope_id: envelopeId,
+        docusign_status: envelopeStatus,
+        signers: signersData,
+      },
+    }
   } catch (error) {
     console.error('Error sending contract for signature:', error)
     return { success: false, error: 'Failed to send contract for signature' }

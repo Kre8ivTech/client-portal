@@ -10,6 +10,11 @@ import { QuickBooksAppConfigForm } from "@/components/admin/quickbooks-app-confi
 import { S3ConfigForm } from "@/components/admin/s3-config-form";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  decideContractSubmit,
+  DOCUSIGN_REQUIRED_ENV,
+} from "@/lib/contracts/docusign-config";
 
 interface PageProps {
   searchParams: Promise<{ success?: string; error?: string }>;
@@ -81,6 +86,8 @@ export default async function AdminIntegrationsSettingsPage({
     !!process.env.AWS_ACCESS_KEY_ID &&
     !!process.env.AWS_SECRET_ACCESS_KEY;
 
+  const docusignConfigured = decideContractSubmit(process.env).outcome === "send";
+
   const s3ExistingConfig = hasEncryptedS3
     ? {
         id: "encrypted",
@@ -141,6 +148,34 @@ export default async function AdminIntegrationsSettingsPage({
       )}
 
       <div className="grid gap-8">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle>DocuSign</CardTitle>
+              <Badge variant={docusignConfigured ? "default" : "secondary"}>
+                {docusignConfigured ? "Configured" : "Not configured"}
+              </Badge>
+            </div>
+            <CardDescription>
+              Contract signing uses a DocuSign JWT integration. Credentials stay in server environment variables and are never stored in the browser.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              {docusignConfigured
+                ? "DocuSign is configured. Creating a contract can send an envelope."
+                : "DocuSign is not configured. Contract submission will not mark an agreement as sent."}
+            </p>
+            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+              {DOCUSIGN_REQUIRED_ENV.map((name) => (
+                <li key={name}>
+                  <code className="text-xs">{name}</code>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+
         {/* QuickBooks App Configuration */}
         <Card>
           <CardHeader>

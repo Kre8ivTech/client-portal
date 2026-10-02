@@ -388,7 +388,7 @@ export function AIChatbotWidget({ userId, organizationId, role }: AIChatbotWidge
       ) : (
         <Button
           size="lg"
-          className="fixed bottom-24 right-20 md:bottom-6 md:right-24 h-14 w-14 rounded-full shadow-2xl z-50 p-0 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 hover:scale-105 transition-all"
+          className="fixed bottom-24 right-4 md:bottom-6 md:right-6 h-14 w-14 rounded-full shadow-2xl z-50 p-0 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 hover:scale-105 transition-all"
           onClick={() => setIsOpen(true)}
           aria-label="Open AI assistant"
         >

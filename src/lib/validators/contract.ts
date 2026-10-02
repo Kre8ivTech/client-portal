@@ -15,7 +15,7 @@ export type ContractType = z.infer<typeof contractTypeEnum>
 // Signer role enum
 export const signerRoleEnum = z.enum([
   'client',
-  'contractor',
+  'company_representative',
   'witness',
   'approver',
 ])
@@ -132,6 +132,14 @@ export const contractSendSchema = z.object({
 })
 
 export type ContractSendInput = z.infer<typeof contractSendSchema>
+
+export const contractTemplateSubmitSchema = z.object({
+  templateId: z.string().uuid('Invalid template ID'),
+  clientId: z.string().uuid('Invalid client ID'),
+  metadata: z.record(z.string().max(5000, 'Variable value too long')).default({}),
+})
+
+export type ContractTemplateSubmitInput = z.infer<typeof contractTemplateSubmitSchema>
 
 // Contract status enum
 export const contractStatusEnum = z.enum([

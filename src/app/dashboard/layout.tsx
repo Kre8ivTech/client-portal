@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { DashboardSidebar } from "@/components/layout/sidebar";
 import { DashboardTopbar } from "@/components/layout/dashboard-topbar";
 import { BottomNav } from "@/components/layout/bottom-nav";
-import { LiveChatWidget } from "@/components/messaging/live-chat-widget";
 import { SLAMonitorWrapper } from "@/components/tickets/sla-monitor-wrapper";
 import { AIChatbotWidget } from "@/components/ai/ai-chatbot-widget";
 import { loadPortalBranding } from "@/lib/white-label/load-portal-branding";
@@ -156,7 +155,6 @@ export default async function DashboardLayout({
 
       <BottomNav />
       <ErrorReporter />
-      <LiveChatWidget />
       <SLAMonitorWrapper />
       <AIChatbotWidget
         userId={user.id}

@@ -42,13 +42,11 @@ export default async function ContractDetailPage({
       client:users!contracts_client_id_fkey(
         id,
         email,
-        full_name,
         profiles(name)
       ),
       creator:users!contracts_created_by_fkey(
         id,
         email,
-        full_name,
         profiles(name)
       ),
       template:contract_templates(
@@ -153,7 +151,7 @@ export default async function ContractDetailPage({
                 initialSigners={contract.signers || []} 
                 status={contract.status}
                 client={{
-                  name: contract.client?.profiles?.name || contract.client?.full_name || 'Client',
+                  name: contract.client?.profiles?.name || contract.client?.email || 'Client',
                   email: contract.client?.email
                 }}
               />

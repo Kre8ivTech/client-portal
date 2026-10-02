@@ -4,10 +4,9 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Plus, User, Mail, Trash2, Send, Loader2, CheckCircle, Clock } from 'lucide-react'
+import { Plus, User, Mail, Trash2, Send, Loader2, CheckCircle } from 'lucide-react'
 import { sendContractForSignature } from '@/lib/actions/contracts'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
 
 interface Signer {
   email: string
@@ -35,6 +34,7 @@ export function ContractSigners({ contractId, initialSigners, status, client }: 
       : [{ email: client.email, name: client.name, role: 'client', signing_order: 1 }]
   )
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [isSent, setIsSent] = useState(status !== 'draft')
 
   const addSigner = () => {
@@ -60,12 +60,12 @@ export function ContractSigners({ contractId, initialSigners, status, client }: 
       const result = await sendContractForSignature(contractId, signers)
       if (result.success) {
         setIsSent(true)
-        window.location.reload() // Refresh to show updated status
+        window.location.reload()
       } else {
-        alert(result.error || 'Failed to send contract')
+        setError(result.error || 'Failed to send contract')
       }
-    } catch (err) {
-      alert('An expected error occurred')
+    } catch {
+      setError('Failed to send contract')
     } finally {
       setLoading(false)
     }
@@ -141,6 +141,10 @@ export function ContractSigners({ contractId, initialSigners, status, client }: 
           </div>
         ))}
       </div>
+
+      {error && (
+        <p className="text-sm text-red-700" role="alert">{error}</p>
+      )}
 
       {!isSent ? (
         <div className="space-y-4 pt-2">

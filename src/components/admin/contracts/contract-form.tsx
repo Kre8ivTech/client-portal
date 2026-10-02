@@ -1,24 +1,44 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, AlertCircle, FileText, User, ChevronRight } from 'lucide-react'
-import { createContractFromTemplate } from '@/lib/actions/contracts'
+import { submitNewContract } from '@/lib/actions/contracts'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { DOCUSIGN_NOT_CONFIGURED_MESSAGE } from '@/lib/contracts/docusign-config'
 
-interface ContractFormProps {
-  clients: { id: string; name: string }[]
-  templates: any[]
+interface ContractTemplateOption {
+  id: string
+  name: string
+  description?: string | null
+  contract_type?: string | null
+  variables?: Array<{
+    name?: string
+    key?: string
+    label?: string
+    required?: boolean
+    default?: string
+  }>
 }
 
-export function ContractForm({ clients, templates }: ContractFormProps) {
+function variableFieldKey(variable: { name?: string; key?: string }) {
+  return variable.name || variable.key || 'field'
+}
+
+interface ContractFormProps {
+  clients: { id: string; name: string; email: string }[]
+  templates: ContractTemplateOption[]
+  docusignConfigured: boolean
+}
+
+export function ContractForm({ clients, templates, docusignConfigured }: ContractFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,8 +56,8 @@ export function ContractForm({ clients, templates }: ContractFormProps) {
   useEffect(() => {
     if (selectedTemplate) {
       const initialMeta: Record<string, string> = {}
-      selectedTemplate.variables?.forEach((v: any) => {
-        initialMeta[v.name || v.key] = v.default || ''
+      selectedTemplate.variables?.forEach((v) => {
+        initialMeta[variableFieldKey(v)] = v.default || ''
       })
       setMetadata(initialMeta)
     }
@@ -58,7 +78,7 @@ export function ContractForm({ clients, templates }: ContractFormProps) {
     setError(null)
 
     try {
-      const result = await createContractFromTemplate(templateId, clientId, metadata)
+      const result = await submitNewContract(templateId, clientId, metadata)
       
       if (result.success && result.data) {
         router.push(`/dashboard/admin/contracts/${result.data.id}`)
@@ -74,6 +94,17 @@ export function ContractForm({ clients, templates }: ContractFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 pb-20">
+      {!docusignConfigured && (
+        <Alert className="border-amber-200 bg-amber-50 text-amber-950">
+          <AlertCircle className="h-4 w-4 text-amber-700" />
+          <AlertTitle>{DOCUSIGN_NOT_CONFIGURED_MESSAGE}</AlertTitle>
+          <AlertDescription>
+            This contract will not be sent. Add the DocuSign server credentials, then submit again.
+            Status is shown under Admin, Integration Settings.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {error && (
         <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800">
           <AlertCircle className="h-4 w-4" />
@@ -105,6 +136,9 @@ export function ContractForm({ clients, templates }: ContractFormProps) {
                 ))}
               </SelectContent>
             </Select>
+            {clients.length === 0 && (
+              <p className="text-sm text-amber-800">No client recipients are available.</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -121,6 +155,15 @@ export function ContractForm({ clients, templates }: ContractFormProps) {
                 ))}
               </SelectContent>
             </Select>
+            {templates.length === 0 && (
+              <p className="text-sm text-amber-800">
+                No active templates yet.{' '}
+                <Link href="/dashboard/admin/contracts/templates/new" className="underline font-medium">
+                  Create a template
+                </Link>
+                .
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -145,21 +188,25 @@ export function ContractForm({ clients, templates }: ContractFormProps) {
           <CardContent className="space-y-6 pt-2">
             {variables.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
-                {variables.map((variable: any) => (
-                  <div key={variable.name || variable.key} className="space-y-2">
+                {variables.map((variable) => {
+                  const fieldKey = variableFieldKey(variable)
+                  const fieldLabel = variable.label || fieldKey
+                  return (
+                  <div key={fieldKey} className="space-y-2">
                     <Label className="text-sm font-medium text-slate-700 flex items-center gap-1">
-                      {variable.label || variable.name || variable.key}
+                      {fieldLabel}
                       {variable.required && <span className="text-red-500">*</span>}
                     </Label>
                     <Input
-                      value={metadata[variable.name || variable.key] || ''}
-                      onChange={(e) => handleMetadataChange(variable.name || variable.key, e.target.value)}
-                      placeholder={`Enter ${variable.label || variable.name || variable.key.toLowerCase()}...`}
+                      value={metadata[fieldKey] || ''}
+                      onChange={(e) => handleMetadataChange(fieldKey, e.target.value)}
+                      placeholder={`Enter ${fieldLabel.toLowerCase()}...`}
                       className="border-slate-200 focus:ring-primary h-10"
                       required={variable.required}
                     />
                   </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-200">
@@ -180,7 +227,7 @@ export function ContractForm({ clients, templates }: ContractFormProps) {
                   </>
                 ) : (
                   <>
-                    Generate Contract Draft
+                    Submit to DocuSign
                     <ChevronRight className="ml-2 h-4 w-4" />
                   </>
                 )}

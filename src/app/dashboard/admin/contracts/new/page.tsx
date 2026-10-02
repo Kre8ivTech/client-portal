@@ -1,8 +1,11 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { Button } from '@/components/ui/button'
-import { ChevronLeft, FileText, Send, User, Settings } from 'lucide-react'
+import { AlertCircle, ChevronLeft, FileText, Send, Settings, User } from 'lucide-react'
 import Link from 'next/link'
 import { ContractForm } from '@/components/admin/contracts/contract-form'
+import { normalizeDashboardRole } from '@/lib/require-role'
+import { loadContractRecipients } from '@/lib/contracts/recipients'
+import { decideContractSubmit } from '@/lib/contracts/docusign-config'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 export default async function NewContractPage() {
   const supabase = await createServerSupabaseClient()
@@ -21,26 +24,30 @@ export default async function NewContractPage() {
     .single()
 
   const p = profile as { organization_id: string | null; role: string } | null
-  const isAuthorized = p && (p.role === 'super_admin' || p.role === 'staff')
+  const role = normalizeDashboardRole(p?.role)
+  const isAuthorized = role === 'super_admin' || role === 'staff'
 
-  if (!isAuthorized) {
+  if (!p || !isAuthorized) {
     return <div className="p-8 text-center text-destructive">Forbidden</div>
   }
 
-  // Fetch clients (users in the same org or all if super_admin)
-  type ClientResult = { id: string; email: string; full_name: string | null; profiles: { name: string | null } | null }
-  let clientsQuery = supabase.from('users').select('id, email, full_name, profiles(name)')
-  if (p.role !== 'super_admin' && p.organization_id) {
-    clientsQuery = clientsQuery.eq('organization_id', p.organization_id)
+  let clients: { id: string; name: string; email: string }[] = []
+  let clientsError: string | null = null
+  try {
+    clients = await loadContractRecipients(supabase, p, user.id)
+  } catch (error) {
+    clientsError = error instanceof Error ? error.message : 'Failed to load clients'
   }
-  const { data: clients } = await clientsQuery.order('email') as { data: ClientResult[] | null }
 
-  // Fetch templates
-  let templatesQuery = supabase.from('contract_templates').select('*').eq('is_active', true)
-  if (p.role !== 'super_admin' && p.organization_id) {
+  let templatesQuery = supabase
+    .from('contract_templates')
+    .select('id, name, description, contract_type, variables, is_active')
+    .eq('is_active', true)
+  if (role !== 'super_admin' && p.organization_id) {
     templatesQuery = templatesQuery.or(`organization_id.eq.${p.organization_id},organization_id.is.null`)
   }
-  const { data: templates } = await templatesQuery.order('name')
+  const { data: templates, error: templatesError } = await templatesQuery.order('name')
+  const docusignConfigured = decideContractSubmit(process.env).outcome === 'send'
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 px-4 py-8">
@@ -89,13 +96,25 @@ export default async function NewContractPage() {
           </div>
         </div>
 
-        <div className="md:col-span-3">
+        <div className="md:col-span-3 space-y-4">
+          {clientsError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Clients could not be loaded</AlertTitle>
+              <AlertDescription>{clientsError}</AlertDescription>
+            </Alert>
+          )}
+          {templatesError && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Templates could not be loaded</AlertTitle>
+              <AlertDescription>{templatesError.message}</AlertDescription>
+            </Alert>
+          )}
           <ContractForm
-            clients={clients?.map(c => ({
-              id: c.id,
-              name: c.profiles?.name || c.full_name || c.email
-            })) || []}
+            clients={clients}
             templates={templates || []}
+            docusignConfigured={docusignConfigured}
           />
         </div>
       </div>

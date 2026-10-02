@@ -4,7 +4,12 @@ import { contractSendSchema } from '@/lib/validators/contract'
 import { createEnvelope } from '@/lib/docusign/envelopes'
 import { writeAuditLog } from '@/lib/audit'
 import { notifyContractSent } from '@/lib/actions/contract-notifications'
-import type { DocuSignDocument, DocuSignSigner } from '@/types/docusign'
+import {
+  contractDocumentFromHtml,
+  decideContractSubmit,
+  DOCUSIGN_NOT_CONFIGURED_MESSAGE,
+} from '@/lib/contracts/docusign-config'
+import { normalizeDashboardRole } from '@/lib/require-role'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -30,12 +35,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Get user info
     const { data: userRow } = await (supabase as any)
       .from('users')
-      .select('organization_id, role, full_name, email')
+      .select('organization_id, role, email')
       .eq('id', user.id)
       .single()
 
     if (!userRow) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+
+    const role = normalizeDashboardRole(userRow.role)
+    if (role !== 'super_admin' && role !== 'staff') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    const decision = decideContractSubmit(process.env)
+    if (decision.outcome !== 'send') {
+      return NextResponse.json({ error: DOCUSIGN_NOT_CONFIGURED_MESSAGE }, { status: 503 })
     }
 
     // Parse and validate request body
@@ -82,20 +97,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    // Convert HTML to PDF buffer (in production, use a proper HTML-to-PDF library)
-    // For now, we'll assume content_html is already base64 PDF or needs conversion
-    const documentBase64 = Buffer.from(contract.content_html).toString('base64')
+    const document = contractDocumentFromHtml(contract.title, contract.content_html)
 
-    // Prepare DocuSign document
-    const document: DocuSignDocument = {
-      documentBase64,
-      name: contract.title,
-      fileExtension: 'pdf',
-      documentId: '1',
-    }
-
-    // Prepare DocuSign signers
-    const signers: DocuSignSigner[] = input.signers.map((signer, index) => ({
+    const signers = input.signers.map((signer, index) => ({
       email: signer.email,
       name: signer.name,
       recipientId: String(index + 1),
@@ -120,10 +124,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     } catch (docusignError) {
       console.error('DocuSign error:', docusignError)
       return NextResponse.json(
-        {
-          error: 'Failed to create DocuSign envelope',
-          details: docusignError instanceof Error ? docusignError.message : 'Unknown error',
-        },
+        { error: 'Failed to create DocuSign envelope' },
         { status: 500 }
       )
     }
@@ -132,9 +133,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { data: updatedContract, error: updateError } = await (supabase as any)
       .from('contracts')
       .update({
-        envelope_id: envelopeId,
+        docusign_envelope_id: envelopeId,
+        docusign_status: envelopeStatus,
         status: 'pending_signature',
-        sent_at: new Date().toISOString(),
       })
       .eq('id', id)
       .select()
@@ -146,14 +147,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Create contract_signers records
-    const signersData = input.signers.map((signer) => ({
+    const signersData = input.signers.map((signer, index) => ({
       contract_id: id,
       email: signer.email,
       name: signer.name,
       role: signer.role,
       signing_order: signer.signing_order,
       status: 'pending',
-      organization_id: userRow.organization_id,
+      docusign_recipient_id: String(index + 1),
     }))
 
     const { error: signersError } = await (supabase as any)
@@ -173,7 +174,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       old_values: { status: contract.status },
       new_values: {
         status: 'pending_signature',
-        envelope_id: envelopeId,
+        docusign_envelope_id: envelopeId,
+        docusign_status: envelopeStatus,
       },
       details: {
         signers: input.signers.map(s => ({ email: s.email, role: s.role })),

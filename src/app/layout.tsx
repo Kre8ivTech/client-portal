@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
-import { getPortalBranding } from "@/lib/actions/portal-branding";
+import { loadPortalBranding } from "@/lib/white-label/load-portal-branding";
 import { getBaseMetadata } from "@/lib/seo";
 import { Toaster } from "@/components/ui/toaster";
 import { validateEnvironment } from "@/lib/env-validation";
@@ -26,7 +26,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const branding = await getPortalBranding();
+  const branding = await loadPortalBranding();
   const primaryVar = sanitizeCssColor(branding.primary_color);
   return (
     <html lang="en" suppressHydrationWarning>

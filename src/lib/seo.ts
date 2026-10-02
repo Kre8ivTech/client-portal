@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { getPortalBranding, type PortalBrandingResult } from "./actions/portal-branding";
+import type { PortalBrandingResult } from "./actions/portal-branding";
+import { loadPortalBranding } from "./white-label/load-portal-branding";
 
 /**
  * Default SEO configuration values
@@ -66,7 +67,7 @@ export function stripHtml(html: string): string {
  * Generates base metadata from portal branding
  */
 export async function getBaseMetadata(): Promise<Metadata> {
-  const branding = await getPortalBranding();
+  const branding = await loadPortalBranding();
 
   const title = branding.app_name || DEFAULT_SEO.siteName;
   const description = branding.tagline || DEFAULT_SEO.description;
@@ -125,7 +126,7 @@ export async function getBaseMetadata(): Promise<Metadata> {
  * Generates page-specific metadata by merging with base metadata
  */
 export async function generatePageMetadata(options: SeoOptions): Promise<Metadata> {
-  const branding = await getPortalBranding();
+  const branding = await loadPortalBranding();
   const siteName = branding.app_name || DEFAULT_SEO.siteName;
   const siteDescription = branding.tagline || DEFAULT_SEO.description;
 
@@ -207,8 +208,4 @@ export async function generatePageMetadata(options: SeoOptions): Promise<Metadat
   return metadata;
 }
 
-/**
- * Gets the portal branding for use in components (re-export for convenience)
- */
-export { getPortalBranding };
 export type { PortalBrandingResult };

@@ -4,7 +4,7 @@ import { OrganizationBrandingForm } from "@/components/settings/organization-bra
 import { WhiteLabelAdminSection } from "@/components/settings/white-label-admin-section";
 import { SmtpConfigForm } from "@/components/settings/smtp-config-form";
 import { WhiteLabelSetupGuide } from "@/components/settings/WhiteLabelSetupGuide";
-import { getPortalBranding } from "@/lib/actions/portal-branding";
+import { loadPortalBranding } from "@/lib/white-label/load-portal-branding";
 import { getExpectedCnameTargets } from "@/lib/white-label/domain-verification";
 import { redirect } from "next/navigation";
 
@@ -90,7 +90,7 @@ export default async function WhiteLabelSettingsPage() {
     redirect("/dashboard/settings");
   }
 
-  const portalBranding = isSuperAdmin ? await getPortalBranding() : null;
+  const portalBranding = isSuperAdmin ? await loadPortalBranding() : null;
   const cnameTarget = getExpectedCnameTargets()[0] ?? "clients.kre8ivtech.com";
 
   return (

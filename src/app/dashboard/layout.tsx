@@ -6,7 +6,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { LiveChatWidget } from "@/components/messaging/live-chat-widget";
 import { SLAMonitorWrapper } from "@/components/tickets/sla-monitor-wrapper";
 import { AIChatbotWidget } from "@/components/ai/ai-chatbot-widget";
-import { getPortalBranding } from "@/lib/actions/portal-branding";
+import { loadPortalBranding } from "@/lib/white-label/load-portal-branding";
 import { normalizeDashboardRole } from "@/lib/require-role";
 import { ErrorReporter } from "@/components/errors/error-reporter";
 
@@ -47,7 +47,7 @@ export default async function DashboardLayout({
   ] = await Promise.all([
     supabase.from("users").select("id, organization_id, email, role, is_account_manager").eq("id", user.id).single(),
     supabase.from("user_profiles").select("id, name, avatar_url, organization_name, organization_slug").eq("id", user.id).single(),
-    getPortalBranding(),
+    loadPortalBranding(),
   ]);
   let userRow = userData as UserRow | null;
   let profileRow = profileData as ProfileRow | null;

@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Plus, FolderOpen, FileText, Edit, Trash2, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
+import { kbArticleHref } from '@/lib/kb/article'
 
 export default async function AdminKBPage() {
   const supabase = await createServerSupabaseClient()
@@ -185,7 +186,7 @@ export default async function AdminKBPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Link href={`/dashboard/kb/article/${article.slug}`} target="_blank">
+                    <Link href={kbArticleHref(article.slug)} target="_blank">
                       <Button variant="ghost" size="sm">
                         <Eye className="h-4 w-4" />
                       </Button>

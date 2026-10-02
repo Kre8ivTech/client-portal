@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Book, FileText, ChevronRight, HelpCircle, LifeBuoy, Zap, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { KBSearchForm } from '@/components/kb/kb-search-form'
+import { kbArticleHref } from '@/lib/kb/article'
 
 export default async function KnowledgeBasePage({
   searchParams,
@@ -165,7 +166,7 @@ export default async function KnowledgeBasePage({
             {featuredArticles?.map((article: any) => (
               <Link 
                 key={article.id} 
-                href={`/dashboard/kb/article/${article.slug}`}
+                href={kbArticleHref(article.slug)}
                 className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all group"
               >
                 <div className="h-10 w-10 shrink-0 bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-blue-600 transition-colors">

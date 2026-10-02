@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, FileText, ChevronRight, HelpCircle } from 'lucide-react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { kbArticleHref } from '@/lib/kb/article'
 
 interface CategoryPageProps {
   params: Promise<{ slug: string }>
@@ -66,7 +67,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         ) : (
           articles?.map((article: any) => (
             <Card key={article.id} className="border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 rounded-[32px] overflow-hidden group">
-              <Link href={`/dashboard/kb/article/${article.slug}`}>
+              <Link href={kbArticleHref(article.slug)}>
                 <CardHeader className="p-8 pb-4">
                   <div className="flex justify-between items-start">
                     <div className="space-y-1 flex-1">

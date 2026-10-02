@@ -10,20 +10,29 @@ import { format } from 'date-fns'
 import { generatePageMetadata, truncateDescription, stripHtml } from '@/lib/seo'
 import { SafeHtml } from '@/components/ui/safe-html'
 import { ArticleFeedback } from '@/components/kb/article-feedback'
+import {
+  KB_ARTICLE_DETAIL_SELECT,
+  KB_ARTICLE_METADATA_SELECT,
+  fetchKbArticle,
+  type KbArticleView,
+} from '@/lib/kb/article'
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>
 }
 
+async function loadArticle(slug: string, columns: string) {
+  const supabase = await createServerSupabaseClient()
+  const { article, error } = await fetchKbArticle<KbArticleView>(supabase, slug, columns)
+  if (error) {
+    throw new Error('Failed to load knowledge base article')
+  }
+  return article
+}
+
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { slug } = await params
-  const supabase = (await createServerSupabaseClient()) as any
-
-  const { data: article } = await supabase
-    .from('kb_articles')
-    .select('title, content, excerpt, created_at, updated_at, author:profiles(name)')
-    .eq('slug', slug)
-    .single()
+  const article = await loadArticle(slug, KB_ARTICLE_METADATA_SELECT)
 
   if (!article) {
     return generatePageMetadata({ title: 'Article Not Found' })
@@ -40,8 +49,8 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       type: 'article',
       title: article.title,
       description,
-      publishedTime: article.created_at,
-      modifiedTime: article.updated_at,
+      publishedTime: article.created_at ?? undefined,
+      modifiedTime: article.updated_at ?? undefined,
       authors: article.author?.name ? [article.author.name] : undefined,
     },
   })
@@ -49,25 +58,9 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 
 export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params
-  const supabase = (await createServerSupabaseClient()) as any
+  const article = await loadArticle(slug, KB_ARTICLE_DETAIL_SELECT)
 
-  const { data: article } = await supabase
-    .from('kb_articles')
-    .select(`
-      *,
-      category:kb_categories (
-        name,
-        slug
-      ),
-      author:profiles (
-        name,
-        avatar_url
-      )
-    `)
-    .eq('slug', slug)
-    .single()
-
-  if (!article) {
+  if (!article?.id) {
     notFound()
   }
 
@@ -101,7 +94,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           </div>
           <div className="flex items-center gap-2">
             <Clock size={16} />
-            <span>Updated {format(new Date(article.updated_at), 'MMM d, yyyy')}</span>
+            <span>Updated {format(new Date(article.updated_at ?? article.created_at ?? Date.now()), 'MMM d, yyyy')}</span>
           </div>
           <div className="flex items-center gap-2">
             <MessageSquare size={16} />

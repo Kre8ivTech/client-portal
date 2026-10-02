@@ -19,6 +19,10 @@ vi.mock("@/lib/actions/auth-settings", () => ({
   verifyRecaptcha: vi.fn(),
 }));
 
+vi.mock("@/lib/actions/send-magic-link", () => ({
+  requestMagicLink: vi.fn(),
+}));
+
 const embarkBranding: PortalBranding = {
   app_name: "Embark Marketing",
   tagline: "Portal",

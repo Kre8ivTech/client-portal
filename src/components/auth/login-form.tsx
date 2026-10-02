@@ -11,6 +11,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { cn } from "@/lib/utils";
 import { getAuthSettings, verifyRecaptcha, type AuthSettings } from "@/lib/actions/auth-settings";
+import { requestMagicLink } from "@/lib/actions/send-magic-link";
 import { getAuthErrorMessage } from "@/lib/auth-errors";
 import { getLoginQueryMessage } from "@/lib/auth/login-query-message";
 import { SSOButtons } from "@/components/auth/sso-buttons";
@@ -115,23 +116,28 @@ export function LoginForm({ initialBranding }: LoginFormProps) {
     setMessage(null);
 
     try {
-      // Verify reCAPTCHA if enabled
-      if (authSettings?.recaptcha_enabled && authSettings?.recaptcha_site_key) {
-        const token = await executeRecaptcha();
-        if (!token) {
+      const recaptchaRequired = Boolean(
+        authSettings?.recaptcha_enabled && authSettings?.recaptcha_site_key,
+      );
+      let recaptchaToken: string | null = null;
+      if (recaptchaRequired) {
+        recaptchaToken = await executeRecaptcha();
+        if (!recaptchaToken) {
           setMessage({ type: "error", text: "Could not complete reCAPTCHA verification" });
-          setLoading(false);
-          return;
-        }
-        const recaptchaResult = await verifyRecaptcha(token, password.trim() ? "login_password" : "login_magic_link");
-        if (!recaptchaResult.success) {
-          setMessage({ type: "error", text: recaptchaResult.error || "reCAPTCHA verification failed" });
           setLoading(false);
           return;
         }
       }
 
       if (password.trim()) {
+        if (recaptchaToken) {
+          const recaptchaResult = await verifyRecaptcha(recaptchaToken, "login_password");
+          if (!recaptchaResult.success) {
+            setMessage({ type: "error", text: recaptchaResult.error || "reCAPTCHA verification failed" });
+            setLoading(false);
+            return;
+          }
+        }
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         const signedInUser = data?.user;
 
@@ -180,14 +186,13 @@ export function LoginForm({ initialBranding }: LoginFormProps) {
         }).catch(() => {});
         window.location.href = "/dashboard";
       } else {
-        const { error } = await supabase.auth.signInWithOtp({
+        const result = await requestMagicLink({
           email,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback`,
-          },
+          recaptchaToken,
+          recaptchaAction: "login_magic_link",
         });
-        if (error) {
-          setMessage({ type: "error", text: getAuthErrorMessage(error) });
+        if (!result.ok) {
+          setMessage({ type: "error", text: result.error });
         } else {
           setMessage({
             type: "success",

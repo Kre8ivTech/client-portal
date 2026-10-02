@@ -18,6 +18,7 @@ export async function sendWithMicrosoft(input: {
   subject: string
   html: string
   replyTo?: string | null
+  fromName?: string | null
 }): Promise<NotificationResult> {
   const provider = 'microsoft365'
   if (CONFIG_KEYS.some((key) => !process.env[key])) {
@@ -68,7 +69,7 @@ export async function sendWithMicrosoft(input: {
           message: {
             subject: input.subject,
             body: { contentType: 'HTML', content: input.html },
-            from: { emailAddress: { address: sender, name: process.env.MICROSOFT_MAIL_FROM_NAME || 'Kre8ivTech' } },
+            from: { emailAddress: { address: sender, name: input.fromName || process.env.MICROSOFT_MAIL_FROM_NAME || 'Kre8ivTech' } },
             toRecipients: [{ emailAddress: { address: input.to } }],
             ...(input.replyTo ? { replyTo: [{ emailAddress: { address: input.replyTo } }] } : {}),
           },

@@ -267,6 +267,23 @@ export async function sendTemplatedEmail({
   }
 }
 
+function emailDisplayName(name: string | null | undefined): string | null {
+  if (!name) return null
+  const cleaned = name.replace(/[\r\n<>"]/g, '').trim()
+  return cleaned.slice(0, 80) || null
+}
+
+function resendFromAddress(fromName?: string | null): string {
+  const configured = process.env.EMAIL_FROM || 'KT-Portal Support <support@ktportal.app>'
+  const display = emailDisplayName(fromName)
+  if (!display) return configured
+  const wrapped = configured.match(/<([^<>\s]+@[^<>\s]+)>/)
+  const bare = configured.match(/^([^<>\s]+@[^<>\s]+)$/)
+  const address = wrapped?.[1] ?? bare?.[1]
+  if (!address) return configured
+  return `${display} <${address}>`
+}
+
 /**
  * Send raw HTML email (for testing or custom needs)
  */
@@ -276,12 +293,14 @@ export async function sendRawEmail({
   html,
   text,
   organizationId,
+  fromName,
 }: {
   to: string
   subject: string
   html: string
   text?: string
   organizationId?: string | null
+  fromName?: string | null
 }): Promise<NotificationResult> {
   try {
     const smtpConfig = await getEffectiveSmtpConfig(organizationId)
@@ -292,6 +311,7 @@ export async function sendRawEmail({
           subject,
           html,
           text,
+          fromName: emailDisplayName(fromName),
         })
 
         return {
@@ -310,7 +330,7 @@ export async function sendRawEmail({
     }
 
     if (hasMicrosoftMailConfiguration()) {
-      return sendWithMicrosoft({ to, subject, html })
+      return sendWithMicrosoft({ to, subject, html, fromName: emailDisplayName(fromName) })
     }
 
     const apiKey = process.env.RESEND_API_KEY
@@ -330,7 +350,7 @@ export async function sendRawEmail({
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM || 'KT-Portal Support <support@ktportal.app>',
+        from: resendFromAddress(fromName),
         to: [to],
         subject,
         html,

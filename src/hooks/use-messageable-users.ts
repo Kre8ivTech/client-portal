@@ -1,20 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
+import {
+  filterMessageableUsers,
+  isPartnerDirectoryRole,
+  messageableOrganizationIds,
+  type MessageableCandidate,
+} from "@/lib/messaging/messageable-users";
 
-export interface MessageableUser {
-  id: string;
-  email: string;
-  role: string;
-  organization_id: string;
-  profiles: {
-    name: string | null;
-    avatar_url: string | null;
-    presence_status: string | null;
-  } | null;
-  organization: {
-    name: string;
-  } | null;
-}
+export type { MessageableUser } from "@/lib/messaging/messageable-users";
 
 export function useMessageableUsers(searchQuery: string = "") {
   const supabase = createClient();
@@ -22,7 +15,6 @@ export function useMessageableUsers(searchQuery: string = "") {
   return useQuery({
     queryKey: ["messageable-users", searchQuery],
     queryFn: async () => {
-      // Get current user's info first
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -36,7 +28,37 @@ export function useMessageableUsers(searchQuery: string = "") {
 
       if (currentUserError) throw currentUserError;
 
-      // Build query for messageable users
+      const role = currentUserData.role as string;
+      const organizationId = (currentUserData.organization_id as string | null) ?? null;
+      let parentOrgId: string | null = null;
+      let childOrgIds: string[] = [];
+
+      if (isPartnerDirectoryRole(role) && organizationId) {
+        const { data: currentOrg, error: orgError } = await supabase
+          .from("organizations")
+          .select("parent_org_id")
+          .eq("id", organizationId)
+          .single();
+
+        if (orgError) throw orgError;
+        parentOrgId = (currentOrg?.parent_org_id as string | null) ?? null;
+
+        const { data: children, error: childError } = await supabase
+          .from("organizations")
+          .select("id")
+          .eq("parent_org_id", organizationId);
+
+        if (childError) throw childError;
+        childOrgIds = (children ?? []).map((org: { id: string }) => org.id);
+      }
+
+      const scope = messageableOrganizationIds({
+        role,
+        organizationId,
+        parentOrgId,
+        childOrgIds,
+      });
+
       let query = supabase
         .from("users")
         .select(
@@ -44,71 +66,34 @@ export function useMessageableUsers(searchQuery: string = "") {
           id,
           email,
           role,
+          status,
           organization_id,
           profiles:profiles(name, avatar_url, presence_status),
           organization:organizations!users_organization_id_fkey(name)
         `,
         )
-        .neq("id", user.id)
         .eq("status", "active");
 
-      // Apply search filter if provided - email only (profiles.name filtering done client-side)
-      if (searchQuery.trim()) {
-        query = query.ilike("email", `%${searchQuery}%`);
+      if (scope !== "all") {
+        if (scope.length === 0) return [];
+        query = query.in("organization_id", scope);
       }
 
-      // For staff/super_admin, they can see all users
-      // For others, filter based on organization relationships
-      const isStaff = ["super_admin", "staff"].includes(currentUserData.role);
-
-      if (!isStaff) {
-        // Get partner/client relationships
-        const { data: relatedOrgs } = await supabase
-          .from("organizations")
-          .select("id, parent_org_id")
-          .or(`id.eq.${currentUserData.organization_id},parent_org_id.eq.${currentUserData.organization_id}`);
-
-        const orgIds = relatedOrgs?.map((o: any) => o.id) || [currentUserData.organization_id];
-
-        // Also include parent org if current org has one
-        const { data: currentOrg } = await supabase
-          .from("organizations")
-          .select("parent_org_id")
-          .eq("id", currentUserData.organization_id)
-          .single();
-
-        if (currentOrg?.parent_org_id) {
-          orgIds.push(currentOrg.parent_org_id);
-        }
-
-        query = query.in("organization_id", orgIds);
-      }
-
-      // Order by email (profiles.name ordering done client-side)
-      query = query.order("email", { ascending: true });
-      query = query.limit(50);
-
-      const { data, error } = await query;
+      const { data, error } = await query.order("email", { ascending: true }).limit(200);
 
       if (error) throw error;
 
-      // Filter by name if search query provided (client-side)
-      let results = data as MessageableUser[];
-      if (searchQuery.trim()) {
-        const searchLower = searchQuery.toLowerCase();
-        results = results.filter(
-          (u) => u.email.toLowerCase().includes(searchLower) || u.profiles?.name?.toLowerCase().includes(searchLower),
-        );
-      }
-
-      // Sort by name if available, otherwise email (client-side)
-      results.sort((a, b) => {
-        const aName = a.profiles?.name || a.email;
-        const bName = b.profiles?.name || b.email;
-        return aName.localeCompare(bName);
-      });
-
-      return results;
+      return filterMessageableUsers(
+        {
+          currentUserId: user.id,
+          role,
+          organizationId,
+          parentOrgId,
+          childOrgIds,
+        },
+        (data ?? []) as MessageableCandidate[],
+        searchQuery,
+      );
     },
     enabled: true,
     staleTime: 30000, // Cache for 30 seconds

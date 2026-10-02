@@ -26,7 +26,10 @@ RUN npm run build:local
 
 ENV NODE_ENV=production
 ENV PORT=3000
+# OpenShip keeps one hostname per container port. Extra white-label hostnames
+# are routed here and forwarded to the app with the original Host header.
+ENV ALIAS_PROXY_PORT=3001
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
-CMD ["sh", "-c", "npx tsx scripts/apply-pending-migrations.ts || true; exec npx next start -H 0.0.0.0 -p ${PORT}"]
+CMD ["sh", "-c", "npx tsx scripts/apply-pending-migrations.ts || true; setsid node scripts/alias-port-proxy.mjs >/dev/null 2>&1 < /dev/null & exec npx next start -H 0.0.0.0 -p ${PORT}"]

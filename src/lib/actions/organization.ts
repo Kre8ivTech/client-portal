@@ -6,29 +6,13 @@ import { revalidatePath } from "next/cache";
 import { writeAuditLog } from "@/lib/audit";
 import { updateOrganizationSchema, createOrganizationSchema } from "@/lib/validators/organization";
 import { validateHexColor, validateImageUrl, validateOpacity } from "@/lib/security";
+import { normalizeCustomDomain } from "@/lib/white-label/domain-verification";
 
 type ActionResult = {
   success: boolean;
   error?: string;
   data?: Record<string, unknown>;
 };
-
-function normalizeCustomDomain(input: string | null | undefined): string | null {
-  if (!input) return null;
-  const trimmed = input.trim().toLowerCase();
-  if (!trimmed) return null;
-
-  const withoutProtocol = trimmed.replace(/^https?:\/\//, "").replace(/\/$/, "");
-  const host = withoutProtocol.split("/")[0] ?? "";
-  if (!host) return null;
-
-  const domainPattern = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
-  if (!domainPattern.test(host)) {
-    return null;
-  }
-
-  return host;
-}
 
 /**
  * Check if user can edit the organization

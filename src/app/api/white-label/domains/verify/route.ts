@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { verifyDomainCname } from "@/lib/white-label/domain-verification";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { normalizeCustomDomain, verifyDomainCname } from "@/lib/white-label/domain-verification";
+
+const verifyDomainSchema = z.object({
+  organizationId: z.string().uuid(),
+  domain: z.string().max(255).optional(),
+});
 
 type UserRow = {
   id: string;
@@ -38,12 +45,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = (await request.json().catch(() => null)) as { organizationId?: string } | null;
-    const organizationId = body?.organizationId;
-
-    if (!organizationId) {
+    const parsedBody = verifyDomainSchema.safeParse(await request.json().catch(() => null));
+    if (!parsedBody.success) {
       return NextResponse.json({ error: "organizationId is required" }, { status: 400 });
     }
+    const { organizationId } = parsedBody.data;
 
     const { data: userData } = await (supabase as any)
       .from("users")
@@ -79,18 +85,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    if (!orgRow.custom_domain) {
-      return NextResponse.json({ error: "No custom domain configured" }, { status: 400 });
+    const domain = normalizeCustomDomain(parsedBody.data.domain ?? orgRow.custom_domain);
+    if (!domain) {
+      return NextResponse.json(
+        { error: "Enter a custom domain, then verify it." },
+        { status: 400 },
+      );
     }
 
-    const verification = await verifyDomainCname(orgRow.custom_domain);
+    const admin = getSupabaseAdmin();
+    const { data: existingDomain } = await admin
+      .from("organizations")
+      .select("id")
+      .eq("custom_domain", domain)
+      .neq("id", orgRow.id)
+      .maybeSingle();
+
+    if (existingDomain) {
+      return NextResponse.json(
+        { error: "This custom domain is already in use by another organization" },
+        { status: 409 },
+      );
+    }
+
+    const verification = await verifyDomainCname(domain);
     const now = new Date().toISOString();
-
     const updatePayload = verification.verified
-      ? { custom_domain_verified: true, custom_domain_verified_at: now, updated_at: now }
-      : { custom_domain_verified: false, custom_domain_verified_at: null, updated_at: now };
+      ? { custom_domain: domain, custom_domain_verified: true, custom_domain_verified_at: now, updated_at: now }
+      : { custom_domain: domain, custom_domain_verified: false, custom_domain_verified_at: null, updated_at: now };
 
-    const { error: updateError } = await (supabase as any)
+    const { error: updateError } = await admin
       .from("organizations")
       .update(updatePayload)
       .eq("id", orgRow.id);
@@ -102,7 +126,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       verified: verification.verified,
-      domain: orgRow.custom_domain,
+      domain,
       records: verification.records,
       expectedTargets: verification.expectedTargets,
       reason: verification.reason,

@@ -1,5 +1,19 @@
 import dns from "node:dns/promises";
 
+export function normalizeCustomDomain(input: string | null | undefined): string | null {
+  if (!input) return null;
+  const trimmed = input.trim().toLowerCase();
+  if (!trimmed) return null;
+
+  const withoutProtocol = trimmed.replace(/^https?:\/\//, "").replace(/\/$/, "");
+  const host = withoutProtocol.split("/")[0]?.split(":")[0] ?? "";
+  if (!host || host === "localhost" || host.includes("..")) return null;
+
+  const domainPattern = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+  if (!domainPattern.test(host)) return null;
+  return host;
+}
+
 function normalizeHostname(input: string | null | undefined): string | null {
   if (!input) return null;
   const trimmed = input.trim().toLowerCase();

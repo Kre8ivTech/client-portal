@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ interface OrganizationBrandingFormProps {
 }
 
 export function OrganizationBrandingForm({ organization, canEdit, canManageDomainVerification = false }: OrganizationBrandingFormProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [verifyingDomain, setVerifyingDomain] = useState(false);
   const [domainVerified, setDomainVerified] = useState(Boolean(organization.custom_domain_verified));
@@ -68,9 +70,14 @@ export function OrganizationBrandingForm({ organization, canEdit, canManageDomai
 
     setLoading(false);
     if (result.success) {
+      const submittedDomain = String(formData.get("custom_domain") ?? "").trim().toLowerCase();
+      const savedDomain = (organization.custom_domain ?? "").trim().toLowerCase();
       setMessage({ type: "success", text: "Organization branding updated successfully." });
-      setDomainVerified(false);
-      setDomainVerificationNote("Domain verification is reset after custom domain changes.");
+      if (submittedDomain !== savedDomain) {
+        setDomainVerified(false);
+        setDomainVerificationNote("Domain verification is reset after custom domain changes.");
+      }
+      router.refresh();
     } else {
       setMessage({ type: "error", text: result.error ?? "Failed to update branding." });
     }
@@ -82,10 +89,14 @@ export function OrganizationBrandingForm({ organization, canEdit, canManageDomai
     setMessage(null);
 
     try {
+      const domainInput = document.getElementById("custom_domain") as HTMLInputElement | null;
       const response = await fetch("/api/white-label/domains/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ organizationId: organization.id }),
+        body: JSON.stringify({
+          organizationId: organization.id,
+          domain: domainInput?.value ?? "",
+        }),
       });
 
       const data = (await response.json()) as {
@@ -110,6 +121,7 @@ export function OrganizationBrandingForm({ organization, canEdit, canManageDomai
             ? `Detected CNAME: ${data.records.join(", ")}`
             : "DNS verification succeeded."
         );
+        router.refresh();
       } else {
         setMessage({ type: "error", text: "Custom domain is not yet pointing to the required CNAME target." });
         setDomainVerificationNote(
@@ -277,7 +289,7 @@ export function OrganizationBrandingForm({ organization, canEdit, canManageDomai
                     <p className="font-semibold text-info">CNAME setup checklist</p>
                     <p className="text-foreground/80">1. Create a CNAME for your subdomain (example: `portal.youragency.com`).</p>
                     <p className="text-foreground/80">2. Point it to `<span className="font-mono">{cnameTarget}</span>`.</p>
-                    <p className="text-foreground/80">3. Save settings, wait for DNS propagation, then click Verify now.</p>
+                    <p className="text-foreground/80">3. Click Verify now. That saves the domain and checks DNS.</p>
                   </div>
                 </div>
               </div>
@@ -332,7 +344,7 @@ export function OrganizationBrandingForm({ organization, canEdit, canManageDomai
               </div>
               {!canManageDomainVerification && (
                 <p className="text-xs text-muted-foreground">
-                  Verification is completed by platform staff after DNS propagation.
+                  Verify now checks the CNAME and marks the domain active when it matches.
                 </p>
               )}
             </div>

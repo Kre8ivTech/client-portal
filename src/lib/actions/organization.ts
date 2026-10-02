@@ -6,7 +6,10 @@ import { revalidatePath } from "next/cache";
 import { writeAuditLog } from "@/lib/audit";
 import { updateOrganizationSchema, createOrganizationSchema } from "@/lib/validators/organization";
 import { validateHexColor, validateImageUrl, validateOpacity } from "@/lib/security";
-import { normalizeCustomDomain } from "@/lib/white-label/domain-verification";
+import {
+  normalizeCustomDomain,
+  resolveCustomDomainVerificationUpdate,
+} from "@/lib/white-label/domain-verification";
 
 type ActionResult = {
   success: boolean;
@@ -136,7 +139,6 @@ export async function updateOrganization(
     // Only allow branding updates for admin/staff/partners (not clients)
     const canUpdateBranding = ["super_admin", "staff", "partner", "partner_staff"].includes(access.role);
     const normalizedDomain = normalizeCustomDomain(customDomainInput || null);
-    const customDomainChanged = (orgRow.custom_domain ?? null) !== normalizedDomain;
 
     if (customDomainInput && !normalizedDomain) {
       return { success: false, error: "Custom domain must be a valid hostname (e.g. portal.example.com)" };
@@ -160,8 +162,13 @@ export async function updateOrganization(
     }
 
     const isStaffAdmin = access.role === "super_admin" || access.role === "staff";
-    const customDomainVerified =
-      isStaffAdmin && customDomainVerifiedInput === "on" && Boolean(normalizedDomain) && !customDomainChanged;
+    const verificationUpdate = resolveCustomDomainVerificationUpdate({
+      previousDomain: orgRow.custom_domain,
+      nextDomain: normalizedDomain,
+      isStaffAdmin,
+      verificationChecked: customDomainVerifiedInput === "on",
+      now: new Date().toISOString(),
+    });
 
     const validatedLogoUrl = validateImageUrl(logoUrl || null);
     const validatedPrimaryColor = (validateHexColor(primaryColor || null) ?? primaryColor) || null;
@@ -181,22 +188,11 @@ export async function updateOrganization(
 
     const updateData: Record<string, unknown> = {
       settings,
+      ...(brandingConfig !== undefined ? { branding_config: brandingConfig } : {}),
+      ...(orgRow.type === "partner"
+        ? { custom_domain: normalizedDomain, ...verificationUpdate }
+        : {}),
     };
-
-    // Only include branding_config if user has permission
-    if (brandingConfig !== undefined) {
-      updateData.branding_config = brandingConfig;
-    }
-
-    if (orgRow.type === "partner") {
-      updateData.custom_domain = normalizedDomain;
-      updateData.custom_domain_verified = customDomainChanged ? false : customDomainVerified;
-      if (customDomainChanged) {
-        updateData.custom_domain_verified_at = null;
-      } else if (customDomainVerified) {
-        updateData.custom_domain_verified_at = new Date().toISOString();
-      }
-    }
 
     if (name) updateData.name = name;
     if (slug) updateData.slug = slug;

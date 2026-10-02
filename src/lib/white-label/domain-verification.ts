@@ -14,6 +14,65 @@ export function normalizeCustomDomain(input: string | null | undefined): string 
   return host;
 }
 
+export type CustomDomainVerificationPatch = {
+  custom_domain_verified?: boolean;
+  custom_domain_verified_at?: string | null;
+};
+
+function canonicalCustomDomain(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return normalizeCustomDomain(trimmed) ?? trimmed.toLowerCase();
+}
+
+/**
+ * Decide which verification columns a branding save may write.
+ *
+ * Partner forms disable the verification checkbox, and disabled checkboxes are
+ * omitted from FormData. Treating that omission as "unverified" clears a
+ * verified domain on every save and drops the public login back to platform
+ * branding. Non-staff saves therefore leave both columns untouched when the
+ * domain string did not change. A changed domain always resets verification.
+ * Staff may still set or clear the checkbox while the domain stays the same.
+ */
+export function resolveCustomDomainVerificationUpdate(input: {
+  previousDomain: string | null | undefined;
+  nextDomain: string | null;
+  isStaffAdmin: boolean;
+  verificationChecked: boolean;
+  now: string;
+}): CustomDomainVerificationPatch {
+  const domainChanged = canonicalCustomDomain(input.previousDomain) !== canonicalCustomDomain(input.nextDomain);
+
+  if (domainChanged) {
+    return {
+      custom_domain_verified: false,
+      custom_domain_verified_at: null,
+    };
+  }
+
+  if (!input.isStaffAdmin) {
+    return {};
+  }
+
+  if (input.verificationChecked && input.nextDomain) {
+    return {
+      custom_domain_verified: true,
+      custom_domain_verified_at: input.now,
+    };
+  }
+
+  if (!input.verificationChecked) {
+    return {
+      custom_domain_verified: false,
+      custom_domain_verified_at: null,
+    };
+  }
+
+  return {};
+}
+
 function normalizeHostname(input: string | null | undefined): string | null {
   if (!input) return null;
   const trimmed = input.trim().toLowerCase();

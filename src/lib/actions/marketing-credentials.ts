@@ -79,3 +79,18 @@ export async function saveMarketingCredentials(input: {
 
   return { ok: true, provider: toPublicProviderStatus(provider, merged) };
 }
+
+export async function clearMarketingCredentials(
+  providerId: MarketingProviderId,
+): Promise<{ ok: true; provider: PublicProviderStatus } | { ok: false; error: string }> {
+  const provider = marketingProvider(providerId);
+  if (!provider) return { ok: false, error: "Unknown provider" };
+  const access = await requireCredentialManager();
+  if (!access.ok) return access;
+  try {
+    await saveOrganizationProvider(access.organizationId, provider.id, {}, access.userId);
+  } catch {
+    return { ok: false, error: "Could not remove credentials" };
+  }
+  return { ok: true, provider: toPublicProviderStatus(provider, null) };
+}

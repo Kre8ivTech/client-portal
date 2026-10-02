@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import { cookies, headers } from 'next/headers'
+import { publicAppOrigin } from '@/lib/public-app-origin'
 
 function sanitizeRedirectPath(path: string): string {
   // Only allow relative paths starting with /
@@ -17,7 +18,8 @@ function sanitizeRedirectPath(path: string): string {
 }
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url)
+  const { searchParams } = new URL(request.url)
+  const origin = publicAppOrigin(request.url)
   const code = searchParams.get('code')
   const rawNext = searchParams.get('next') ?? '/dashboard'
   const next = sanitizeRedirectPath(rawNext)

@@ -1,4 +1,5 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { publicAppOrigin } from '@/lib/public-app-origin'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -11,7 +12,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const { origin } = new URL(request.url)
+  const origin = publicAppOrigin(request.url)
   return NextResponse.redirect(`${origin}/login`, {
     status: 303, // See Other - prevents some caching issues on redirects after POST
   })

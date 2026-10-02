@@ -13,10 +13,10 @@ describe("getHrefsForRole integrations", () => {
     expect(getHrefsForRole("super_admin", false)).toContain(ORG_INTEGRATIONS_HREF)
   })
 
-  it("does not show org QuickBooks to clients or non-account-manager staff", () => {
+  it("shows org integrations to staff and partner staff for marketing credentials", () => {
+    expect(getHrefsForRole("staff", false)).toContain(ORG_INTEGRATIONS_HREF)
+    expect(getHrefsForRole("partner_staff", false)).toContain(ORG_INTEGRATIONS_HREF)
     expect(getHrefsForRole("client", false)).not.toContain(ORG_INTEGRATIONS_HREF)
-    expect(getHrefsForRole("staff", false)).not.toContain(ORG_INTEGRATIONS_HREF)
-    expect(getHrefsForRole("partner_staff", false)).not.toContain(ORG_INTEGRATIONS_HREF)
   })
 
   it("gives partner staff real security and notification routes", () => {

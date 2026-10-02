@@ -6,6 +6,7 @@ import { buildOrgFileS3Prefix } from "@/lib/file-sync/s3-prefix";
 import { listGoogleDriveFiles, downloadGoogleDriveFile, refreshGoogleAccessToken } from "@/lib/file-sync/providers/google-drive";
 import { listOneDriveRootChildren, downloadOneDriveItem, refreshMicrosoftAccessToken } from "@/lib/file-sync/providers/microsoft-onedrive";
 import { listDropboxFolder, downloadDropboxFile, refreshDropboxAccessToken } from "@/lib/file-sync/providers/dropbox";
+import { loadGoogleOAuthClientForOrganization } from "@/lib/marketing/credentials";
 
 const MAX_INTEGRATIONS_PER_RUN = 5;
 const MAX_FILES_PER_INTEGRATION = 5;
@@ -100,10 +101,13 @@ export async function GET(request: NextRequest) {
 
       if (isTokenExpired(integration.token_expires_at) && refreshToken) {
         if (provider === "google_drive") {
-          const clientId = process.env.GOOGLE_CLIENT_ID;
-          const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-          if (!clientId || !clientSecret) throw new Error("Google OAuth is not configured");
-          const refreshed = await refreshGoogleAccessToken({ clientId, clientSecret, refreshToken });
+          const googleClient = await loadGoogleOAuthClientForOrganization(organizationId);
+          if (!googleClient) throw new Error("Google OAuth is not configured");
+          const refreshed = await refreshGoogleAccessToken({
+            clientId: googleClient.clientId,
+            clientSecret: googleClient.clientSecret,
+            refreshToken,
+          });
           accessToken = refreshed.accessToken;
           await (supabaseAdmin as any)
             .from("oauth_integrations")

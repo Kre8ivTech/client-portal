@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { authorizeCronOrSuperAdmin } from "@/lib/api/cron-auth";
+import { withGoogleAdsApiVersion } from "@/lib/google-ads/client";
+import { loadGoogleAdsOAuthForOrganization } from "@/lib/marketing/credentials";
 import { syncGoogleAdsConnection } from "@/lib/google-ads/sync";
 import type { GoogleAdsConnectionRecord } from "@/lib/google-ads/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -22,7 +24,8 @@ export async function GET(request: NextRequest) {
   const results: Array<{ connectionId: string; success: boolean; rows?: number; issues?: number }> = [];
   for (const connection of (data ?? []) as GoogleAdsConnectionRecord[]) {
     try {
-      const synced = await syncGoogleAdsConnection(admin, connection);
+      const oauth = withGoogleAdsApiVersion(await loadGoogleAdsOAuthForOrganization(connection.organization_id));
+      const synced = await syncGoogleAdsConnection(admin, connection, oauth);
       results.push({ connectionId: connection.id, success: true, ...synced });
     } catch (error) {
       console.error(`[Google Ads Cron] Sync failed for connection ${connection.id}`, error);

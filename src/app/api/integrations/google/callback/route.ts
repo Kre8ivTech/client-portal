@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { verifySignedOAuthState, sanitizeOAuthReturnPath } from "@/lib/oauth-state";
 import { syncStaffCalendarFromOAuth } from "@/lib/integrations/staff-calendar-sync";
+import { loadGoogleOAuthClientForOrganization } from "@/lib/marketing/credentials";
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/google/callback`;
 
 function redirectToIntegration(
@@ -68,7 +67,11 @@ export async function GET(request: NextRequest) {
     return redirectToIntegration(request, returnPath, { error: "unauthorized" });
   }
 
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+  const { data: profile } = await supabase.from("users").select("organization_id").eq("id", user.id).maybeSingle();
+  const googleClient = await loadGoogleOAuthClientForOrganization(
+    (profile as { organization_id: string | null } | null)?.organization_id ?? null,
+  );
+  if (!googleClient) {
     return redirectToIntegration(request, returnPath, { error: "oauth_not_configured" });
   }
 
@@ -78,8 +81,8 @@ export async function GET(request: NextRequest) {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: GOOGLE_CLIENT_ID!,
-        client_secret: GOOGLE_CLIENT_SECRET!,
+        client_id: googleClient.clientId,
+        client_secret: googleClient.clientSecret,
         code,
         grant_type: "authorization_code",
         redirect_uri: REDIRECT_URI,

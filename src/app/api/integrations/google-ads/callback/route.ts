@@ -6,7 +6,9 @@ import {
   exchangeGoogleAdsCode,
   getGoogleAdsUserEmail,
   listGoogleAdsAccounts,
+  withGoogleAdsApiVersion,
 } from "@/lib/google-ads/client";
+import { loadGoogleAdsOAuthForOrganization } from "@/lib/marketing/credentials";
 import { syncGoogleAdsConnection } from "@/lib/google-ads/sync";
 import type { GoogleAdsAccount, GoogleAdsConnectionRecord } from "@/lib/google-ads/types";
 import { sanitizeOAuthReturnPath, verifySignedOAuthState } from "@/lib/oauth-state";
@@ -74,10 +76,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const tokens = await exchangeGoogleAdsCode({ code, redirectUri: getRedirectUri() });
+    const oauth = withGoogleAdsApiVersion(await loadGoogleAdsOAuthForOrganization(state.organizationId));
+    const tokens = await exchangeGoogleAdsCode({ code, redirectUri: getRedirectUri(), oauth });
     const [googleEmail, availableCustomers] = await Promise.all([
       getGoogleAdsUserEmail(tokens.access_token),
-      listGoogleAdsAccounts(tokens.access_token),
+      listGoogleAdsAccounts(tokens.access_token, oauth),
     ]);
     const admin = getSupabaseAdmin();
     const { data: existingData, error: existingError } = await admin
@@ -119,7 +122,7 @@ export async function GET(request: NextRequest) {
 
     if (selectedAccount) {
       try {
-        await syncGoogleAdsConnection(admin, savedData as GoogleAdsConnectionRecord);
+        await syncGoogleAdsConnection(admin, savedData as GoogleAdsConnectionRecord, oauth);
       } catch (error) {
         console.error("[Google Ads OAuth] Initial reporting sync failed", error);
       }

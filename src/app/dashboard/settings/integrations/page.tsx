@@ -7,9 +7,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { QuickBooksIntegration } from "@/components/settings/quickbooks-integration";
+import { MarketingCredentialsForm } from "@/components/settings/marketing-credentials-form";
+import { PartnerApiKeysCard } from "@/components/settings/partner-api-keys";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 import { SmtpConfigForm } from "@/components/settings/smtp-config-form";
+import { listPartnerApiKeys } from "@/lib/actions/partner-api-keys";
+import { listOrganizationProviderStatus } from "@/lib/marketing/credentials";
+import { MARKETING_PROVIDERS, toPublicProviderStatus } from "@/lib/marketing/providers";
+import { canManagePartnerApiKeys } from "@/lib/partner-api/scope";
 import { canManageQuickBooks } from "@/lib/quickbooks/access";
 import { QUICKBOOKS_SAFE_SELECT } from "@/lib/quickbooks/connection";
 import { toPublicQuickBooksIntegration } from "@/lib/quickbooks/tokens";
@@ -49,6 +55,15 @@ export default async function IntegrationsSettingsPage({
     Boolean(profile.is_account_manager),
   );
 
+  const { data: organization } = profile.organization_id
+    ? await supabase.from("organizations").select("type").eq("id", profile.organization_id).maybeSingle()
+    : { data: null };
+  const organizationType = (organization as { type: string | null } | null)?.type ?? null;
+  const canManageOrgCredentials = Boolean(
+    profile.organization_id &&
+      canManagePartnerApiKeys({ role: profile.role, organizationType }),
+  );
+
   // Fetch QuickBooks integration if exists
   let quickbooksIntegration = null;
   if (isAccountManager) {
@@ -58,6 +73,16 @@ export default async function IntegrationsSettingsPage({
       .eq("organization_id", profile.organization_id)
       .maybeSingle();
     quickbooksIntegration = data ? toPublicQuickBooksIntegration(data as never) : null;
+  }
+
+  const partnerKeys = canManageOrgCredentials ? await listPartnerApiKeys() : null;
+  let marketingProviders = MARKETING_PROVIDERS.map((provider) => toPublicProviderStatus(provider, null));
+  if (canManageOrgCredentials && profile.organization_id) {
+    try {
+      marketingProviders = await listOrganizationProviderStatus(profile.organization_id);
+    } catch {
+      marketingProviders = MARKETING_PROVIDERS.map((provider) => toPublicProviderStatus(provider, null));
+    }
   }
 
   return (
@@ -106,6 +131,38 @@ export default async function IntegrationsSettingsPage({
       )}
 
       <div className="grid gap-8">
+        {canManageOrgCredentials && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Google and analytics credentials</CardTitle>
+              <CardDescription>
+                Stored for this organization only. Secrets stay encrypted and are masked after you save them.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MarketingCredentialsForm providers={marketingProviders} />
+            </CardContent>
+          </Card>
+        )}
+
+        {canManageOrgCredentials && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Partner API</CardTitle>
+              <CardDescription>
+                Create a key for this organization. It can list child client organizations and their site monitors.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {partnerKeys?.ok ? (
+                <PartnerApiKeysCard keys={partnerKeys.keys} />
+              ) : (
+                <p className="text-sm text-muted-foreground">{partnerKeys?.error ?? "API keys are unavailable."}</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* QuickBooks Integration */}
         {isAccountManager ? (
           <>
@@ -121,12 +178,12 @@ export default async function IntegrationsSettingsPage({
               />
             )}
           </>
-        ) : (
+        ) : !canManageOrgCredentials ? (
           <Card>
             <CardHeader>
               <CardTitle>Integrations</CardTitle>
               <CardDescription>
-                Only account managers can configure integrations.
+                Only account managers can configure QuickBooks. Partners and platform staff can save Google credentials and partner API keys.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -135,7 +192,7 @@ export default async function IntegrationsSettingsPage({
               </p>
             </CardContent>
           </Card>
-        )}
+        ) : null}
       </div>
     </div>
   );

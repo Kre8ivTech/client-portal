@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { getGoogleAdsPartnerContext } from "@/lib/google-ads/access";
+import { withGoogleAdsApiVersion } from "@/lib/google-ads/client";
+import { loadGoogleAdsOAuthForOrganization } from "@/lib/marketing/credentials";
 import { syncGoogleAdsConnection } from "@/lib/google-ads/sync";
 import type { GoogleAdsConnectionRecord } from "@/lib/google-ads/types";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -18,7 +20,10 @@ export async function POST() {
   if (error || !data) return NextResponse.json({ error: "Google Ads is not connected" }, { status: 404 });
 
   try {
-    const result = await syncGoogleAdsConnection(admin, data as GoogleAdsConnectionRecord);
+    const oauth = withGoogleAdsApiVersion(
+      await loadGoogleAdsOAuthForOrganization(contextResult.context.organizationId),
+    );
+    const result = await syncGoogleAdsConnection(admin, data as GoogleAdsConnectionRecord, oauth);
     return NextResponse.json({ success: true, ...result });
   } catch (error) {
     console.error("[Google Ads] Manual sync failed", error);

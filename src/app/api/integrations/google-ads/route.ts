@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { decrypt } from "@/lib/crypto";
 import { getGoogleAdsPartnerContext } from "@/lib/google-ads/access";
-import { getGoogleAdsOAuthConfig, GOOGLE_ADS_OAUTH_SCOPES, revokeGoogleAdsToken } from "@/lib/google-ads/client";
+import { withGoogleAdsApiVersion, GOOGLE_ADS_OAUTH_SCOPES, revokeGoogleAdsToken } from "@/lib/google-ads/client";
+import { loadGoogleAdsOAuthForOrganization } from "@/lib/marketing/credentials";
 import type { GoogleAdsConnectionRecord } from "@/lib/google-ads/types";
 import { createSignedOAuthState } from "@/lib/oauth-state";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -20,7 +21,9 @@ export async function GET() {
     if ((process.env.ENCRYPTION_SECRET?.length ?? 0) < 32) {
       throw new Error("ENCRYPTION_SECRET must be at least 32 characters");
     }
-    const { clientId } = getGoogleAdsOAuthConfig();
+    const { clientId } = withGoogleAdsApiVersion(
+      await loadGoogleAdsOAuthForOrganization(result.context.organizationId),
+    );
     const state = createSignedOAuthState({
       userId: result.context.userId,
       organizationId: result.context.organizationId,

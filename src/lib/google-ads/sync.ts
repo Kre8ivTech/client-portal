@@ -1,5 +1,10 @@
 import { decrypt } from "@/lib/crypto";
-import { currentDateInTimeZone, fetchGoogleAdsSnapshot, refreshGoogleAdsAccessToken } from "@/lib/google-ads/client";
+import {
+  currentDateInTimeZone,
+  fetchGoogleAdsSnapshot,
+  refreshGoogleAdsAccessToken,
+  type GoogleAdsRuntimeConfig,
+} from "@/lib/google-ads/client";
 import type { GoogleAdsConnectionRecord } from "@/lib/google-ads/types";
 
 type AdminDatabase = {
@@ -17,6 +22,7 @@ function safeErrorMessage(error: unknown): string {
 export async function syncGoogleAdsConnection(
   database: AdminDatabase,
   connection: GoogleAdsConnectionRecord,
+  oauth?: GoogleAdsRuntimeConfig,
 ): Promise<{ rows: number; issues: number }> {
   if (!connection.customer_id) throw new Error("Select a Google Ads account before syncing");
 
@@ -27,12 +33,13 @@ export async function syncGoogleAdsConnection(
       connection.refresh_token_auth_tag,
       connection.refresh_token_salt,
     );
-    const accessToken = await refreshGoogleAdsAccessToken(refreshToken);
+    const accessToken = await refreshGoogleAdsAccessToken(refreshToken, oauth);
     const snapshot = await fetchGoogleAdsSnapshot({
       accessToken,
       customerId: connection.customer_id,
       loginCustomerId: connection.login_customer_id,
       timeZone: connection.time_zone ?? "UTC",
+      oauth,
     });
     const syncedAt = new Date().toISOString();
     const today = currentDateInTimeZone(connection.time_zone ?? "UTC");

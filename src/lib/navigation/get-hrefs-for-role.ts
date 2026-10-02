@@ -134,7 +134,7 @@ export function getHrefsForRole(role: DashboardRole, isAccountManager: boolean):
         ...projectPages,
         ...settingsBase,
         emailTemplates,
-        ...(isAccountManager ? [ORG_INTEGRATIONS_HREF] : []),
+        ORG_INTEGRATIONS_HREF,
         capacity,
         "/dashboard/clients",
         ...adminStaff,
@@ -197,6 +197,7 @@ export function getHrefsForRole(role: DashboardRole, isAccountManager: boolean):
         "/dashboard/profile",
         "/dashboard/settings/security",
         "/dashboard/settings/notifications",
+        ORG_INTEGRATIONS_HREF,
         liveChats,
       ];
     case "client":

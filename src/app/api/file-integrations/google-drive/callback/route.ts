@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySignedOAuthState } from "@/lib/oauth-state";
+import { loadGoogleOAuthClientForOrganization } from "@/lib/marketing/credentials";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/api/file-integrations/google-drive/callback`;
 
 export async function GET(request: NextRequest) {
@@ -45,7 +44,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard/settings/file-storage?error=unauthorized", request.url));
   }
 
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+  const { data: profile } = await supabase.from("users").select("organization_id").eq("id", user.id).maybeSingle();
+  const googleClient = await loadGoogleOAuthClientForOrganization(
+    (profile as { organization_id: string | null } | null)?.organization_id ?? null,
+  );
+  if (!googleClient) {
     return NextResponse.redirect(new URL("/dashboard/settings/file-storage?error=oauth_not_configured", request.url));
   }
 
@@ -54,8 +57,8 @@ export async function GET(request: NextRequest) {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
+        client_id: googleClient.clientId,
+        client_secret: googleClient.clientSecret,
         code,
         grant_type: "authorization_code",
         redirect_uri: REDIRECT_URI,

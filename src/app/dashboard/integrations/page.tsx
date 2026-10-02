@@ -21,6 +21,7 @@ import { ZapierIntegration } from "@/components/integrations/zapier-integration"
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { S3ConfigForm } from "@/components/admin/s3-config-form";
 import { getAppSettings } from "@/lib/actions/app-settings";
+import { loadGoogleOAuthClientForOrganization } from "@/lib/marketing/credentials";
 import { SmtpConfigForm } from "@/components/settings/smtp-config-form";
 
 interface IntegrationsPageProps {
@@ -58,11 +59,11 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
   // Check user role - only super_admin can access
   const { data: userData } = await supabase
     .from("users")
-    .select("role")
+    .select("role, organization_id")
     .eq("id", user.id)
     .single();
 
-  const userRole = userData as { role: string } | null;
+  const userRole = userData as { role: string; organization_id: string | null } | null;
   if (userRole?.role !== "super_admin" && userRole?.role !== "admin") {
     redirect("/dashboard");
   }
@@ -127,8 +128,8 @@ export default async function IntegrationsPage({ searchParams }: IntegrationsPag
 
   const smtpConfigured = Boolean(globalSmtpConfig);
 
-  const googleCalendarOAuthConfigured = !!(
-    process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+  const googleCalendarOAuthConfigured = Boolean(
+    await loadGoogleOAuthClientForOrganization(userRole?.organization_id ?? null),
   );
   const microsoftCalendarOAuthConfigured = !!(
     microsoftCalendarConfig().clientId && microsoftCalendarConfig().clientSecret

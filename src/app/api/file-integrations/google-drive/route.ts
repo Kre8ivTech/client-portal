@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSignedOAuthState } from "@/lib/oauth-state";
+import { loadGoogleOAuthClientForOrganization } from "@/lib/marketing/credentials";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = `${process.env.NEXT_PUBLIC_APP_URL}/api/file-integrations/google-drive/callback`;
 
 const SCOPES = [
@@ -19,9 +18,13 @@ export async function GET(_request: NextRequest) {
 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+  const { data: profile } = await supabase.from("users").select("organization_id").eq("id", user.id).maybeSingle();
+  const googleClient = await loadGoogleOAuthClientForOrganization(
+    (profile as { organization_id: string | null } | null)?.organization_id ?? null,
+  );
+  if (!googleClient) {
     return NextResponse.json(
-      { error: "Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET." },
+      { error: "Google OAuth not configured. Save a Google OAuth client for this organization or set the platform environment variables." },
       { status: 500 }
     );
   }
@@ -29,7 +32,7 @@ export async function GET(_request: NextRequest) {
   const state = createSignedOAuthState({ userId: user.id, ts: Date.now() });
 
   const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
-  authUrl.searchParams.set("client_id", GOOGLE_CLIENT_ID);
+  authUrl.searchParams.set("client_id", googleClient.clientId);
   authUrl.searchParams.set("redirect_uri", REDIRECT_URI);
   authUrl.searchParams.set("response_type", "code");
   authUrl.searchParams.set("scope", SCOPES);

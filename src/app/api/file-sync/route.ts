@@ -6,6 +6,7 @@ import { buildOrgFileS3Prefix } from "@/lib/file-sync/s3-prefix";
 import { listGoogleDriveFiles, downloadGoogleDriveFile, refreshGoogleAccessToken } from "@/lib/file-sync/providers/google-drive";
 import { listOneDriveRootChildren, downloadOneDriveItem, refreshMicrosoftAccessToken } from "@/lib/file-sync/providers/microsoft-onedrive";
 import { listDropboxFolder, downloadDropboxFile, refreshDropboxAccessToken } from "@/lib/file-sync/providers/dropbox";
+import { loadGoogleOAuthClientForOrganization } from "@/lib/marketing/credentials";
 
 const bodySchema = z.object({
   provider: z.enum(["google_drive", "microsoft_onedrive", "dropbox"]),
@@ -133,11 +134,11 @@ export async function POST(request: NextRequest) {
     // Refresh token if needed
     if (isTokenExpired(integration.token_expires_at) && refreshToken) {
       if (provider === "google_drive") {
-        const cfg = getProviderAuthConfig(provider);
-        if (!cfg.googleClientId || !cfg.googleClientSecret) throw new Error("Google OAuth is not configured");
+        const googleClient = await loadGoogleOAuthClientForOrganization(organizationId);
+        if (!googleClient) throw new Error("Google OAuth is not configured");
         const refreshed = await refreshGoogleAccessToken({
-          clientId: cfg.googleClientId,
-          clientSecret: cfg.googleClientSecret,
+          clientId: googleClient.clientId,
+          clientSecret: googleClient.clientSecret,
           refreshToken,
         });
         accessToken = refreshed.accessToken;

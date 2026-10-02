@@ -6,6 +6,7 @@ import { CalendarOfficeHours } from "@/components/settings/calendar-office-hours
 import { AdminAccessInfo } from "@/components/settings/admin-access-info";
 import { GeneralPreferences } from "@/components/settings/general-preferences";
 import { getAppSettings } from "@/lib/actions/app-settings";
+import { loadGoogleOAuthClientForOrganization } from "@/lib/marketing/credentials";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default async function SettingsPage({
@@ -61,8 +62,8 @@ export default async function SettingsPage({
     .eq("user_id", user.id)
     .in("provider", ["google_calendar", "microsoft_outlook", "apple_caldav"]);
 
-  const googleOAuthConfigured = !!(
-    process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+  const googleOAuthConfigured = Boolean(
+    await loadGoogleOAuthClientForOrganization(userRow?.organization_id ?? null),
   );
   const microsoftOAuthConfigured = !!(
     microsoftCalendarConfig().clientId && microsoftCalendarConfig().clientSecret

@@ -61,13 +61,31 @@ function requireEnv(name: string): string {
   return value;
 }
 
-export function getGoogleAdsOAuthConfig() {
-  return {
+export type GoogleAdsRuntimeConfig = {
+  clientId: string;
+  clientSecret: string;
+  developerToken: string;
+  apiVersion: string;
+};
+
+export function withGoogleAdsApiVersion(config: {
+  clientId: string;
+  clientSecret: string;
+  developerToken: string;
+}): GoogleAdsRuntimeConfig {
+  return { ...config, apiVersion: getApiVersion() };
+}
+
+export function getGoogleAdsOAuthConfig(): GoogleAdsRuntimeConfig {
+  return withGoogleAdsApiVersion({
     clientId: requireEnv("GOOGLE_CLIENT_ID"),
     clientSecret: requireEnv("GOOGLE_CLIENT_SECRET"),
     developerToken: requireEnv("GOOGLE_ADS_DEVELOPER_TOKEN"),
-    apiVersion: getApiVersion(),
-  };
+  });
+}
+
+function activeGoogleAdsConfig(config?: GoogleAdsRuntimeConfig): GoogleAdsRuntimeConfig {
+  return config ?? getGoogleAdsOAuthConfig();
 }
 
 function tokenEndpointBody(values: Record<string, string>) {
@@ -89,8 +107,9 @@ async function parseJsonResponse(response: Response): Promise<unknown> {
 export async function exchangeGoogleAdsCode(input: {
   code: string;
   redirectUri: string;
+  oauth?: GoogleAdsRuntimeConfig;
 }) {
-  const { clientId, clientSecret } = getGoogleAdsOAuthConfig();
+  const { clientId, clientSecret } = activeGoogleAdsConfig(input.oauth);
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -110,8 +129,11 @@ export async function exchangeGoogleAdsCode(input: {
   return tokenResponseSchema.parse(payload);
 }
 
-export async function refreshGoogleAdsAccessToken(refreshToken: string): Promise<string> {
-  const { clientId, clientSecret } = getGoogleAdsOAuthConfig();
+export async function refreshGoogleAdsAccessToken(
+  refreshToken: string,
+  oauth?: GoogleAdsRuntimeConfig,
+): Promise<string> {
+  const { clientId, clientSecret } = activeGoogleAdsConfig(oauth);
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -154,8 +176,9 @@ async function googleAdsRequest(
   accessToken: string,
   init: RequestInit = {},
   loginCustomerId?: string | null,
+  oauth?: GoogleAdsRuntimeConfig,
 ): Promise<unknown> {
-  const { developerToken, apiVersion } = getGoogleAdsOAuthConfig();
+  const { developerToken, apiVersion } = activeGoogleAdsConfig(oauth);
   const headers = new Headers(init.headers);
   headers.set("Authorization", `Bearer ${accessToken}`);
   headers.set("developer-token", developerToken);
@@ -183,12 +206,14 @@ async function googleAdsSearch(
   customerId: string,
   query: string,
   loginCustomerId?: string | null,
+  oauth?: GoogleAdsRuntimeConfig,
 ): Promise<Record<string, unknown>[]> {
   const payload = await googleAdsRequest(
     `/customers/${customerId}/googleAds:searchStream`,
     accessToken,
     { method: "POST", body: JSON.stringify({ query }) },
     loginCustomerId,
+    oauth,
   );
   return searchStreamSchema
     .parse(payload)
@@ -243,8 +268,11 @@ function toAccount(customer: Record<string, unknown>, loginCustomerId: string | 
   };
 }
 
-export async function listGoogleAdsAccounts(accessToken: string): Promise<GoogleAdsAccount[]> {
-  const payload = await googleAdsRequest("/customers:listAccessibleCustomers", accessToken, { method: "GET" });
+export async function listGoogleAdsAccounts(
+  accessToken: string,
+  oauth?: GoogleAdsRuntimeConfig,
+): Promise<GoogleAdsAccount[]> {
+  const payload = await googleAdsRequest("/customers:listAccessibleCustomers", accessToken, { method: "GET" }, null, oauth);
   const resourceNames = accessibleCustomersSchema.parse(payload).resourceNames;
   const directIds = resourceNames
     .map(customerIdFromResource)
@@ -256,6 +284,8 @@ export async function listGoogleAdsAccounts(accessToken: string): Promise<Google
       accessToken,
       customerId,
       "SELECT customer.id, customer.descriptive_name, customer.currency_code, customer.time_zone, customer.manager FROM customer LIMIT 1",
+      null,
+      oauth,
     );
     const directCustomer = asRecord(directRows[0]?.customer);
     const directAccount = toAccount(directCustomer, null);
@@ -270,6 +300,7 @@ export async function listGoogleAdsAccounts(accessToken: string): Promise<Google
       customerId,
       "SELECT customer_client.client_customer, customer_client.descriptive_name, customer_client.currency_code, customer_client.time_zone, customer_client.manager, customer_client.status, customer_client.level FROM customer_client WHERE customer_client.level > 0 AND customer_client.status = 'ENABLED'",
       customerId,
+      oauth,
     );
     for (const row of childRows) {
       const child = asRecord(row.customerClient);
@@ -408,10 +439,11 @@ async function optionalSearch(
   customerId: string,
   query: string,
   loginCustomerId: string | null,
+  oauth?: GoogleAdsRuntimeConfig,
 ): Promise<{ rows: Record<string, unknown>[]; failed: boolean }> {
   try {
     return {
-      rows: await googleAdsSearch(accessToken, customerId, query, loginCustomerId),
+      rows: await googleAdsSearch(accessToken, customerId, query, loginCustomerId, oauth),
       failed: false,
     };
   } catch {
@@ -424,6 +456,7 @@ export async function fetchGoogleAdsSnapshot(input: {
   customerId: string;
   loginCustomerId: string | null;
   timeZone: string;
+  oauth?: GoogleAdsRuntimeConfig;
 }): Promise<GoogleAdsSnapshot> {
   const today = currentDateInTimeZone(input.timeZone);
   const dailyRows = await googleAdsSearch(
@@ -431,6 +464,7 @@ export async function fetchGoogleAdsSnapshot(input: {
     input.customerId,
     "SELECT segments.date, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions, metrics.conversions_value FROM customer WHERE segments.date DURING LAST_30_DAYS ORDER BY segments.date",
     input.loginCustomerId,
+    input.oauth,
   );
 
   const [campaignResult, deliveryResult, policyResult, recommendationResult] = await Promise.all([
@@ -439,24 +473,28 @@ export async function fetchGoogleAdsSnapshot(input: {
       input.customerId,
       `SELECT campaign.id, campaign.name, campaign.status, campaign.advertising_channel_type, campaign.optimization_score, campaign_budget.amount_micros, metrics.impressions, metrics.clicks, metrics.cost_micros, metrics.conversions FROM campaign WHERE segments.date = '${today}' AND campaign.status != 'REMOVED'`,
       input.loginCustomerId,
+      input.oauth,
     ),
     optionalSearch(
       input.accessToken,
       input.customerId,
       "SELECT campaign.id, campaign.name, campaign.status, campaign.primary_status, campaign.primary_status_reasons FROM campaign WHERE campaign.status = 'ENABLED'",
       input.loginCustomerId,
+      input.oauth,
     ),
     optionalSearch(
       input.accessToken,
       input.customerId,
       "SELECT campaign.id, campaign.name, ad_group_ad.ad.id, ad_group_ad.policy_summary.approval_status FROM ad_group_ad WHERE ad_group_ad.status != 'REMOVED' AND ad_group_ad.policy_summary.approval_status != 'APPROVED' LIMIT 100",
       input.loginCustomerId,
+      input.oauth,
     ),
     optionalSearch(
       input.accessToken,
       input.customerId,
       "SELECT recommendation.resource_name, recommendation.type FROM recommendation WHERE recommendation.dismissed = FALSE LIMIT 50",
       input.loginCustomerId,
+      input.oauth,
     ),
   ]);
 

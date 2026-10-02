@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import type { GoogleAdsAccount, GoogleAdsCampaign, GoogleAdsIssue } from "@/lib/google-ads/types";
+import { readOrganizationProvider } from "@/lib/marketing/credentials";
+import { resolveGoogleAdsCredentialSet } from "@/lib/marketing/providers";
 import { requireRole } from "@/lib/require-role";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -104,11 +106,19 @@ export default async function GoogleAdsPage({
   const ctr = impressionsSevenDays > 0 ? (clicksSevenDays / impressionsSevenDays) * 100 : 0;
   const issues = Array.isArray(latest?.issues) ? latest.issues : [];
   const campaigns = Array.isArray(latest?.campaigns) ? latest.campaigns : [];
+  let storedAds: Record<string, string> | null = null;
+  try {
+    storedAds = await readOrganizationProvider(organizationId, "google_ads");
+  } catch {
+    storedAds = null;
+  }
   const configured = Boolean(
-    process.env.GOOGLE_CLIENT_ID &&
-    process.env.GOOGLE_CLIENT_SECRET &&
-    process.env.GOOGLE_ADS_DEVELOPER_TOKEN &&
-    (process.env.ENCRYPTION_SECRET?.length ?? 0) >= 32,
+    resolveGoogleAdsCredentialSet({
+      stored: storedAds,
+      envClientId: process.env.GOOGLE_CLIENT_ID,
+      envClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      envDeveloperToken: process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
+    }) && (process.env.ENCRYPTION_SECRET?.length ?? 0) >= 32,
   );
   const connectionError = oauthErrorMessage(params.error);
 
@@ -135,7 +145,7 @@ export default async function GoogleAdsPage({
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Google Ads setup is incomplete</AlertTitle>
           <AlertDescription>
-            An administrator must configure the Google OAuth client, Ads developer token, and encryption secret.
+            Save this organization's Google Ads client and developer token on Settings, Integrations, or set the platform environment variables. Encryption must also be configured.
           </AlertDescription>
         </Alert>
       )}

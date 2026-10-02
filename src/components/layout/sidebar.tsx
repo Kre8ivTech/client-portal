@@ -262,8 +262,7 @@ export function DashboardSidebar({
     <aside aria-label="Sidebar navigation" className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground flex-shrink-0 border-r border-sidebar-muted/30">
       <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-muted/30">
         {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- dynamic user-provided logo URL
-          // no-referrer: WordPress hotlink protection 403s the shared portal origin.
+          // eslint-disable-next-line @next/next/no-img-element -- user logo; no-referrer avoids hotlink 403s
           <img
             src={logoUrl}
             alt={appName}

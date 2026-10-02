@@ -12,10 +12,10 @@ import {
   Clock,
   Activity,
   Zap,
-  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow, differenceInDays } from "date-fns";
+import { SiteMonitorForm } from "@/components/sites/site-monitor-form";
 
 export const dynamic = "force-dynamic";
 
@@ -69,11 +69,14 @@ export default async function SiteMonitoringPage() {
   // Get child client organizations
   const { data: childOrgs } = await admin
     .from("organizations")
-    .select("id, name, slug")
+    .select("id, name, slug, type")
     .eq("parent_org_id", organizationId)
     .order("name", { ascending: true });
 
-  const clients = (childOrgs ?? []) as { id: string; name: string; slug: string }[];
+  const clients = (childOrgs ?? []) as { id: string; name: string; slug: string; type: string }[];
+  const formOrganizations = clients
+    .filter((client) => client.type === "client")
+    .map((client) => ({ id: client.id, name: client.name }));
   const clientIds = clients.map((c) => c.id);
   const orgNameMap = new Map(clients.map((c) => [c.id, c.name]));
 
@@ -138,6 +141,8 @@ export default async function SiteMonitoringPage() {
           ← Back to Overview
         </Link>
       </div>
+
+      {tableExists ? <SiteMonitorForm organizations={formOrganizations} /> : null}
 
       {!tableExists ? (
         <Card>
@@ -251,8 +256,8 @@ export default async function SiteMonitoringPage() {
               {siteMonitors.length === 0 ? (
                 <div className="flex h-[160px] flex-col items-center justify-center rounded-lg border-2 border-dashed text-center text-sm text-muted-foreground">
                   <Globe className="h-8 w-8 text-muted-foreground/50" />
-                  <p className="mt-2">No websites being monitored yet.</p>
-                  <p className="text-xs">Add client websites to start tracking uptime and performance.</p>
+                  <p className="mt-2">No websites are listed yet.</p>
+                  <p className="text-xs">Add a client site above. Status stays unknown until a check is recorded.</p>
                 </div>
               ) : (
                 <div className="overflow-x-auto">

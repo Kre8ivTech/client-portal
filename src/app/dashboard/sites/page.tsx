@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/require-role";
 import { SiteMonitorForm } from "@/components/sites/site-monitor-form";
+import { canOfferSiteMonitorForm, siteMonitorFormListsChildClientsOnly } from "@/lib/sites/site-monitor-access";
 
 type Monitor = {
   id: string;
@@ -23,18 +24,30 @@ function orgName(value: Monitor["organizations"]) {
 }
 
 export default async function SitesPage() {
-  const { role } = await requireRole(["super_admin", "staff", "partner", "partner_staff", "client"]);
+  const { role, profile } = await requireRole(["super_admin", "staff", "partner", "partner_staff", "client"]);
   const supabase = await createServerSupabaseClient();
-  const canManage = role === "super_admin" || role === "staff";
+  const canAdd = canOfferSiteMonitorForm(role);
+  const childClientsOnly = siteMonitorFormListsChildClientsOnly(role);
+  const actorOrganizationId = profile?.organization_id ?? null;
+
+  const organizationQuery =
+    canAdd && childClientsOnly && actorOrganizationId
+      ? supabase
+          .from("organizations")
+          .select("id, name")
+          .eq("parent_org_id", actorOrganizationId)
+          .eq("type", "client")
+          .order("name")
+      : canAdd && !childClientsOnly
+        ? supabase.from("organizations").select("id, name").order("name").limit(200)
+        : Promise.resolve({ data: [] as { id: string; name: string }[] });
 
   const [{ data: monitors }, orgs] = await Promise.all([
     supabase
       .from("site_monitors")
       .select("id, name, url, status, uptime_percentage_30d, ssl_expiry_date, platform, maintenance_window, care_notes, last_check_at, organizations(name)")
       .order("name"),
-    canManage
-      ? supabase.from("organizations").select("id, name").order("name").limit(200)
-      : Promise.resolve({ data: [] }),
+    organizationQuery,
   ]);
 
   const sites = (monitors ?? []) as Monitor[];
@@ -45,15 +58,16 @@ export default async function SitesPage() {
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Sites</h2>
         <p className="mt-1 text-muted-foreground">
-          Uptime, SSL, platform, and the maintenance window for each site. Public incident notices are on{" "}
+          Uptime, SSL, platform, and the maintenance window for each site. A new site stays unknown until a check is
+          recorded. Public incident notices are on{" "}
           <Link href="/status" className="underline">
             the status page
           </Link>
           .
         </p>
       </div>
-      {canManage ? <SiteMonitorForm organizations={organizations} /> : null}
-      {sites.length === 0 ? <p className="text-sm text-muted-foreground">No sites are being watched yet.</p> : null}
+      {canAdd ? <SiteMonitorForm organizations={organizations} /> : null}
+      {sites.length === 0 ? <p className="text-sm text-muted-foreground">No sites are listed yet.</p> : null}
       <ul className="grid gap-4 md:grid-cols-2">
         {sites.map((site) => (
           <li key={site.id} className="space-y-2 rounded-lg border p-4">

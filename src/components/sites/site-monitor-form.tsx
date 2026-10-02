@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { addSiteMonitor } from "@/lib/actions/site-monitors";
 
-const fieldClass = "flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
+const fieldClass =
+  "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-sm";
 
 export function SiteMonitorForm({ organizations }: { organizations: { id: string; name: string }[] }) {
   const router = useRouter();
@@ -38,13 +39,31 @@ export function SiteMonitorForm({ organizations }: { organizations: { id: string
     });
   }
 
+  if (organizations.length === 0) {
+    return (
+      <p className="rounded-lg border p-4 text-sm text-muted-foreground">
+        No organizations are available to attach a site to.
+      </p>
+    );
+  }
+
   return (
     <form onSubmit={onSubmit} className="space-y-3 rounded-lg border p-4">
       <fieldset className="grid gap-3 md:grid-cols-2">
         <legend className="text-base font-semibold md:col-span-2">Add a site</legend>
+        <p id="site-monitor-help" className="text-sm text-muted-foreground md:col-span-2">
+          The site is saved for the selected organization. Status stays unknown until a check is recorded.
+        </p>
         <div className="space-y-1 md:col-span-2">
           <Label htmlFor="site-org">Organization</Label>
-          <select id="site-org" name="organizationId" className={fieldClass} required defaultValue="">
+          <select
+            id="site-org"
+            name="organizationId"
+            className={fieldClass}
+            required
+            defaultValue=""
+            aria-describedby="site-monitor-help"
+          >
             <option value="">Choose an organization</option>
             {organizations.map((org) => (
               <option key={org.id} value={org.id}>
@@ -59,7 +78,7 @@ export function SiteMonitorForm({ organizations }: { organizations: { id: string
         </div>
         <div className="space-y-1">
           <Label htmlFor="site-url">URL</Label>
-          <Input id="site-url" name="url" type="url" required placeholder="https://example.com" />
+          <Input id="site-url" name="url" type="url" required autoComplete="url" placeholder="https://example.com" />
         </div>
         <div className="space-y-1">
           <Label htmlFor="site-platform">Platform</Label>
@@ -74,7 +93,13 @@ export function SiteMonitorForm({ organizations }: { organizations: { id: string
           <Textarea id="site-notes" name="careNotes" rows={2} />
         </div>
       </fieldset>
-      <div aria-live="polite">{error ? <p className="text-sm text-destructive">{error}</p> : null}</div>
+      <div aria-live="polite">
+        {error ? (
+          <p id="site-monitor-error" className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </div>
       <Button type="submit" disabled={pending}>
         {pending ? "Saving..." : "Add site"}
       </Button>

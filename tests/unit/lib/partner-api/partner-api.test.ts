@@ -220,6 +220,7 @@ describe("partner API auth scoping", () => {
     expect(beat.status).toBe(200);
     expect(beat.body.data).toMatchObject({ wp_version: "6.7", created: false, last_seen_at: expect.any(String) });
     expect(monitors[0].last_seen_at).toEqual((beat.body.data as { last_seen_at: string }).last_seen_at);
+    expect(monitors[0].wp_plugins).toBeNull();
 
     const outside = await dispatchPartnerApi(
       {
@@ -231,6 +232,74 @@ describe("partner API auth scoping", () => {
       repo,
     );
     expect(outside.status).toBe(403);
+  });
+
+  it("replaces the WordPress plugin snapshot and leaves it when a heartbeat omits plugins", async () => {
+    const { repo, key, monitors } = memoryRepo();
+    const authorization = `Bearer ${key}`;
+    const first = [
+      { file: "akismet/akismet.php", name: "Akismet", version: "5.3", active: true, update_available: false },
+      { file: "hello.php", name: "Hello Dolly", version: "1.7.2", active: false, update_available: true },
+    ];
+    const created = await dispatchPartnerApi(
+      {
+        method: "POST",
+        path: "/sites/heartbeat",
+        authorization,
+        body: {
+          url: "https://child.example",
+          organization_id: child.id,
+          name: "Child Site",
+          platform: "wordpress",
+          plugins: first,
+        },
+      },
+      repo,
+    );
+    expect(created.status).toBe(201);
+    expect(monitors[0].wp_plugins).toEqual(first);
+    expect(monitors[0].wp_plugins_updated_at).toEqual((created.body.data as { wp_plugins_updated_at: string }).wp_plugins_updated_at);
+
+    const replacement = [
+      { file: "seo/seo.php", name: "SEO", version: "2.0", active: true, update_available: true, license_key: "do-not-store" },
+    ];
+    const replaced = await dispatchPartnerApi(
+      {
+        method: "POST",
+        path: "/sites/heartbeat",
+        authorization,
+        body: { url: "https://child.example/", organization_id: child.id, plugins: replacement },
+      },
+      repo,
+    );
+    expect(replaced.status).toBe(200);
+    expect(monitors[0].wp_plugins).toEqual([
+      { file: "seo/seo.php", name: "SEO", version: "2.0", active: true, update_available: true },
+    ]);
+    expect(JSON.stringify(monitors[0].wp_plugins)).not.toContain("do-not-store");
+
+    const seenAt = monitors[0].wp_plugins_updated_at;
+    const omitted = await dispatchPartnerApi(
+      {
+        method: "POST",
+        path: "/sites/heartbeat",
+        authorization,
+        body: { url: "https://child.example", organization_id: child.id, wp_version: "6.7.1" },
+      },
+      repo,
+    );
+    expect(omitted.status).toBe(200);
+    expect(monitors[0].wp_plugins).toEqual([
+      { file: "seo/seo.php", name: "SEO", version: "2.0", active: true, update_available: true },
+    ]);
+    expect(monitors[0].wp_plugins_updated_at).toBe(seenAt);
+    expect(monitors[0].wp_version).toBe("6.7.1");
+
+    const listed = await dispatchPartnerApi({ method: "GET", path: "/sites", authorization }, repo);
+    const rows = listed.body.data as Array<{ organization_id: string; wp_plugins: unknown }>;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].organization_id).toBe(child.id);
+    expect(rows[0].wp_plugins).toEqual(monitors[0].wp_plugins);
   });
 
   it("answers health without a key and keeps platform keys inside their own children", async () => {

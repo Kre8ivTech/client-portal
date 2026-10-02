@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: KT-Portal Monitor
- * Description: Registers this WordPress site with KT-Portal site monitoring and sends a heartbeat.
- * Version: 1.0.0
+ * Description: Registers this WordPress site with KT-Portal site monitoring and sends a heartbeat with plugin status.
+ * Version: 1.1.0
  * Author: Kre8ivTech
  * Requires at least: 6.0
  * Requires PHP: 7.4
@@ -197,6 +197,70 @@ function kt_portal_monitor_client_org_id($settings) {
     return new WP_Error('kt_portal_org', 'Enter the client organization ID. This key can see more than one client.');
 }
 
+function kt_portal_monitor_plugins() {
+    if (!function_exists('get_plugins')) {
+        require_once ABSPATH . 'wp-admin/includes/plugin.php';
+    }
+
+    $installed = get_plugins();
+    if (!is_array($installed)) {
+        return array();
+    }
+
+    $updates = get_site_transient('update_plugins');
+    $known_updates = (is_object($updates) && isset($updates->response) && is_array($updates->response))
+        ? $updates->response
+        : array();
+
+    $plugins = array();
+    foreach ($installed as $file => $headers) {
+        if (count($plugins) >= 200) {
+            break;
+        }
+        if (!is_string($file)) {
+            continue;
+        }
+        $file = str_replace("\0", '', $file);
+        if ($file === '' || strlen($file) > 255 || strpos($file, '..') !== false || strpos($file, '\\') !== false) {
+            continue;
+        }
+
+        $name = '';
+        $version = '';
+        if (is_array($headers)) {
+            $name = isset($headers['Name']) ? wp_strip_all_tags((string) $headers['Name']) : '';
+            $version = isset($headers['Version']) ? wp_strip_all_tags((string) $headers['Version']) : '';
+        }
+        $collapsed = preg_replace('/\s+/', ' ', $name);
+        $name = trim(is_string($collapsed) ? $collapsed : $name);
+        if ($name === '') {
+            $name = $file;
+        }
+        if (function_exists('mb_substr')) {
+            $name = mb_substr($name, 0, 200);
+            $version = mb_substr(trim($version), 0, 40);
+        } else {
+            $name = substr($name, 0, 200);
+            $version = substr(trim($version), 0, 40);
+        }
+
+        $active = function_exists('is_plugin_active') && is_plugin_active($file);
+        if (!$active && function_exists('is_plugin_active_for_network') && is_plugin_active_for_network($file)) {
+            $active = true;
+        }
+
+        $plugins[] = array(
+            'file' => $file,
+            'name' => $name,
+            'version' => $version,
+            'active' => (bool) $active,
+            'update_available' => isset($known_updates[$file]),
+        );
+    }
+
+    return $plugins;
+}
+
 function kt_portal_monitor_payload($organization_id) {
     $url = home_url('/');
     return array(
@@ -206,6 +270,7 @@ function kt_portal_monitor_payload($organization_id) {
         'platform' => 'wordpress',
         'wp_version' => get_bloginfo('version'),
         'https' => wp_parse_url($url, PHP_URL_SCHEME) === 'https',
+        'plugins' => kt_portal_monitor_plugins(),
     );
 }
 

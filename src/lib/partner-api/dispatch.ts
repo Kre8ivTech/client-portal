@@ -8,7 +8,7 @@ import {
   type PartnerKeyRecord,
   type PartnerOrgRecord,
 } from "@/lib/partner-api/scope";
-import { createSiteMonitorSchema, heartbeatSchema } from "@/lib/partner-api/schemas";
+import { createSiteMonitorSchema, heartbeatSchema, type WpPlugin } from "@/lib/partner-api/schemas";
 
 export type SiteMonitorRecord = {
   id: string;
@@ -19,6 +19,8 @@ export type SiteMonitorRecord = {
   platform: string | null;
   wp_version: string | null;
   last_seen_at: string | null;
+  wp_plugins: WpPlugin[] | null;
+  wp_plugins_updated_at: string | null;
   metadata: Record<string, unknown>;
 };
 
@@ -32,7 +34,12 @@ export type PartnerRepository = {
   insertSiteMonitor(row: Omit<SiteMonitorRecord, "id"> & { id?: string }): Promise<SiteMonitorRecord>;
   updateSiteMonitor(
     id: string,
-    patch: Partial<Pick<SiteMonitorRecord, "name" | "url" | "platform" | "wp_version" | "last_seen_at" | "metadata">>,
+    patch: Partial<
+      Pick<
+        SiteMonitorRecord,
+        "name" | "url" | "platform" | "wp_version" | "last_seen_at" | "wp_plugins" | "wp_plugins_updated_at" | "metadata"
+      >
+    >,
   ): Promise<SiteMonitorRecord>;
 };
 
@@ -72,8 +79,17 @@ function publicMonitor(monitor: SiteMonitorRecord) {
     platform: monitor.platform,
     wp_version: monitor.wp_version,
     last_seen_at: monitor.last_seen_at,
+    wp_plugins: monitor.wp_plugins,
+    wp_plugins_updated_at: monitor.wp_plugins_updated_at,
     https,
   };
+}
+
+function pluginSnapshot(plugins: WpPlugin[] | undefined, seenAt: string): Pick<SiteMonitorRecord, "wp_plugins" | "wp_plugins_updated_at"> {
+  if (plugins === undefined) {
+    return { wp_plugins: null, wp_plugins_updated_at: null };
+  }
+  return { wp_plugins: plugins, wp_plugins_updated_at: seenAt };
 }
 
 function monitorMetadata(https: boolean | undefined, url: string, source: string): Record<string, unknown> {
@@ -188,6 +204,7 @@ export async function dispatchPartnerApi(
           platform: parsed.data.platform || null,
           wp_version: parsed.data.wp_version ?? null,
           last_seen_at: seenAt,
+          ...pluginSnapshot(undefined, seenAt),
           metadata,
         });
 
@@ -211,6 +228,9 @@ export async function dispatchPartnerApi(
     const seenAt = new Date().toISOString();
     const metadata = monitorMetadata(parsed.data.https, url, "heartbeat");
 
+    const plugins = pluginSnapshot(parsed.data.plugins, seenAt);
+    const pluginPatch = parsed.data.plugins === undefined ? {} : plugins;
+
     if (existing) {
       const saved = await repo.updateSiteMonitor(existing.id, {
         name: parsed.data.name ?? existing.name,
@@ -218,6 +238,7 @@ export async function dispatchPartnerApi(
         platform: parsed.data.platform || existing.platform,
         wp_version: parsed.data.wp_version ?? existing.wp_version,
         last_seen_at: seenAt,
+        ...pluginPatch,
         metadata: { ...existing.metadata, ...metadata },
       });
       return { status: 200, body: { data: { ...publicMonitor(saved), created: false } } };
@@ -246,6 +267,7 @@ export async function dispatchPartnerApi(
       platform: parsed.data.platform || "wordpress",
       wp_version: parsed.data.wp_version ?? null,
       last_seen_at: seenAt,
+      ...plugins,
       metadata,
     });
     return { status: 201, body: { data: { ...publicMonitor(saved), created: true } } };

@@ -1,9 +1,18 @@
+import { z } from "zod";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { PartnerRepository, SiteMonitorRecord } from "@/lib/partner-api/dispatch";
+import { wpPluginSchema, type WpPlugin } from "@/lib/partner-api/schemas";
 import { normalizeSiteUrl, type PartnerKeyRecord, type PartnerOrgRecord } from "@/lib/partner-api/scope";
 
 const ORG_COLUMNS = "id, name, slug, type, status, parent_org_id, custom_domain";
-const MONITOR_COLUMNS = "id, organization_id, name, url, status, platform, wp_version, last_seen_at, metadata";
+const MONITOR_COLUMNS =
+  "id, organization_id, name, url, status, platform, wp_version, last_seen_at, wp_plugins, wp_plugins_updated_at, metadata";
+
+function asPlugins(value: unknown): WpPlugin[] | null {
+  if (value == null) return null;
+  const parsed = z.array(wpPluginSchema).safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
 
 function asOrg(row: Record<string, unknown> | null): PartnerOrgRecord | null {
   if (!row) return null;
@@ -31,6 +40,8 @@ function asMonitor(row: Record<string, unknown>): SiteMonitorRecord {
     platform: row.platform == null ? null : String(row.platform),
     wp_version: row.wp_version == null ? null : String(row.wp_version),
     last_seen_at: row.last_seen_at == null ? null : String(row.last_seen_at),
+    wp_plugins: asPlugins(row.wp_plugins),
+    wp_plugins_updated_at: row.wp_plugins_updated_at == null ? null : String(row.wp_plugins_updated_at),
     metadata,
   };
 }
@@ -115,6 +126,8 @@ export function createPartnerRepository(): PartnerRepository {
           platform: row.platform,
           wp_version: row.wp_version,
           last_seen_at: row.last_seen_at,
+          wp_plugins: row.wp_plugins,
+          wp_plugins_updated_at: row.wp_plugins_updated_at,
           metadata: row.metadata,
         })
         .select(MONITOR_COLUMNS)

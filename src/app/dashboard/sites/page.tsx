@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/require-role";
 import { SiteMonitorForm } from "@/components/sites/site-monitor-form";
+import { WordPressPluginStatus } from "@/components/sites/wordpress-plugin-status";
 import { canOfferSiteMonitorForm, siteMonitorFormListsChildClientsOnly } from "@/lib/sites/site-monitor-access";
 
 type Monitor = {
@@ -12,6 +13,8 @@ type Monitor = {
   uptime_percentage_30d: number | null;
   ssl_expiry_date: string | null;
   platform: string | null;
+  wp_plugins: unknown;
+  wp_plugins_updated_at: string | null;
   maintenance_window: string | null;
   care_notes: string | null;
   last_check_at: string | null;
@@ -45,7 +48,9 @@ export default async function SitesPage() {
   const [{ data: monitors }, orgs] = await Promise.all([
     supabase
       .from("site_monitors")
-      .select("id, name, url, status, uptime_percentage_30d, ssl_expiry_date, platform, maintenance_window, care_notes, last_check_at, organizations(name)")
+      .select(
+        "id, name, url, status, uptime_percentage_30d, ssl_expiry_date, platform, wp_plugins, wp_plugins_updated_at, maintenance_window, care_notes, last_check_at, organizations(name)",
+      )
       .order("name"),
     organizationQuery,
   ]);
@@ -58,7 +63,8 @@ export default async function SitesPage() {
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Sites</h2>
         <p className="mt-1 text-muted-foreground">
-          Uptime, SSL, platform, and the maintenance window for each site. A new site stays unknown until a check is
+          Uptime, SSL, platform, maintenance window, and WordPress plugin status for each site. Plugin status
+          appears after the monitor plugin sends a heartbeat. A new site stays unknown until a check is
           recorded. Public incident notices are on{" "}
           <Link href="/status" className="underline">
             the status page
@@ -99,6 +105,11 @@ export default async function SitesPage() {
                 <dd>{site.maintenance_window || "Not set"}</dd>
               </div>
             </dl>
+            <WordPressPluginStatus
+              platform={site.platform}
+              plugins={site.wp_plugins}
+              updatedAt={site.wp_plugins_updated_at}
+            />
             {site.care_notes ? <p className="text-sm">{site.care_notes}</p> : null}
           </li>
         ))}

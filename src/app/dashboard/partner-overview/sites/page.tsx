@@ -16,6 +16,7 @@ import {
 import Link from "next/link";
 import { formatDistanceToNow, differenceInDays } from "date-fns";
 import { SiteMonitorForm } from "@/components/sites/site-monitor-form";
+import { WordPressPluginStatus } from "@/components/sites/wordpress-plugin-status";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,9 @@ type SiteMonitor = {
   performance_score: number | null;
   last_downtime_at: string | null;
   consecutive_failures: number;
+  platform: string | null;
+  wp_plugins: unknown;
+  wp_plugins_updated_at: string | null;
 };
 
 function getSSLStatus(expiryDate: string | null): "valid" | "expiring_soon" | "expired" | "unknown" {
@@ -88,7 +92,9 @@ export default async function SiteMonitoringPage() {
   if (clientIds.length > 0) {
     const { data, error } = await admin
       .from("site_monitors")
-      .select("id, organization_id, url, name, status, last_check_at, response_time_ms, uptime_percentage_30d, ssl_expiry_date, performance_score, last_downtime_at, consecutive_failures")
+      .select(
+        "id, organization_id, url, name, status, last_check_at, response_time_ms, uptime_percentage_30d, ssl_expiry_date, performance_score, last_downtime_at, consecutive_failures, platform, wp_plugins, wp_plugins_updated_at",
+      )
       .in("organization_id", clientIds)
       .order("status", { ascending: true });
 
@@ -301,6 +307,13 @@ export default async function SiteMonitoringPage() {
                                 >
                                   {site.url}
                                 </a>
+                                <div className="mt-2">
+                                  <WordPressPluginStatus
+                                    platform={site.platform}
+                                    plugins={site.wp_plugins}
+                                    updatedAt={site.wp_plugins_updated_at}
+                                  />
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell>

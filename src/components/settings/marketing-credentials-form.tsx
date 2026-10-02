@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { saveMarketingCredentials } from "@/lib/actions/marketing-credentials";
+import { clearMarketingCredentials, saveMarketingCredentials } from "@/lib/actions/marketing-credentials";
 import { MARKETING_PROVIDERS, type PublicProviderStatus } from "@/lib/marketing/providers";
 
 export function MarketingCredentialsForm({ providers }: { providers: PublicProviderStatus[] }) {
@@ -16,7 +16,8 @@ export function MarketingCredentialsForm({ providers }: { providers: PublicProvi
 
   async function onSubmit(event: FormEvent<HTMLFormElement>, providerId: PublicProviderStatus["id"]) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const provider = MARKETING_PROVIDERS.find((item) => item.id === providerId);
     if (!provider) return;
     const fields: Record<string, string> = {};
@@ -32,7 +33,7 @@ export function MarketingCredentialsForm({ providers }: { providers: PublicProvi
       setError(result.error);
       return;
     }
-    event.currentTarget.reset();
+    formElement.reset();
     setMessage(`${provider.label} saved.`);
     router.refresh();
   }
@@ -91,9 +92,33 @@ export function MarketingCredentialsForm({ providers }: { providers: PublicProvi
                 );
               })}
             </fieldset>
-            <Button type="submit" disabled={pendingId === provider.id}>
-              Save {provider.label}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={pendingId === provider.id}>
+                Save {provider.label}
+              </Button>
+              {provider.configured && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={pendingId === provider.id}
+                  onClick={async () => {
+                    setPendingId(provider.id);
+                    setError(null);
+                    setMessage(null);
+                    const result = await clearMarketingCredentials(provider.id);
+                    setPendingId(null);
+                    if (!result.ok) {
+                      setError(result.error);
+                      return;
+                    }
+                    setMessage(`${provider.label} removed.`);
+                    router.refresh();
+                  }}
+                >
+                  Remove saved credentials
+                </Button>
+              )}
+            </div>
           </form>
         );
       })}

@@ -263,7 +263,13 @@ export function DashboardSidebar({
       <div className="flex h-16 items-center gap-2 px-6 border-b border-sidebar-muted/30">
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- dynamic user-provided logo URL
-          <img src={logoUrl} alt={appName} className="h-9 w-auto max-w-full object-contain" />
+          // no-referrer: WordPress hotlink protection 403s the shared portal origin.
+          <img
+            src={logoUrl}
+            alt={appName}
+            referrerPolicy="no-referrer"
+            className="h-9 w-auto max-w-full object-contain"
+          />
         ) : (
           <>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent text-white font-bold text-sm">

@@ -5,11 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { writeAuditLog } from "@/lib/audit";
 import { updateOrganizationSchema, createOrganizationSchema } from "@/lib/validators/organization";
-import { validateHexColor, validateImageUrl, validateOpacity } from "@/lib/security";
-import {
-  normalizeCustomDomain,
-  resolveCustomDomainVerificationUpdate,
-} from "@/lib/white-label/domain-verification";
+import { buildOrganizationSavePatch } from "@/lib/white-label/organization-save-patch";
 
 type ActionResult = {
   success: boolean;
@@ -94,65 +90,54 @@ export async function updateOrganization(
     // (e.g. partner_staff on child orgs) even when access is legitimately granted.
     const { data: orgData } = await getSupabaseAdmin()
       .from("organizations")
-      .select("id, type, custom_domain")
+      .select("id, type, custom_domain, branding_config")
       .eq("id", orgId)
       .single();
 
-    const orgRow = orgData as { id: string; type: string; custom_domain?: string | null } | null;
+    const orgRow = orgData as {
+      id: string;
+      type: string;
+      custom_domain?: string | null;
+      branding_config?: Record<string, unknown> | null;
+    } | null;
     if (!orgRow) {
       return { success: false, error: "Organization not found" };
     }
 
-    // Parse form data
     const name = (formData.get("name") as string)?.trim();
     const slug = (formData.get("slug") as string)?.trim();
     const contactEmail = (formData.get("contact_email") as string)?.trim();
-    const contactPhone = (formData.get("contact_phone") as string)?.trim();
-    const billingStreet = (formData.get("billing_street") as string)?.trim();
-    const billingCity = (formData.get("billing_city") as string)?.trim();
-    const billingState = (formData.get("billing_state") as string)?.trim();
-    const billingPostalCode = (formData.get("billing_postal_code") as string)?.trim();
-    const billingCountry = (formData.get("billing_country") as string)?.trim();
-    const logoUrl = (formData.get("logo_url") as string)?.trim();
-    const primaryColor = (formData.get("primary_color") as string)?.trim();
-    const customDomainInput = (formData.get("custom_domain") as string)?.trim();
-    const appName = (formData.get("branding_app_name") as string)?.trim();
-    const tagline = (formData.get("branding_tagline") as string)?.trim();
-    const loginBgColorInput = (formData.get("login_bg_color") as string)?.trim();
-    const loginBgImageInput = (formData.get("login_bg_image_url") as string)?.trim();
-    const loginBgOverlayInput = (formData.get("login_bg_overlay_opacity") as string)?.trim();
-    const customDomainVerifiedInput = formData.get("custom_domain_verified");
-
-    // Build the update object
-    const settings = {
-      contact_email: contactEmail || null,
-      contact_phone: contactPhone || null,
-      billing_address: {
-        street: billingStreet || undefined,
-        city: billingCity || undefined,
-        state: billingState || undefined,
-        postal_code: billingPostalCode || undefined,
-        country: billingCountry || undefined,
-      },
-    };
-
-    // Only allow branding updates for admin/staff/partners (not clients)
     const canUpdateBranding = ["super_admin", "staff", "partner", "partner_staff"].includes(access.role);
-    const normalizedDomain = normalizeCustomDomain(customDomainInput || null);
+    const isStaffAdmin = access.role === "super_admin" || access.role === "staff";
+    const patch = buildOrganizationSavePatch({
+      orgType: orgRow.type,
+      previousDomain: orgRow.custom_domain,
+      previousBranding:
+        orgRow.branding_config && typeof orgRow.branding_config === "object"
+          ? orgRow.branding_config
+          : null,
+      canUpdateBranding,
+      isStaffAdmin,
+      form: {
+        has: (field) => formData.has(field),
+        get: (field) => {
+          const value = formData.get(field);
+          return typeof value === "string" ? value : null;
+        },
+      },
+      now: new Date().toISOString(),
+    });
 
-    if (customDomainInput && !normalizedDomain) {
-      return { success: false, error: "Custom domain must be a valid hostname (e.g. portal.example.com)" };
+    if (patch.error) {
+      return { success: false, error: patch.error };
     }
 
-    if (normalizedDomain && orgRow.type !== "partner") {
-      return { success: false, error: "Custom domains are only available for partner organizations" };
-    }
-
-    if (normalizedDomain) {
+    const nextDomain = patch.update.custom_domain;
+    if (typeof nextDomain === "string" && nextDomain) {
       const { data: existingDomain } = await (supabase as any)
         .from("organizations")
         .select("id")
-        .eq("custom_domain", normalizedDomain)
+        .eq("custom_domain", nextDomain)
         .neq("id", orgId)
         .maybeSingle();
 
@@ -161,38 +146,7 @@ export async function updateOrganization(
       }
     }
 
-    const isStaffAdmin = access.role === "super_admin" || access.role === "staff";
-    const verificationUpdate = resolveCustomDomainVerificationUpdate({
-      previousDomain: orgRow.custom_domain,
-      nextDomain: normalizedDomain,
-      isStaffAdmin,
-      verificationChecked: customDomainVerifiedInput === "on",
-      now: new Date().toISOString(),
-    });
-
-    const validatedLogoUrl = validateImageUrl(logoUrl || null);
-    const validatedPrimaryColor = (validateHexColor(primaryColor || null) ?? primaryColor) || null;
-    const validatedBgColor = validateHexColor(loginBgColorInput || null);
-    const validatedBgImage = validateImageUrl(loginBgImageInput || null);
-    const validatedBgOverlay = loginBgOverlayInput ? validateOpacity(loginBgOverlayInput) : null;
-
-    const brandingConfig = canUpdateBranding ? {
-      app_name: appName || null,
-      tagline: tagline || null,
-      logo_url: validatedLogoUrl,
-      primary_color: validatedPrimaryColor,
-      login_bg_color: validatedBgColor,
-      login_bg_image_url: validatedBgImage,
-      login_bg_overlay_opacity: validatedBgOverlay,
-    } : undefined;
-
-    const updateData: Record<string, unknown> = {
-      settings,
-      ...(brandingConfig !== undefined ? { branding_config: brandingConfig } : {}),
-      ...(orgRow.type === "partner"
-        ? { custom_domain: normalizedDomain, ...verificationUpdate }
-        : {}),
-    };
+    const updateData: Record<string, unknown> = { ...patch.update };
 
     if (name) updateData.name = name;
     if (slug) updateData.slug = slug;
